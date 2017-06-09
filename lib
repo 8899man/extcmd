@@ -377,7 +377,7 @@ lib_sip() {
             # cache max variable length
             [ ${#i} -gt $l ] && l=${#i};
             # convert lowercase
-            mac=`lib_low $mac`;
+            mac=`lib_caps -l $mac`;
             # trim ^0
             for j in {0..9} {a..f};
             do
