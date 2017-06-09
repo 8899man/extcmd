@@ -323,15 +323,19 @@ lib_lip() {
     return 0
 }
 
-### Convert lowercase
-lib_low() {
-    [ "$1" ] && tr "[:upper:]" "[:lower:]" <<< "$@";
-    return 0
-}
-
-### Convert uppercase
-lib_upp() {
-    [ "$1" ] && tr "[:lower:]" "[:upper:]" <<< "$@";
+### Convert upper case #Usage: caps [[-l]] #    -l lower case
+lib_caps() {
+    [ "-l" == "$1" ] && {
+        shift;
+        [ "$1" ] && {
+            tr "[:upper:]" "[:lower:]" <<< "$@"
+        } || tr "[:upper:]" "[:lower:]";
+        :
+    } || {
+        [ "$1" ] && {
+            tr "[:lower:]" "[:upper:]" <<< "$@";
+        } || tr "[:lower:]" "[:upper:]"
+    };
     return 0
 }
 
