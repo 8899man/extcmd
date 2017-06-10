@@ -253,7 +253,7 @@ _title() {
 
 # for _3rd_play
 _ffplay() {
-    case "`lib low ${1##*.}`" in
+    case "`lib caps -l ${1##*.}`" in
         avi|divx|flv|mkv|mp4|mpg|rm|rmvb|wmv)
             # -ac 2 #ED..A... set number of audio channels (from 0 to INT_MAX) (default 0) #Convert the 5.1 track to stereo
             # -sn #disable subtitling
