@@ -212,7 +212,7 @@ REM Test target in $path
         REM get latest update version
         set \\\tamp=
         for /f "usebackq delims=" %%b in (
-            `git.exe --git-dir^="!\\\src!" log --pretty^=format:"%%!at"`
+            `git.exe --git-dir^="!\\\src!" log --pretty^=format:"%%!ct"`
         ) do if not defined \\\tamp set \\\tamp=%%b
 
         if defined \\\tamp (
