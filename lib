@@ -44,8 +44,6 @@ lib_cd2i() {
     return 0
 }
 
-
-
 ### Convert an ISO file to DMG format #Usage: ci2d [iso_file_path]
 lib_ci2d() {
     [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
@@ -273,6 +271,94 @@ lib_rboot() {
     # 426F6F74-0000-11AA-AA11-00306543ECAC
     # [ "${1##*/}" == "dmtest" -a "${2##*/}" == "BaseSystem.dmg" -a -d "$3" ] && "$1" ensureRecoveryPartition "$3" "$2" 0 0 "${2%.*}.chunklist"
     return 0
+}
+
+### remote tar -c #Usage: rtar [option] [[user@host:]target_path] [[user@host:]source_path]
+lib_rtar() {
+    [ "$1" ] || exit 1; # target url is empty
+    [ "$2" ] || exit 1; # source url is empty
+    local option target_host target_dir source_host source_dir;
+    option="$1";
+    shift;
+
+    target_dir="${1#*:}";
+    [ "$target_dir" == "$1" ] || target_host=${1%%:*};
+    [ "${target_dir:0-1}" == "/" ] && target_dir="${target_dir:0:${#target_dir}-1}"
+
+    source_dir="${2#*:}";
+    [ "$source_dir" == "$2" ] || source_host=${2%%:*};
+    [ "${source_dir:0-1}" == "/" ] && source_dir="${source_dir:0:${#source_dir}-1}"
+
+    # echo $target_host, $target_dir, $source_host, $source_dir
+    # return 0
+
+    case $option in
+        *c*)
+            if [ "$target_host" -a "$source_host" ]; then
+                # both
+                rtarc $source_host "${source_dir}" | rcati $target_host "$target_dir"
+            elif [ "$target_host" ]; then
+                # local -> remote
+                [ -d "$source_dir" ] || exit 1; # source path not found.
+                {
+                    [ "${option/P/}" == "$option" ] && {
+                        cd "${source_dir%/*}" >/dev/null && tar $option - "${source_dir##*/}"
+                        cd "$OLDPWD"
+                        :
+                    } || tar $option - "${source_dir}"
+                } | rcat $target_host "$target_dir";
+            else
+                # remote -> local
+                rtarc $source_host "$source_dir" > "$target_dir";
+            fi
+        ;;
+        *x*)
+            if [ "$target_host" -a "$source_host" ]; then
+                # both
+                rcato $source_host "${source_dir}" | rtarx $target_host "$target_dir"
+            elif [ "$target_host" ]; then
+                # local -> remote
+                [ -f "$source_dir" ] || exit 1; # source file not found.
+                cat "$source_dir" | rtarx $target_host "$target_dir"
+            else
+                # remote -> local
+                cd "$target_dir";
+                rcato $source_host "$source_dir" | tar $option -;
+                cd "$OLDPWD"
+            fi
+        ;;
+        *)
+            exit 1; # args error
+        ;;
+    esac
+
+    return 0
+}
+
+# for lib_rtar
+rtarc() {
+    {
+        [ "${option/P/}" == "$option" ] && \
+        printf %s 'cd "'"${2%/*}"'" >/dev/null && tar '$option' - "'"${2##*/}"'"' || \
+        printf %s 'tar '$option' - "'"$2"'"'
+    } | ssh $1 bash
+}
+
+# for lib_rtar
+rtarx() {
+    [ "${option/P/}" == "$option" ] && {
+        ssh $1 'cd "'"$2"'" >/dev/null && tar '$option' -'
+    } || ssh $1 'tar '$option' - '
+}
+
+# for lib_rtar
+rcati() {
+    ssh $1 'cat > "'"$2"'"'
+}
+
+# for lib_rtar
+rcato() {
+    ssh $1 'cat "'"$2"'"'
 }
 
 ### Hidden file | directory #Usage: hid [yes|no]

@@ -34,6 +34,44 @@
 #             return 1
 #         }
 
+
+### remote git bundle #Usage: rbundle [[user@host:]target_path] [[user@host:]source_path]
+_3rd_rbundle() {
+    [ "$1" ] || exit 1; # target path is empty
+    [ "$2" ] || exit 1; # source path is empty
+    local target_host target_dir source_host source_dir;
+
+    target_dir="${1#*:}";
+    [ "$target_dir" == "$1" ] || target_host=${1%%:*};
+
+    source_dir="${2#*:}";
+    [ "$source_dir" == "$2" ] || source_host=${2%%:*};
+
+    if [ "$target_host" -a "$source_host" ]; then
+        # both
+        rbundle $source_host $source_dir | rcatver $target_host "$target_dir"
+    elif [ "$target_host" ]; then
+        # local -> remote
+        [ -d "$source_dir" ] || exit 1; # path not exist
+        git --git-dir="$source_dir" bundle create - --all | rcatver $target_host "$target_dir"
+    else
+        # remote -> local
+        rbundle $source_host $source_dir > "$target_dir";
+        git bundle verify "$1";
+    fi
+    return 0
+}
+
+# for _3rd_rbundle
+rbundle() {
+    printf %s 'git --git-dir="'"$2"'" bundle create - --all' | ssh $1 bash
+}
+
+# for _3rd_rbundle
+rcatver() {
+    ssh $1 'cat > "'"$2"'" && git bundle verify "'"$2"'"'
+}
+
 ### Backup git repositories
 _3rd_gitbak() {
     which git >/dev/null 2>&1 || exit 1; # git command not found
