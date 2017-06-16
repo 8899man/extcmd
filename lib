@@ -273,7 +273,7 @@ lib_rboot() {
     return 0
 }
 
-### remote tar -c #Usage: rtar [option] [[user@host:]target_path] [[user@host:]source_path]
+### remote tar #Usage: rtar [option] [[user@host:]target_path] [[user@host:]source_path]
 lib_rtar() {
     [ "$1" ] || exit 1; # target url is empty
     [ "$2" ] || exit 1; # source url is empty
