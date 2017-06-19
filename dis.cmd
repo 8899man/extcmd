@@ -890,23 +890,26 @@ REM for :dis\officekms
 ::: "Support load %USERPROFILE%\.batchrc before cmd.exe run" "" "usage: %~n0 batchrc [[-d]]"
 :::: "lib.cmd not found"
 :dis\batchrc
-    if /i "%~1"=="-d" >nul 2>nul (
-        erase "%USERPROFILE%\.batchrc"
-        reg.exe delete "HKCU\SOFTWARE\Microsoft\Command Processor" /v AutoRun /f
-        exit /b 0
-    )
+    call :batchrc\%*
+    goto :eof
+
+:batchrc\
     call :this\iinpath lib.cmd || exit /b 2
     setlocal
     call lib.cmd gbs \\\bs
     reg.exe add "HKCU\SOFTWARE\Microsoft\Command Processor" /v AutoRun /t REG_SZ /d "if not defined BS set BS=%\\\bs%&& (for /f \"usebackq delims=\" %%a in (\"%%USERPROFILE%%\.batchrc\") do @call %%a)>nul 2>&1" /f
     if exist "%USERPROFILE%\.batchrc" endlocal & exit /b 0
-
     > "%USERPROFILE%\.batchrc" (
         echo ;use ^>^&3 in script can print
         echo set devmgr_show_nonpresent_devices=1
         echo set path=%%path%%;%~dp0
     )
     endlocal
+    exit /b 0
+
+:batchrc\-d
+    erase "%USERPROFILE%\.batchrc"
+    reg.exe delete "HKCU\SOFTWARE\Microsoft\Command Processor" /v AutoRun /f
     exit /b 0
 
 ::: "Compresses the specified files." "" "usage: %~n0 cexe [target_path]"
