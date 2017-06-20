@@ -486,6 +486,35 @@ Function lib_print(tag, ext)
     printLine strng
 End Function
 
+''' Tag date time each line 'Usage: [command] | log [strftime format]
+Function lib_log(format)
+    format = Replace(format, "$F", "yyyy-MM-dd")
+    format = Replace(format, "$T", "hh:mm:ss")
+    format = Replace(format, "$Y", "yyyy")
+    format = Replace(format, "$y", "yy")
+    format = Replace(format, "$m", "MM")
+    format = Replace(format, "$d", "dd")
+    format = Replace(format, "$H", "hh")
+    format = Replace(format, "$M", "mm")
+    format = Replace(format, "$S", "ss")
+    format = "{0:" & format & "}"
+
+    Set Sb = CreateObject("System.Text.StringBuilder")
+    Set StdIn = WScript.StdIn
+    Do While Not StdIn.AtEndOfStream
+        Sb.AppendFormat_4 format, Array(now())
+        printLine Sb.ToString() & StdIn.ReadLine
+        Sb.Length = 0
+    Loop
+End Function
+
+' Function lib_log(separator)
+'     Set StdIn = WScript.StdIn
+'     Do While Not StdIn.AtEndOfStream
+'         line = StdIn.ReadLine
+'         printLine Replace(FormatDateTime(Now()) , "/", "-") & separator & line
+'     Loop
+' End Function
 
 ''''''''''''''''''''''''
 '   private function   '
@@ -773,10 +802,10 @@ Function gfuncAnno(method)
     text.Close
 End Function
 
-' Replace $@ to StdIn.ReadAll
+' Replace - to StdIn.ReadAll
 Function rArg(i)
     rArg = args(i)
-    If "$@" = rArg Then
+    If "-" = rArg Then
         rArg = "WScript.StdIn.ReadAll"
     Else
         rArg = "args(" & i & ")"
