@@ -120,7 +120,7 @@ lib_gpkg() {
         sleep 2;
     done;
 
-    } | lib_log [ " GPKG] "
+    } | lib_log "%F %T, GPKG, "
 
     # wait all thread over
     wait
@@ -205,7 +205,7 @@ lib_sdd() {
         sudo dd if="${1%.*}.dmg" of=$target bs=4m || exit 1; # dd error
         # sudo dd if="${1%.*}.dmg" of=$target bs=4m & while killall -USR1 dd; do
         #     sleep 10;
-        # done | lib_log [ "] "
+        # done | lib_log "%F %T, "
     elif [ "${1##*.}" == "gz" ]; then
         diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
         which gzcat >/dev/null 2>&1 || exit 1; # gzcat command not found
@@ -769,13 +769,10 @@ lib_inum() {
     return 0
 }
 
-### Tag date time each line #Usage: [command] | log [[prefix]][[middle]][[suffix]]
+### Tag date time each line #Usage: [command] | log [strftime format]
 lib_log() {
-    # gawk '{print strftime("[%F %T]")" "$0}'
-    local l;
-    while read l; do
-        echo "$1`date '+%F %T'`$2$l$3";
-    done
+    # gawk '{print strftime("'"$1"'")" "$0}'
+    perl -ne 'use POSIX qw(strftime); print strftime("'"$1"'", localtime), $_'
 }
 
 ### Plist editer #Usage: plist [--xml|-x|--json|-j|--binary|-b] [path...]
