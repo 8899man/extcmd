@@ -86,7 +86,7 @@ _3rd_gitbak() {
         name=${name/\.git/};
         name=${name##*/};
 
-        tamp=`git --git-dir="$l" log --pretty=format:"%ct" | head -1`;
+        tamp=`git --git-dir="$l" log -1 --all --pretty=format:"%cd" --date=format:%y%m%d%H%M`;
 
         [ "$tamp" ] || {
             echo skip: $l;

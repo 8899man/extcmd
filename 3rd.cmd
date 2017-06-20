@@ -210,10 +210,9 @@ REM Test target in $path
         for %%b in ("!\\\name!") do set "\\\name=%%~nxb"
 
         REM get latest update version
-        set \\\tamp=
         for /f "usebackq delims=" %%b in (
-            `git.exe --git-dir^="!\\\src!" log --pretty^=format:"%%!ct"`
-        ) do if not defined \\\tamp set \\\tamp=%%b
+            `git.exe --git-dir^="!\\\src!" log -1 --all --pretty^=format:"%%cd" --date^=format:%%y%%m%%d%%H%%M`
+        ) do set \\\tamp=%%b
 
         if defined \\\tamp (
             set "\\\out=.\!\\\name!_!\\\tamp!.git"
