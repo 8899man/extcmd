@@ -521,10 +521,9 @@ thread_valve() {
     case $1 in
         # use before loop, need count
         --init | -i)
-            mkfifo /tmp/$$.fifo;
+            mkfifo /tmp/.fifo-$$;
             # &3
-            exec 3<> /tmp/$$.fifo;
-            rm /tmp/$$.fifo;
+            exec 3<> /tmp/.fifo-$$;
             local i;
             # init thread valve
             for i in `seq 1 $2`; do
@@ -536,6 +535,7 @@ thread_valve() {
             wait;
             exec 3>&-;
             exec 3<&-
+            rm -f /tmp/.fifo-$$;
         ;;
         # use after multi-thread
         --return | -r)
