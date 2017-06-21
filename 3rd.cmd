@@ -278,14 +278,14 @@ REM For :3rd\orcl
     )
     exit /b 0
 
-::: "Get docker tags" "" "    %~n0 tags [image_name]"
-:::: "no bash.exe found, need install git for windows, and add it in environment variabl"
-:3rd\tags
-    for %%a in (bash.exe) do if "%%~$path:a"=="" exit /b 1
-    for /f "usebackq tokens=2,4 " %%a in (
-        `bash.exe -c 'curl https://index.docker.io/v1/repositories/%1/tags 2^>nul ^^^| sed -e "s/\}, /\n/g;s/,//g;s/\}\]//g"`
-    ) do echo %%~a %1:%%~b
-    exit /b 0
+REM ::: "Get docker tags" "" "    %~n0 tags [image_name]"
+REM :::: "no bash.exe found, need install git for windows, and add it in environment variabl"
+REM :3rd\tags
+REM     for %%a in (bash.exe) do if "%%~$path:a"=="" exit /b 1
+REM     for /f "usebackq tokens=2,4 " %%a in (
+REM         `bash.exe -c 'curl https://index.docker.io/v1/repositories/%1/tags 2^>nul ^^^| sed -e "s/\}, /\n/g;s/,//g;s/\}\]//g"`
+REM     ) do echo %%~a %1:%%~b
+REM     exit /b 0
 
 ::: "VirtualBox Manage" "" "usage: %~n0 vbox [args] [[vm_name]]" "" "    start       Start VM by name" "    stop/save   Stop VM by name" "    stopAll     Stop all vm"
 :::: "need install vbox" "No eula text found"

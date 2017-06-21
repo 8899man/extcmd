@@ -112,10 +112,7 @@ _3rd_gitbak() {
 ### Get docker tags #Usage: tags [image_name]
 _3rd_tags() {
     [ "$1" ] || exit 1; # args is empty
-    local tags=`curl https://index.docker.io/v1/repositories/$1/tags 2>/dev/null`;
-    tags=${tags/\}]/};
-    tags=${tags//\"/};
-    printf "${tags//\},/$IFS}" | sed "s/,//g" | awk '{print $2" '$1':"$4}'
+    curl -Ls https://index.docker.io/v1/repositories/$1/tags | perl -pe 's/[\[{" }\]]//g;s/,/\n/g' | grep name | awk -F: '{print "'$1':"$2}';
     return 0
 }
 
