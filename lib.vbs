@@ -501,9 +501,10 @@ Function lib_log(format)
 
     Set Sb = CreateObject("System.Text.StringBuilder")
     Set StdIn = WScript.StdIn
+    Set StdOut = WScript.StdOut
     Do While Not StdIn.AtEndOfStream
         Sb.AppendFormat_4 format, Array(now())
-        printLine Sb.ToString() & StdIn.ReadLine
+        StdOut.WriteLine Sb.ToString() & StdIn.ReadLine
         Sb.Length = 0
     Loop
 End Function
