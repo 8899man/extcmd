@@ -185,6 +185,9 @@ lib.cmd
         lip             Show Ipv4
                         显示本机 IP。
 
+        log             Tag date time each line
+                        给输出添加日志标记。
+
         MD5             Print or check MD5 (128-bit) checksums.
                         计算文件 MD5。
 
@@ -343,6 +346,9 @@ lib.vbs
 
         inftrim         Trim *.inf text for drivers
                         处理驱动用 inf 文件。
+
+        log             Tag date time each line
+                        给输出添加日志标记。
 
         print
 

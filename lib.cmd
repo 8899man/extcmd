@@ -1108,7 +1108,7 @@ REM if /i "%~x1"==".vbs" screnc.exe %1 ./%~n1.vbe
     ) else cscript.exe //nologo "%%~$path:a" %* 2>&3 || exit /b 10
     goto :eof
 
-::: "Tag date time each line" "" "usage: [command] | %~n0 log [strftime format]"
+::: "Tag date time each line" "" "usage: %~n0 log [strftime format]"
 :lib\log
     call :lib\vbs log %*
     goto :eof
