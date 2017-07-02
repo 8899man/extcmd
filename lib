@@ -771,7 +771,7 @@ lib_inum() {
 
 ### Tag date time each line #Usage: [command] | log [strftime format]
 lib_log() {
-    # gawk '{print strftime("'"$1"'")" "$0}'
+    # gawk '{print strftime("'"$1"'") $0}'
     perl -ne 'use POSIX qw(strftime); print strftime("'"$1"'", localtime), $_'
 }
 
