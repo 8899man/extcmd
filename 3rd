@@ -180,7 +180,7 @@ _3rd_play() {
         case "$1" in
             -*maxdepth | -d)
                 lib inum $2 && {
-                    maxdepth="-maxdepth $1";
+                    maxdepth="-maxdepth $2";
                     shift
                 } || exit 1; # max depth must be a number
             ;;
