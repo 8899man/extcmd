@@ -377,6 +377,9 @@ lib     (shell script)
         aapp            Allow all app install
                         允许 mac 安装任意应用。
 
+        caps            Convert upper case
+                        转换成大写。
+
         cd2i            Convert a DMG file to ISO
                         将 DMG 文件转换为 ISO 格式。
 
@@ -388,9 +391,6 @@ lib     (shell script)
 
         dhms            Format Unix timestamp to ??d ??h ??m ??s
                         格式化数字。
-
-        garri           Get array index
-                        通过值获得数组索引。
 
         gmd5pw          Get password for stdin chpasswd -e
                         获得 chpasswd 命令支持密码编码。
@@ -404,6 +404,9 @@ lib     (shell script)
                         当监听结束后，脚本不会退出，会持续跟踪文件的下载状态，直到所有 app 都下载完成。
                         你可以随时使用 control + C 退出此命令。新启动的 gpkg 命令会处理上次遗留的 app。
                         （未来会加入下载失败的提示）
+
+        gxmlv           Get xml value
+                        获得 xml 标签中的值。
 
         hid             Hidden file/directory
                         显示或隐藏文件。
@@ -437,8 +440,14 @@ lib     (shell script)
         pubrsa          Copy rsa public key to remote
                         将本地的公钥上传至远端。
 
+        rand            Print random string match [A-Za-z0-9]
+                        获得随机字符串。
+
         rboot           Rebuild boot file
                         重新建立启动文件。
+
+        rtar            remote tar
+                        远端 tar。
 
         scpp            Auto scp with password
 
@@ -452,20 +461,11 @@ lib     (shell script)
         tailto          save tail n line
                         保留文件的最后 n 行。
 
-        trspace         Replace all space to one space
-                        将多个空格替换成一个。
-
-        trxml           Get xml without annotations
-                        去掉 xml 中的注释。
-
         udf             Create ISO by directory
                         从文件夹新建 iso 文件。
 
         unascii         Print text not in ASCII char
                         输出非 ASCII 字符。
-
-        upp             Convert uppercase
-                        将字符转换为大写。
 
         vnc             Connect vnc server
                         链接 vnc 服务端。

@@ -647,18 +647,27 @@ lib_hosts() {
 
 }
 
-### Get xml without annotations #Usage: trxml [text_file_path]
-lib_trxml() {
-    [ -f "$1" ] || exit 1; # File not found
-    awk '/<!--/{i++}/-->/{i--}!i&&!/-->/&&!/^$/' "$1"
+# ### Get xml without annotations #Usage: gxmltr [text_file_path]
+# lib_gxmltr() {
+#     awk '/<!--/{i++}/-->/{i--}!i&&!/-->/&&!/^$/' "$@"
+# }
+
+### Get xml value #Usage: gxmlv [tag_name]
+lib_gxmlv() {
+    [ "$1" ] || exit 1; # Args is empty
+    # grep -oP '(?<=\>)[\d\w_]+(?=\<\/'$1')' && return 0;
+    perl -ne 'STDOUT->autoflush; print m/(?<=\>)[\d\w_]+(?=\<\/'"$1"')/g, "\n"' && return 0;
+    return 1
 }
 
-### Replace all space to one space #Usage: trspace [text_file_path]
-lib_trspace() {
-    [ "`uname`" == "Linux" ] || exit 1; # Only support Linux
-    [ -f "$1" ] || exit 1; # File not found
-    sed -r ':1;N;$!b1;s/\s+/ /g' "$1"
-}
+# ### Replace all space to one space #Usage: trspace [text_file_path]
+# lib_trspace() {
+#     [ -f "$1" ] || exit 1; # File not found
+#     [ "`uname`" == "Linux" ] && {
+#         sed -r ':1;N;$!b1;s/\s+/ /g' "$1"
+#         :
+#     } || perl -i -pe 's/\s+/ /g' "$1"
+# }
 
 ### Test string is ipv4 #Usage: iipv4 [str]
 lib_iipv4() {
@@ -694,14 +703,6 @@ lib_vnc() {
     lib_iipv4 $1 || exit 1; # Args not a ipv4
     open vnc://$1;
     return 0
-}
-
-### Get array index #Usage: graai [arr_var_name] [arr_value]
-lib_garri() {
-    [ "`uname`" == "Linux" ] || exit 1; # Only support Linux
-    [ "$1" ] || exit 1; # Args is empty
-    set | grep -E "^$1=\(" | grep -oP "(?<=\[)\d+(?=\]=\"\Q`sed 's/"/\\\&/g' <<< "$2"`\E\")" && return 0;
-    return 1
 }
 
 ### Get password for stdin chpasswd -e #Usage: gmd5pw [passwd_str]
@@ -771,6 +772,7 @@ lib_inum() {
 
 ### Tag date time each line #Usage: [command] | log [strftime format]
 lib_log() {
+    [ "$1" ] || exit 1; # Args is empty
     # gawk '{print strftime("'"$1"'") $0}'
     perl -ne 'use POSIX qw(strftime); print strftime("'"$1"'", localtime), $_'
 }
