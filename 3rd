@@ -215,7 +215,7 @@ _3rd_play() {
 
     [ ${#media[@]} == 0 ] && exit 1; # media file not found
 
-    regex='avi|divx|flv|mkv|mp4|mpg|rm|rmvb|wmv|alac|ape|flac|m4a|mp3|ogg|tta|tak|wav|wma';
+    regex='avi|divx|flv|mkv|mp4|mpg|rm|rmvb|vob|wmv|alac|ape|flac|m4a|mp3|ogg|tta|tak|wav|wma';
 
     [ "`uname`" == "Darwin" ] && {
         ext='-E';
@@ -235,6 +235,9 @@ _3rd_play() {
                         list[$ran]="$line"
                     } || list[$i]="$line"
                 done < <(find $ext "$a" $maxdepth -type f -iregex $regex);
+
+                [ ${#list[@]} == 0 ] && exit 1; # media file not found
+
                 # play
                 for i in `seq 0 $i`; do
                     _title "#$((i + 1)) / ${#list[@]}, RANDOM" ${list[$((i + 1))]};
@@ -265,6 +268,9 @@ _3rd_play() {
                 while read line; do
                     list[${#list[@]}]="$line"
                 done < <(find $ext "$a" $maxdepth -type f -iregex $regex | sort);
+
+                [ ${#list[@]} == 0 ] && exit 1; # media file not found
+
                 i=$((${#list[@]} - 1));
                 [ $skip -gt $i ] && exit 1; # skip out of bound
                 for i in `seq $skip $i`; do
@@ -289,7 +295,7 @@ _title() {
 # for _3rd_play
 _ffplay() {
     case "`lib caps -l ${1##*.}`" in
-        avi|divx|flv|mkv|mp4|mpg|rm|rmvb|wmv)
+        avi|divx|flv|mkv|mp4|mpg|rm|rmvb|vob|wmv)
             # -ac 2 #ED..A... set number of audio channels (from 0 to INT_MAX) (default 0) #Convert the 5.1 track to stereo
             # -sn #disable subtitling
             ffplay -hide_banner $stream_specifier -ac 2 -sn -autoexit "$1";
