@@ -38,6 +38,11 @@ Function lib_sleep(ms)
     WScript.Sleep ms
 End Function
 
+''' Run some command at background 'Usage: lib vbhide "[command]"
+Function lib_vbhide(command)
+    CreateObject("WScript.Shell").Run command, vbhide
+End Function
+
 ''' Download and save 'Usage: lib get [url] [output_path]
 Function lib_get(url, output)
     Set htt = gXmlHttp()

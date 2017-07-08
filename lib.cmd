@@ -1091,9 +1091,10 @@ REM for head tail
 
 ::: "Run some command at background"
 :::: "The first parameter is empty"
-:lib\dobg
+:lib\vbhide
     if "%~1"=="" exit /b 1
-    mshta.exe VBScript:CreateObject("WScript.Shell").Run("""%~1"" %~2", 0)(Window.close)
+    REM mshta.exe VBScript:CreateObject("WScript.Shell").Run("""%~1"" %~2", 0)(Window.close)
+    call :lib\vbs vbhide "%~1"
     exit /b 0
 
 REM screnc.exe from http://download.microsoft.com/download/0/0/7/0073477f-bbf9-4510-86f9-ba51282531e3/sce10en.exe

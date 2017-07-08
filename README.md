@@ -98,9 +98,6 @@ lib.cmd
         centiTime       Calculating time intervals, print use time
                         输出执行时间。在从第二次开始输出距离上次执行的时间。
 
-        dobg            Run some command at background
-                        隐藏执行命令。
-
         download        Download something
                         下载文件。
 
@@ -245,6 +242,9 @@ lib.cmd
 
         uset            Unset variable, where variable name left contains
                         批量清空变量，从左匹配变量名。
+
+        vbhide          Run some command at background
+                        隐藏执行命令。
 
         vbs             Run VBScript library from lib.vbs
                         执行 lib.vbs 中的函数。
