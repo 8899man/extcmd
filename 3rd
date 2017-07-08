@@ -160,7 +160,7 @@ _3rd_dockers() {
 _3rd_2flac() {
     local regex='alac|ape|m4a|tta|tak|wav';
     which ffmpeg >/dev/null 2>&1 || exit 1; # ffmpeg command not found
-    [ "`uname`" == "Darwin" ] && {
+    [[ $OSTYPE == darwin* ]] && {
         find -E -type f -iregex '.*\.('$regex')$' -exec ffmpeg -hide_banner -i {} -acodec flac {}.flac \; || :
     } || {
         find -type f -iregex '.*\.\('${regex//\|/\\|}'\)$' -exec ffmpeg -hide_banner -i {} -acodec flac {}.flac \; || :
@@ -217,7 +217,7 @@ _3rd_play() {
 
     regex='avi|divx|flv|mkv|mp4|mpg|rm|rmvb|vob|wmv|alac|ape|flac|m4a|mp3|ogg|tta|tak|wav|wma';
 
-    [ "`uname`" == "Darwin" ] && {
+    [[ $OSTYPE == darwin* ]] && {
         ext='-E';
         regex='.*\.('$regex')$'
     } || regex='.*\.\('${regex//\|/\\|}'\)$'
@@ -313,7 +313,7 @@ _ffplay() {
 _3rd_lcam() {
     which ffmpeg >/dev/null 2>&1 || exit 1; # ffmpeg command not found
     local dev
-    [ "`uname`" == "Darwin" ] && dev=avfoundation || dev=x11grab;
+    [[ $OSTYPE == darwin* ]] && dev=avfoundation || dev=x11grab;
     ffmpeg -hide_banner -f $dev -list_devices true -i "" 2>&1 | grep \]
 }
 
@@ -338,7 +338,7 @@ _3rd_scam() {
             exit 1; # Args not support
         ;;
     esac
-    [ "`uname`" == "Darwin" ] && dev=avfoundation || dev=x11grab;
+    [[ $OSTYPE == darwin* ]] && dev=avfoundation || dev=x11grab;
 
     # Supported pixel formats:
     #     uyvy422
