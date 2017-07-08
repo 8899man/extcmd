@@ -37,7 +37,7 @@
 
 ### Convert a DMG file to ISO #Usage: cd2i [dmg_file_path]
 lib_cd2i() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     [ -f "$1" ] || exit 1; # dmg file not found
     [ "${1##*.}" == "dmg" ] || exit 1; # file not dmg
     hdiutil convert "$1" -format UDTO -o "${0%.*}.iso";
@@ -46,7 +46,7 @@ lib_cd2i() {
 
 ### Convert an ISO file to DMG format #Usage: ci2d [iso_file_path]
 lib_ci2d() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     [ -f "$1" ] || exit 1; # iso file not found
     [ "${1##*.}" == "iso" ] || exit 1; # file not iso
     hdiutil convert "$1" -format UDRW -o "${0%.*}.dmg";
@@ -55,7 +55,7 @@ lib_ci2d() {
 
 ### Create ISO by directory #Usage: udf [dir_path]
 lib_udf() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     [ -d "$1" ] || exit 1; # directory not found
     # hdiutil makehybrid -iso -joliet -o win8.iso win8.cdr
     hdiutil makehybrid -udf -udf-version 1.02 -o "$1.iso" "$1";
@@ -64,7 +64,7 @@ lib_udf() {
 
 ### Get apk file from AppStore #Usage: gpkg [[countdown_sec]] #    1. Login AppStore and Install App #    2. Run this command before download complete #    3. Keep shell open
 lib_gpkg() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     [ `ps -ef | grep -c "${0##*/} gpkg"` -gt 3 ] && exit 1; # gpkg command is already running
 
     local i anchor pkg=() tmp=/private/var/tmp countdown=$((${1-1} * 60)) sec_on=`date +%s`;
@@ -167,7 +167,7 @@ lib_dhms() {
 
 ### Create instatll media, by Install*.app #Usage: cim [device_path]
 lib_cim() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     [ -d "$1" ] || exit 1; # target device not found
     local src;
     while read src; do
@@ -181,7 +181,7 @@ lib_cim() {
 
 ### Write img to disk #Usage: sdd [img_path] [disk_path] #       e.g. sdd /Volumes/Macintosh\\ HD/docker.img /dev/disk2 #       e.g. iof /Volumes/Macintosh\\ HD/docker.img.gz /Volumes/1
 lib_sdd() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     # caller 0;
     [ -f "$1" ] || exit 1; # img file not found
     local target i j k l;
@@ -265,7 +265,7 @@ Host    $host
 
 ### Rebuild boot file #Usage: rboot [dir_path]
 lib_rboot() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     [ -f "$1/com.apple.recovery.boot/kernelcache" ] || exit 1; # Boot file not found
     sudo bless --folder "$1/com.apple.recovery.boot" --label "Recovery HD";
     # 426F6F74-0000-11AA-AA11-00306543ECAC
@@ -363,7 +363,7 @@ rcato() {
 
 ### Hidden file | directory #Usage: hid [yes|no]
 lib_hid() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     [ "$1" == "yes" -o "$1" == "no" ] || exit 1; # must select 'yes' or 'no'
     defaults write com.apple.finder AppleShowAllFiles $1;
     return 0
@@ -371,7 +371,7 @@ lib_hid() {
 
 ### No hidden directory #Usage: nohid [dir_path]
 lib_nohid() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     [ -d "$1" ] || exit 1; # target not found or not directory
     chflags nohidden "$1"/*;
     return 0
@@ -379,7 +379,7 @@ lib_nohid() {
 
 ### Allow all app install
 lib_aapp() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     sudo spctl --master-disable;
     return 0
 }
@@ -428,10 +428,12 @@ lib_caps() {
 ### Search IPv4 by MAC or Host name #Usage: sip [mac_addr] #    support alias, see lib hosts
 lib_sip() {
     [ "$1" ] || exit 1; # MAC addr or Host name is empty
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
 
     # Clear arp cache
-    sudo arp -ad >/dev/null 2>&1 || return 1;
+    [[ $OSTYPE == darwin* ]] && {
+        sudo arp -ad >/dev/null 2>&1 || return 1;
+        :
+    } || arp -n | awk 'NR>1 {system("arp -d "$1)}' || return 1;
 
     local i j l=0 r mac macs=() range route_ip;
 
@@ -512,7 +514,11 @@ lib_sip() {
     # destroy thread valve
     thread_valve -d;
     # clear arp cache
-    sudo arp -ad >/dev/null 2>&1
+    [[ $OSTYPE == darwin* ]] && {
+        sudo arp -ad >/dev/null 2>&1 || return 1;
+        :
+    } || arp -n | awk 'NR>1 {system("arp -d "$1)}' || return 1;
+
 }
 
 
@@ -699,7 +705,7 @@ imac() {
 
 ### Connect vnc server #Usage: vnc [ipv4][:[port]] #server listening port 5900
 lib_vnc() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     lib_iipv4 $1 || exit 1; # Args not a ipv4
     open vnc://$1;
     return 0
@@ -779,7 +785,7 @@ lib_log() {
 
 ### Plist editer #Usage: plist [--xml|-x|--json|-j|--binary|-b] [path...]
 lib_plist() {
-    [ "`uname`" == "Darwin" ] || exit 1; # Only support OS X (macOS)
+    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     which plutil >/dev/null 2>&1 || xcode-select --install 2>/dev/null
     [ "${2##*.}" == "plist" ] || exit 1; # file format not support
     case $1 in
@@ -916,6 +922,7 @@ BKDRHash (){
         h=$((seed * h + $i));
     done;
     # 2^63-1 = 0x7FFFFFFFFFFFFFFF
+    # 2^31-1 = 0x7FFFFFFF
     printf $((($h & 0x7FFFFFFFFFFFFFFF) % 0x7FFFFFFFFFFFFF + (${2:-0} & 0xFF) * 0x7FFFFFFFFFFFFF))
     # printf $(($h & 0xF))
 }
@@ -977,7 +984,7 @@ BKDRHash (){
 # Offset map, variable: MAP_OFFSET MAP_ENTRY
 offset_map() {
     [ "$1" ] || return 1;
-    local i h k o=0;
+    local i h k o=0 entry;
     case $1 in
         --put | -p)
             [ $# -ge 3 -a ${#2} != 0 -a ${#3} != 0 ] || return 2;
@@ -992,10 +999,11 @@ offset_map() {
                 for ((i=0; i<${#k[@]}; i+=2))
                 do
                     # If key aleady in, update value
-                    [ "${MAP_ENTRY[$h]:$o:${k[$i]}}" == "$2" ] && {
+                    entry=${MAP_ENTRY[$h]};
+                    [ "${entry:$o:${k[$i]}}" == "$2" ] && {
                         ((o += ${k[$i]}));
                         # [left]$3[right]
-                        MAP_ENTRY[$h]="${MAP_ENTRY[$h]:0:$o}$3${MAP_ENTRY[$h]:$o + ${k[$i + 1]}}";
+                        MAP_ENTRY[$h]="${entry:0:$o}$3${entry:$o + ${k[$i + 1]}}";
                         # after value update
                         k[$i + 1]=${#3};
                         MAP_OFFSET[$h]="${k[@]}";
@@ -1016,8 +1024,9 @@ offset_map() {
             [ "${MAP_OFFSET[$h]}" ] || return 1;
             k=(${MAP_OFFSET[$h]});
             if [ ${#k[@]} == 2 ]; then
-                [ "${MAP_ENTRY[$h]:0:$k}" == "$2" ] && {
-                    REPLY="${MAP_ENTRY[$h]:$k}";
+                entry=${MAP_ENTRY[$h]};
+                [ "${entry:0:$k}" == "$2" ] && {
+                    REPLY="${entry:$k}";
                     # --get | -g || --remove | -r
                     [ "${1/-g/}" != "$1" ] && printf "$REPLY" || {
                         unset MAP_OFFSET[$h] MAP_ENTRY[$h];
@@ -1028,12 +1037,13 @@ offset_map() {
             elif [ ${#k[@]} -gt 2 ]; then
                 for ((i=0; i<${#k[@]}; i+=2))
                 do
+                    entry=${MAP_ENTRY[$h]};
                     # If key aleady in, update
-                    [ "${MAP_ENTRY[$h]:$o:${k[$i]}}" == "$2" ] && {
-                        REPLY="${MAP_ENTRY[$h]:$o + ${k[$i]}:${k[$i + 1]}}";
+                    [ "${entry:$o:${k[$i]}}" == "$2" ] && {
+                        REPLY="${entry:$o + ${k[$i]}:${k[$i + 1]}}";
                         # --get | -g || --remove | -r
                         [ "${1/-g/}" != "$1" ] && printf "$REPLY" || {
-                            MAP_ENTRY[$h]="${MAP_ENTRY[$h]:0:$o}${MAP_ENTRY[$h]:$o + ${k[$i]} + ${k[$i + 1]}}";
+                            MAP_ENTRY[$h]="${entry:0:$o}${entry:$o + ${k[$i]} + ${k[$i + 1]}}";
                             unset k[$i] k[$i+1];
                             MAP_OFFSET[$h]="${k[@]}";
                             ((--MAP_ENTRY[0x7FFFFFFFFFFFFFFF - (${3:-0} & 0xFF)]))
@@ -1074,7 +1084,10 @@ offset_map() {
                         k=(${MAP_OFFSET[$h]}) o=0;
                         for l in ${k[@]};
                         do
-                            [ $((r++ % 2)) == 0 ] && REPLY[${#REPLY[@]}]="${MAP_ENTRY[$h]:$o:$l}";
+                            [ $((r++ % 2)) == 0 ] && {
+                                entry=${MAP_ENTRY[$h]};
+                                REPLY[${#REPLY[@]}]="${entry:$o:$l}";
+                            }
                             ((o += $l));
                         done
                     done
@@ -1086,7 +1099,10 @@ offset_map() {
                         k=(${MAP_OFFSET[$h]}) o=0;
                         for l in ${k[@]};
                         do
-                            [ $((r++ % 2)) == 1 ] && REPLY[${#REPLY[@]}]="${MAP_ENTRY[$h]:$o:$l}";
+                            [ $((r++ % 2)) == 1 ] && {
+                                entry=${MAP_ENTRY[$h]};
+                                REPLY[${#REPLY[@]}]="${entry:$o:$l}";
+                            }
                             ((o += $l));
                         done
                     done
@@ -1098,7 +1114,8 @@ offset_map() {
                         k=(${MAP_OFFSET[$h]}) o=0;
                         for i in ${k[@]};
                         do
-                            REPLY[${#REPLY[@]}]="${MAP_ENTRY[$h]:$o:$i}";
+                            entry=${MAP_ENTRY[$h]};
+                            REPLY[${#REPLY[@]}]="${entry:$o:$i}";
                             ((o += $i));
                         done
                     done
@@ -1278,7 +1295,7 @@ load_ini() {
         elif [ $tag ]; then
             _map -p ${l%=*} ${l#*=} $2
         fi
-    done < <(cat ${0%/*}/.*ini ~/.*ini 2>/dev/null | awk -F';' '{print $1}');
+    done < <(cat ${0%/*}/.*ini ~/.*ini 2>/dev/null | awk -F';' 'gsub(/\r/,"",$1);{print $1}' | uniq);
 
     # # read environment variable
     # while read l tag;
