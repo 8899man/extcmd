@@ -62,6 +62,26 @@ lib_udf() {
     return 0
 }
 
+### Cursor #Usage: cur [-|+]
+lib_cur() {
+    case $1 in
+        -|--hide)
+            printf '\033[?25l'
+        ;;
+        +|--show)
+            printf '\033[?25h'
+        ;;
+        "")
+            local p=;
+            printf '\e[6n';read -sdR p;
+            printf "${p#*[}\n"
+        ;;
+        *)
+            exit 1; # args not support
+        ;;
+    esac
+}
+
 ### Get apk file from AppStore #Usage: gpkg [[countdown_sec]] #    1. Login AppStore and Install App #    2. Run this command before download complete #    3. Keep shell open
 lib_gpkg() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
@@ -237,24 +257,19 @@ lib_own() {
 
 ### Copy rsa public key to remote #Usage: pubrsa [[user@]host] [[alias]]
 lib_pubrsa() {
-    [ "$1" ] || exit 1; # first args is empty
+     [ "$1" ] || exit 1; # first args is empty
     local rsa_pub;
-    rsa_pub=`cat ~/.ssh/id_rsa$2.pub 2>/dev/null` || {
-        ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa$2;
-        rsa_pub=`cat ~/.ssh/id_rsa$2.pub 2>/dev/null` || exit 1; # Unknown Error
-    };
-    ssh $1 <<-SH
-    mkdir ~/.ssh 2>/dev/null;
-    echo "$rsa_pub" >> ~/.ssh/authorized_keys;
-    chmod 600 ~/.ssh/authorized_keys;
-    chmod 700 ~/.ssh
-SH
+    [ -s ~/.ssh/id_rsa$2.pub ] || ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa$2;
+    printf %s 'mkdir ~/.ssh 2>/dev/null;
+printf %s "'`cat ~/.ssh/id_rsa$2.pub 2>/dev/null`'" >> ~/.ssh/authorized_keys;
+chmod 600 ~/.ssh/authorized_keys;
+chmod 700 ~/.ssh
+' | ssh $1 bash || exit 1; # Unknown Error
 
-    local host=${1#*@} user
-    [ "$host" == "$1" ] && user=${1%@*} || user=$USER
+    local host=${1#*@} user;
+    [ "$host" == "$1" ] && user=${1%@*} || user=$USER;
 
-    printf %s "
-Host    $host
+    printf %s "Host    $host
     HostName        $host
     Port            22
     User            $user
@@ -588,8 +603,7 @@ thread_valve() {
 # }
 
 hosts() {
-    printf %s '
-##
+    printf %s '##
 # Host Database
 #
 # localhost is used to configure the loopback interface
@@ -1295,7 +1309,7 @@ load_ini() {
         elif [ $tag ]; then
             _map -p ${l%=*} ${l#*=} $2
         fi
-    done < <(cat ${0%/*}/.*ini ~/.*ini 2>/dev/null | awk -F';' 'gsub(/\r/,"",$1);{print $1}' | uniq);
+    done < <(cat ${0%/*}/.*ini ~/.*ini 2>/dev/null | awk -F\; 'gsub(/\r/,"",$1);{print $1}' | uniq);
 
     # # read environment variable
     # while read l tag;
