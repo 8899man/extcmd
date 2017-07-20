@@ -87,7 +87,7 @@ lib_gpkg() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     [ `ps -ef | grep -c "${0##*/} gpkg"` -gt 3 ] && exit 1; # gpkg command is already running
 
-    local i anchor pkg=() tmp=/private/var/tmp countdown=$((${1-1} * 60)) sec_on=`date +%s`;
+    local i anchor count_cache=0 pkg=() tmp=/private/var/tmp countdown=$((${1-1} * 60)) sec_on=$(date +%s);
 
     {
 
@@ -113,7 +113,7 @@ lib_gpkg() {
         [ ${#pkg[@]} -gt 0 ] && for i in ${!pkg[@]};
         do
             # Alleady complete
-            [ "${pkg[i]%/*}" == "$tmp" ] && {
+            [ "${pkg[$i]%/*}" == "$tmp" ] && {
                 pkg_complete "${pkg[$i]}" &
                 unset pkg[$i];
                 continue
@@ -123,7 +123,7 @@ lib_gpkg() {
 
             # Add hard link
             [ -f "$anchor" ] || {
-                ln "${pkg[$i]}" "$anchor" && printf "Add \033[4m${pkg[i]##*/}\033[0m.\n"
+                ln "${pkg[$i]}" "$anchor" && printf "Add \033[4m${pkg[i]##*/}\033[0m.\n";
             };
 
             # Download complete
@@ -133,11 +133,12 @@ lib_gpkg() {
             };
         done;
 
-        # Timing
-        i=$((`date +%s` - $sec_on));
-        [ $((countdown % 10)) == 0 ] && printf "Count: ${#pkg[@]}, UseTime: `lib_dhms $i`\n";
+        [ ${count_cache} != ${#pkg[@]} ] && {
+            printf "Count: ${#pkg[@]}\n";
+            count_cache=${#pkg[@]}
+        };
 
-        sleep 2;
+        sleep 1;
     done;
 
     } | lib_log "%F %T, GPKG, "
@@ -159,18 +160,42 @@ pkg_serial_number() {
 # hash and move to ~/Downloads
 pkg_complete() {
     [ -f "$1" ] || return 1;
-    local NL="${IFS}        " hcode tmp=$((`date +%s` - $sec_on));
-    hcode="${1##*/}${NL}SIZE: `du -h "$1" | awk '{print $1}'`${NL}TIME: `lib_dhms $tmp`";
-    tmp=`openssl dgst -md5 "$1"` && hcode+="${NL}MD5:${tmp##*=}"; # Hash md5
-    tmp=`openssl dgst -sha1 "$1"` && hcode+="${NL}SHA1:${tmp##*=}"; # Hash sha1
-    tmp=`openssl dgst -sha256 "$1"` && hcode+="${NL}SHA256:${tmp##*=}"; # Hash sha256
-    printf "$hcode\n";
-    mv "$1" ~/Downloads 2>/dev/null || {
-        cp "$1" ~/Downloads && printf "\033[31m$1 still exist\033[0m\n"
-    }
+    local name=${1##*/};
+    name=${name#*_};
+    name=${name%.*};
+
+    {
+        printf "NAME: ${1##*/}\n";
+        printf "SIZE: ";
+        du -h "$1" | awk '{print $1}'
+        printf "TIME: ";
+        lib_dhms $(($(date +%s) - $sec_on));
+        lib_hash "$1"
+        mv "$1" ~/Downloads 2>/dev/null || {
+            cp "$1" ~/Downloads && printf "\033[31m$1 still exist\033[0m\n"
+        }
+    } | awk '{print "'"${name:0:8}, "'"$0;fflush(stdout)}'
+
 }
 
-### Format Unix timestamp to ??d ??h ??m ??s #dhms [secends]
+### Print md5 sha1 sha256 checksums #Usage: hash [file_path]
+lib_hash() {
+    which openssl >/dev/null 2>&1 || exit 1; # openssl command not found
+    local h="$(
+        {
+            [ -f "$1" ] && {
+                cat "$1" | tee >(openssl dgst -sha1 >&2) >(openssl dgst -md5 >&2) | openssl dgst -sha256;
+                :
+            } || tee >(openssl dgst -sha1 >&2) >(openssl dgst -md5 >&2) | openssl dgst -sha256;
+        } 2>&1
+    )";
+    h="${h/(stdin)=/MD5:}";
+    h="${h/(stdin)=/SHA1:}";
+    h="${h/(stdin)=/SHA256:}";
+    printf "$h\n"
+}
+
+### Format Unix timestamp to ??d ??h ??m ??s #Usage: dhms [secends]
 lib_dhms() {
     [ $# == 1 ] || exit 1; # Args error
     lib_inum $1 || exit 1; # Not number
