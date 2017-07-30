@@ -644,22 +644,6 @@ REM     exit /b 0
     endlocal & set \\\centiTime=%\\\tmp%
     exit /b 0
 
-::: "Show Ipv4"
-:lib\lip
-    setlocal
-    REM Get router ip
-    call :this\grouteIp \\\route
-    REM "
-    for %%a in (
-        %\\\route%
-    ) do for /f usebackq^ skip^=1^ tokens^=2^ delims^=^" %%b in (
-        `wmic.exe NicConfig get IPAddress`
-    ) do if "%%~nb"=="%%~na" echo %%b
-    endlocal
-    exit /b 0
-
-
-
 ::: "Update hosts by ini"
 :::: "no ini file found"
 :lib\hosts
@@ -670,7 +654,7 @@ REM     exit /b 0
     call :map -ks \\\keys 1
     REM override mac to ipv4
     for /f "usebackq tokens=1*" %%a in (
-        `call lib.cmd sip %\\\keys%`
+        `call lib.cmd ip -f %\\\keys%`
     ) do call :map -p %%a %%b 1 && call :lib\2la %%~a %%b
 
     REM replace hosts in cache
@@ -704,9 +688,29 @@ REM     exit /b 0
     endlocal
     goto :eof
 
-::: "Search IPv4 by MAC or Host name" "" "usage: %~n0 sip [mac]"
-:::: "MAC addr or Host name is empty" "args not mac addr"
-:lib\sip
+::: "Ipv4" "" "usage: %~n0 ip [option]" "-l         Show this ipv4" "-f [MAC]   Search IPv4 by MAC or Host name"
+:::: "MAC addr or Host name is empty" "args not mac addr" "args is empty"
+:lib\ip
+    if "%~1"=="" exit /b 3
+    call :this\ip\%* 2>nul
+    goto :eof
+
+:this\ip\-l
+:this\ip\--list
+    setlocal
+    REM Get router ip
+    call :this\grouteIp \\\route
+    REM "
+    for %%a in (
+        %\\\route%
+    ) do for /f usebackq^ skip^=1^ tokens^=2^ delims^=^" %%b in (
+        `wmic.exe NicConfig get IPAddress`
+    ) do if "%%~nb"=="%%~na" echo %%b
+    endlocal
+    exit /b 0
+
+:this\ip\-f
+:this\ip\--find
     if "%~1"=="" exit /b 1
     setlocal enabledelayedexpansion
 
@@ -759,14 +763,14 @@ REM     exit /b 0
         %\\\range:-=,1,%
     ) do (
         call :this\thread_valve 50 cmd.exe ping
-        start /b lib.cmd "" sip %%~na.%%b %\\\macs%
+        start /b lib.cmd "" ip\--find %%~na.%%b %\\\macs%
     )
     endlocal
     exit /b 0
 
 REM nbtstat
 REM For thread sip
-:thread\sip
+:thread\ip\--find
     REM some ping will fail, but arp success
     ping.exe -n 1 -w 1 %1 >nul 2>nul
     for /f "usebackq skip=3 tokens=1,2" %%a in (

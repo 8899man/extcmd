@@ -325,10 +325,10 @@ REM Start VM
 
 REM Stop VM
 :this\vbox\stop
-:this\vbox\save
+REM :this\vbox\save
     call :vbox\init %1 || exit /b 0
     if defined \\\run\%vm% (
-        VBoxManage.exe controlvm %vm% savestate
+        VBoxManage.exe controlvm %vm% poweroff
     ) else echo %vm% not running...
     exit /b 0
 
@@ -336,7 +336,7 @@ REM Stop All VM
 :this\vbox\stopAll
     for /f "usebackq" %%a in (
         `VBoxManage.exe list runningvms`
-    ) do VBoxManage.exe controlvm %%~a savestate
+    ) do VBoxManage.exe controlvm %%~a poweroff
     echo All vm stop
     exit /b 0
 

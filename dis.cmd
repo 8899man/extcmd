@@ -493,10 +493,8 @@ REM Enable ServicesForNFS
     ) else set \\\name=%~2
 
     REM input args
-    call lib.cmd idir %1 && (
-        set \\\input=%~f1
-    ) || set \\\input=%~dp1
-    if "%\\\input:~-1%"=="\" set \\\input=%\\\input:~0,-1%
+    set "\\\input=%~dp1"
+    set \\\input=%\\\input:~0,-1%
     REM New or Append
     if exist ".\%\\\name%.wim" (set \\\create=Append) else set \\\create=Capture
     REM Create exclusion list
@@ -512,7 +510,7 @@ REM Enable ServicesForNFS
 REM create exclusion list
 :wim\ConfigFile
     if not exist "%~1" exit /b 1
-    call lib.cmd idir %1 && exit /b 2
+    if "%~pnx1"=="\" exit /b 2
     echo [ExclusionList]
     for /f "usebackq delims=" %%a in (
         `dir /a /b "%~dp1"`

@@ -21,7 +21,7 @@ lib gpkg
         截获 AppStore 的原版安装包。完成后会放到 Download 文件夹中。
         (详细信息看 lib shell script 描述)
 
-lib sip
+lib ip -f
 
         Search IPv4 by MAC or Host name
         通过 MAC 地址或别名搜索 IP 。（仅搜索本网段最后 255 个）
@@ -167,6 +167,9 @@ lib.cmd
         inum            Test string if Num
                         测试字符是否是 10 进制整数。
 
+        ip              Ipv4
+                        -f （别名请参考 ini 文本文件格式，放入脚本所在路径或 HOME 路径下）
+
         ipipe           Test script run after pipe
                         测试脚本是否在管道命令之后。
 
@@ -178,9 +181,6 @@ lib.cmd
 
         kill            Kill process
                         关闭进程。
-
-        lip             Show Ipv4
-                        显示本机 IP。
 
         log             Tag date time each line
                         给输出添加日志标记。
@@ -214,10 +214,6 @@ lib.cmd
 
         SHA256          Print or check SHA256 (256-bit) checksums.
                         计算文件 SHA256。
-
-        sip             Search IPv4 by MAC or Host name
-                        通过 MAC 地址或别名，搜索设备 IP。
-                        （别名请参考 ini 文本文件格式，放入脚本所在路径或 HOME 路径下）
 
         skiprint        Print text skip some line
                         跳过指定行输出文件的文本内容到另一个空文本中。
