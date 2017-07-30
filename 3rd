@@ -241,7 +241,7 @@ _3rd_play() {
                 # play
                 for i in `seq 0 $i`; do
                     _title "#$((i + 1)) / ${#list[@]}, RANDOM" ${list[$((i + 1))]};
-                    _ffplay "${list[$i]}"
+                    play_ffplay "${list[$i]}"
                 done
 
                 # # random list
@@ -256,12 +256,12 @@ _3rd_play() {
                 # for i in ${!list[@]}; do
                 #     [ "$line" ] && {
                 #         _title "#$((++ran)) / ${#list[@]}, RANDOM" ${list[$i]};
-                #         _ffplay "${list[$line]}"
+                #         play_ffplay "${list[$line]}"
                 #     };
                 #     line=$i;
                 # done
                 # _title "#$((++ran)) / ${#list[@]}, RANDOM";
-                # _ffplay "${list[$line]}"
+                # play_ffplay "${list[$line]}"
                 :
             } || {
                 list=();
@@ -275,10 +275,10 @@ _3rd_play() {
                 [ $skip -gt $i ] && exit 1; # skip out of bound
                 for i in `seq $skip $i`; do
                     _title "#$((i + 1)) / ${#list[@]}" ${list[$((i + 1))]};
-                    _ffplay "${list[$i]}"
+                    play_ffplay "${list[$i]}"
                 done
             }
-        } || _ffplay "$a"
+        } || play_ffplay "$a"
     done
 }
 
@@ -293,7 +293,7 @@ _title() {
 }
 
 # for _3rd_play
-_ffplay() {
+play_ffplay() {
     case "`lib caps -l ${1##*.}`" in
         avi|divx|flv|mkv|mp4|mpg|rm|rmvb|vob|wmv)
             # -ac 2 #ED..A... set number of audio channels (from 0 to INT_MAX) (default 0) #Convert the 5.1 track to stereo
@@ -309,16 +309,27 @@ _ffplay() {
     esac
 }
 
-### List camera device
-_3rd_lcam() {
-    which ffmpeg >/dev/null 2>&1 || exit 1; # ffmpeg command not found
-    local dev
-    [[ $OSTYPE == darwin* ]] && dev=avfoundation || dev=x11grab;
-    ffmpeg -hide_banner -f $dev -list_devices true -i "" 2>&1 | grep \]
+### Camera tools #Usage: cam [option] [args] # -l          List camera device # -s [video_id] [audio_id] [[size]] Display camera
+_3rd_cam() {
+    case $1 in
+        -l|--list)
+            which ffmpeg >/dev/null 2>&1 || exit 1; # ffmpeg command not found
+            local dev
+            [[ $OSTYPE == darwin* ]] && dev=avfoundation || dev=x11grab;
+            ffmpeg -hide_banner -f $dev -list_devices true -i "" 2>&1 | grep \]
+        ;;
+        -s|--show)
+            shift;
+            cam_show "$@"
+        ;;
+        *)
+            exit 1; # invalid option
+        ;;
+    esac
 }
 
-### Display camera #Usage: scam [video_id] [audio_id] [[size]]
-_3rd_scam() {
+# for _3rd_cam
+cam_show() {
     which ffplay >/dev/null 2>&1 || exit 1; # ffplay command not found
     which lib >/dev/null 2>&1 || exit 1; # lib command not found
     lib inum $1 || exit 1; # first args error

@@ -373,27 +373,20 @@ lib.vbs
 lib     (shell script)
 
         注意权限是否为可执行。
+        cur             Cursor
+                        对光标的操作
 
-        aapp            Allow all app install
-                        允许 mac 安装任意应用。
+        dmg             Create/Convert DMG file
+                        镜像工具
 
-        caps            Convert upper case
-                        转换成大写。
+        encode          Encode string
+                        字符编码
 
-        cd2i            Convert a DMG file to ISO
-                        将 DMG 文件转换为 ISO 格式。
+        files           File / directory tools
+                        文件处理
 
-        ci2d            Convert an ISO file to DMG format
-                        将 ISO 文件转换为 DMG 格式。
-
-        cim             Create instatll device, by OS X DMG
-                        制作 OS X 系统安装盘。
-
-        dhms            Format Unix timestamp to ??d ??h ??m ??s
-                        格式化数字。
-
-        gmd5pw          Get password for stdin chpasswd -e
-                        获得 chpasswd 命令支持密码编码。
+        filter          String filter
+                        字符过滤
 
         gpkg            Get apk file from AppStore
                         截获 AppStore 的原版安装包。完成后会放到 Download 文件夹中。
@@ -405,12 +398,6 @@ lib     (shell script)
                         你可以随时使用 control + C 退出此命令。新启动的 gpkg 命令会处理上次遗留的 app。
                         （未来会加入下载失败的提示）
 
-        gxmlv           Get xml value
-                        获得 xml 标签中的值。
-
-        hid             Hidden file/directory
-                        显示或隐藏文件。
-
         hosts           Update hosts by ini
                         通过 ini 配置文件，自动更新 hosts。
 
@@ -420,52 +407,26 @@ lib     (shell script)
         inum            Test str is num
                         测试字符串是否是数字。
 
-        lip             Show IPv4
-                        显示本机的 ip。
+        ip              Show/find IPv4
+                        显示、查找 ip。
 
         log             Tag date time each line
                         给输出添加日志标记。
 
-        low             Convert lowercase
-                        将字符转换成小写。
-
-        nohid           No hidden directory
-
-        own             Make owner
-                        重置文件夹所有者。
+        oset            OS globle setting
+                        系统全局设置
 
         plist           Plist editer
-                        操作
-
-        pubrsa          Copy rsa public key to remote
-                        将本地的公钥上传至远端。
+                        Plist 操作
 
         rand            Print random string match [A-Za-z0-9]
                         获得随机字符串。
 
-        rboot           Rebuild boot file
-                        重新建立启动文件。
-
-        rtar            remote tar
-                        远端 tar。
-
-        scpp            Auto scp with password
-
-        sdd             Write img to disk
-                        将镜像写入磁盘。
-
-        sip             Search IPv4 by MAC or Host name
-                        通过 MAC 地址或别名，搜索设备 IP。
-                        （别名请参考 ini 文本文件格式，放入脚本所在路径或 HOME 路径下）
-
-        tailto          save tail n line
-                        保留文件的最后 n 行。
+        remote          Remote tools
+                        远程处理工具。
 
         udf             Create ISO by directory
                         从文件夹新建 iso 文件。
-
-        unascii         Print text not in ASCII char
-                        输出非 ASCII 字符。
 
         vnc             Connect vnc server
                         链接 vnc 服务端。

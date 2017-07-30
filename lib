@@ -34,25 +34,6 @@
 #             return 1
 #         }
 
-
-### Convert a DMG file to ISO #Usage: cd2i [dmg_file_path]
-lib_cd2i() {
-    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
-    [ -f "$1" ] || exit 1; # dmg file not found
-    [ "${1##*.}" == "dmg" ] || exit 1; # file not dmg
-    hdiutil convert "$1" -format UDTO -o "${0%.*}.iso";
-    return 0
-}
-
-### Convert an ISO file to DMG format #Usage: ci2d [iso_file_path]
-lib_ci2d() {
-    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
-    [ -f "$1" ] || exit 1; # iso file not found
-    [ "${1##*.}" == "iso" ] || exit 1; # file not iso
-    hdiutil convert "$1" -format UDRW -o "${0%.*}.dmg";
-    return 0
-}
-
 ### Create ISO by directory #Usage: udf [dir_path]
 lib_udf() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
@@ -77,7 +58,7 @@ lib_cur() {
             printf "${p#*[}\n"
         ;;
         *)
-            exit 1; # args not support
+            exit 1; # invalid option
         ;;
     esac
 }
@@ -94,7 +75,7 @@ lib_gpkg() {
     printf "Will listen \033[4m$countdown\033[0m sec.\n";
 
     # Reg hard link from /private/var/tmp
-    pkg_serial_number $tmp;
+    gpkg_serial_number $tmp;
 
     # Infinite loop
     while :; do
@@ -107,14 +88,14 @@ lib_gpkg() {
         [ $countdown == 0 ] && printf "Listening \033[4mstop\033[0m.\n";
 
         # Search download pkg
-        [ $((countdown -= 2)) -ge 0 ] && pkg_serial_number /private/var/folders;
+        [ $((countdown -= 2)) -ge 0 ] && gpkg_serial_number /private/var/folders;
 
         # foreach pkg array
         [ ${#pkg[@]} -gt 0 ] && for i in ${!pkg[@]};
         do
             # Alleady complete
             [ "${pkg[$i]%/*}" == "$tmp" ] && {
-                pkg_complete "${pkg[$i]}" &
+                gpkg_complete "${pkg[$i]}" &
                 unset pkg[$i];
                 continue
             };
@@ -129,7 +110,7 @@ lib_gpkg() {
             # Download complete
             [ -f "${pkg[$i]}" ] || {
                 unset pkg[$i];
-                pkg_complete "$anchor" &
+                gpkg_complete "$anchor" &
             };
         done;
 
@@ -147,8 +128,9 @@ lib_gpkg() {
     wait
 }
 
+# for lib_gpkg
 # Override pkg map: pkg[$serial_number]="$path"
-pkg_serial_number() {
+gpkg_serial_number() {
     local k v;
     while read k v; do
         # Put in map
@@ -157,8 +139,9 @@ pkg_serial_number() {
     return 0
 }
 
+# for lib_gpkg
 # hash and move to ~/Downloads
-pkg_complete() {
+gpkg_complete() {
     [ -f "$1" ] || return 1;
     local name=${1##*/};
     name=${name#*_};
@@ -169,8 +152,8 @@ pkg_complete() {
         printf "SIZE: ";
         du -h "$1" | awk '{print $1}'
         printf "TIME: ";
-        lib_dhms $(($(date +%s) - $sec_on));
-        lib_hash "$1"
+        lib_encode -dhms $(($(date +%s) - $sec_on));
+        lib_files --sums "$1"
         mv "$1" ~/Downloads 2>/dev/null || {
             cp "$1" ~/Downloads && printf "\033[31m$1 still exist\033[0m\n"
         }
@@ -178,54 +161,80 @@ pkg_complete() {
 
 }
 
-### Print md5 sha1 sha256 checksums #Usage: hash [file_path]
-lib_hash() {
-    which openssl >/dev/null 2>&1 || exit 1; # openssl command not found
-    local h="$(
-        {
-            [ -f "$1" ] && {
-                cat "$1" | tee >(openssl dgst -sha1 >&2) >(openssl dgst -md5 >&2) | openssl dgst -sha256;
-                :
-            } || tee >(openssl dgst -sha1 >&2) >(openssl dgst -md5 >&2) | openssl dgst -sha256;
-        } 2>&1
-    )";
-    h="${h/(stdin)=/MD5:}";
-    h="${h/(stdin)=/SHA1:}";
-    h="${h/(stdin)=/SHA256:}";
-    printf "$h\n"
+### Encode string #Usage: encode [option] [args...] # -dhms [secends]    Format Unix timestamp to ??d ??h ??m ??s # -pw   [passwd_str] Get password for stdin chpasswd -e
+lib_encode() {
+    case $1 in
+        -dhms)
+            lib_inum $2 || exit 1; # Not number
+            local out=$(($2 % 60))s;
+            [ $2 -ge 60 ] && {
+                out=$(($2 % 3600 / 60))m\ $out;
+                [ $2 -ge 3600 ] && {
+                    out=$(($2 % 86400 / 3600))h\ $out;
+                    [ $2 -ge 86400 ] && out=$(($2 / 86400))d\ $out
+                }
+            };
+            printf "$out\n"
+        ;;
+        -pw)
+            which openssl >/dev/null 2>&1 || exit 1; # openssl command not found
+            [ "$2" ] || exit 1; # Args is empty
+            openssl passwd -1 "$2"
+        ;;
+        *)
+            exit 1; # invalid option
+        ;;
+    esac
 }
 
-### Format Unix timestamp to ??d ??h ??m ??s #Usage: dhms [secends]
-lib_dhms() {
-    [ $# == 1 ] || exit 1; # Args error
-    lib_inum $1 || exit 1; # Not number
-    local out=$(($1 % 60))s;
-    [ $1 -ge 60 ] && {
-        out=$(($1 % 3600 / 60))m\ $out;
-        [ $1 -ge 3600 ] && {
-            out=$(($1 % 86400 / 3600))h\ $out;
-            [ $1 -ge 86400 ] && out=$(($1 / 86400))d\ $out
-        }
-    };
-    printf "$out\n"
-}
-
-### Create instatll media, by Install*.app #Usage: cim [device_path]
-lib_cim() {
+### Create/Convert DMG file #Usage: dmg [options] [path] # --create  [folder]        Create DMG # --dmg2iso [dmg_file_path] Convert a DMG file to ISO # --iso2dmg [iso_file_path] Convert an ISO file to DMG format # -cim      [device_path]   Create instatll media, by Install*.app # -dd       [img_path] [disk_path]  Write img to disk
+lib_dmg() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
-    [ -d "$1" ] || exit 1; # target device not found
-    local src;
-    while read src; do
-        break;
-    done < <(find /Applications/Install* -iname "createinstallmedia" 2>/dev/null);
-
-    [ -f "$src" ] || exit 1; # install source not found
-    sudo "$src" --volume "$1" --applicationpath "${src:0:${#src}-38}" --nointeraction;
-    return 0
+    local tmp;
+    case $1 in
+        -c|--create)
+            [ -d "$2" ] || exit 1; # target folder not found.
+            tmp=${2##*/};
+            hdiutil create -srcfolder "$2" -format UDZO "$tmp.dmg"
+        ;;
+        -v|--verify)
+            [ "${2##*.}" == "dmg" -o "${2##*.}" == "DMG" ] || exit 1; # format error
+            hdiutil verify "$2"
+        ;;
+        -d2i|--dmg2iso)
+            [ -f "$2" ] || exit 1; # dmg file not found
+            [ "${2##*.}" == "dmg" -o "${2##*.}" == "DMG" ] || exit 1; # file not dmg
+            tmp=${2##*/};
+            tmp=${tmp%.*};
+            hdiutil convert "$2" -format UDTO -o "$tmp.iso";
+        ;;
+        -i2d|--iso2dmg)
+            [ -f "$2" ] || exit 1; # iso file not found
+            [ "${2##*.}" == "iso" -o "${2##*.}" == "ISO" ] || exit 1; # file not iso
+            tmp=${2##*/};
+            tmp=${tmp%.*};
+            hdiutil convert "$2" -format UDRW -o "$tmp.dmg";
+        ;;
+        -cim|--createinstallmedia)
+            [ -d "$2" ] || exit 1; # target device not found
+            while read tmp; do
+                break;
+            done < <(find /Applications/Install* -iname "createinstallmedia" 2>/dev/null);
+            [ -f "$tmp" ] || exit 1; # install source not found
+            sudo "$tmp" --volume "$2" --applicationpath "${tmp:0:${#tmp}-38}" --nointeraction;
+        ;;
+        -dd)
+            shift;
+            dmg_dd "$@"
+        ;;
+        *)
+            exit 1; # invalid option
+        ;;
+    esac
 }
 
-### Write img to disk #Usage: sdd [img_path] [disk_path] #       e.g. sdd /Volumes/Macintosh\\ HD/docker.img /dev/disk2 #       e.g. iof /Volumes/Macintosh\\ HD/docker.img.gz /Volumes/1
-lib_sdd() {
+# for lib_dmg
+dmg_dd() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     # caller 0;
     [ -f "$1" ] || exit 1; # img file not found
@@ -241,47 +250,62 @@ lib_sdd() {
     # trim
     [[ $target == *disk[0-9]s[0-9] ]] && target=${target%s*};
 
-    if [ "${1##*.}" == "img" ]; then
-        diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
-        sudo dd if="$1" of=$target bs=4m || exit 1; # dd error
-    elif [ "${1##*.}" == "iso" ]; then
-        diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
-        hdiutil convert "$1" -format UDRW -o "${1%.*}.dmg" >/dev/null;
-        sudo dd if="${1%.*}.dmg" of=$target bs=4m || exit 1; # dd error
-        # sudo dd if="${1%.*}.dmg" of=$target bs=4m & while killall -USR1 dd; do
-        #     sleep 10;
-        # done | lib_log "%F %T, "
-    elif [ "${1##*.}" == "gz" ]; then
-        diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
-        which gzcat >/dev/null 2>&1 || exit 1; # gzcat command not found
-        gzcat "$1" | sudo dd of=$target bs=4m || exit 1; # dd error
-    elif [ "${1##*.}" == "xz" ]; then
-        diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
-        which xzcat >/dev/null 2>&1 || exit 1; # xzcat command not found
-        xzcat "$1" | sudo dd of=$target bs=4m || exit 1; # dd error
-    else
-        exit 1; # format not support
-    fi
+    case ${1##*.} in
+        img)
+            diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
+            sudo dd if="$1" of=$target bs=4m || exit 1; # dd error
+        ;;
+        iso)
+            diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
+            hdiutil convert "$1" -format UDRW -o "${1%.*}.dmg" >/dev/null;
+            sudo dd if="${1%.*}.dmg" of=$target bs=4m || exit 1; # dd error
+            # sudo dd if="${1%.*}.dmg" of=$target bs=4m & while killall -USR1 dd; do
+            #     sleep 10;
+            # done | lib_log "%F %T, "
+        ;;
+        gz)
+            diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
+            which gzcat >/dev/null 2>&1 || exit 1; # gzcat command not found
+            gzcat "$1" | sudo dd of=$target bs=4m || exit 1; # dd error
+        ;;
+        xz)
+            diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
+            which xzcat >/dev/null 2>&1 || exit 1; # xzcat command not found
+            xzcat "$1" | sudo dd of=$target bs=4m || exit 1; # dd error
+        ;;
+        *)
+            exit 1; # format not support
+        ;;
+    esac
 
     sync;
     diskutil eject $target >/dev/null
     return 0
 }
 
-### Set directory owner #Usage: own [dir_path]
-lib_own() {
-    [ -d "$1" ] || exit 1; # directory not found
-    local USER arg;
-    USER=${2:-bin}
-    [ ${1:(-1)} == / ] && arg="${1:0:${#1}-1}" || arg="$1";
-    sudo chown -R $USER:`id -gn $USER` "$arg" || return 1;
-    sudo chmod -R 644 "$arg/*"
-    sudo find "$arg" -type d -exec chmod 755 {} \;
-    return 0
+### Remote tools #Usage: remote [option] [args...] # -rsa [[user@]host] [[alias]] Copy rsa public key to remote #  -tar [option] [[user@host:]target_path] [[user@host:]source_path]   remote tar # -scp [pass_word] [command...] Auto scp with password
+lib_remote() {
+    case $1 in
+        -rsa)
+            shift;
+            remote_rsa "$@"
+        ;;
+        -scp)
+            shift;
+            remote_auto_scp "$@"
+        ;;
+        -tar)
+            shift;
+            remote_tar "$@"
+        ;;
+        *)
+            exit 1; # invalid option
+        ;;
+    esac
 }
 
-### Copy rsa public key to remote #Usage: pubrsa [[user@]host] [[alias]]
-lib_pubrsa() {
+# for lib_remote
+remote_rsa() {
      [ "$1" ] || exit 1; # first args is empty
     local rsa_pub;
     [ -s ~/.ssh/id_rsa$2.pub ] || ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa$2;
@@ -303,18 +327,48 @@ chmod 700 ~/.ssh
     return 0
 }
 
-### Rebuild boot file #Usage: rboot [dir_path]
-lib_rboot() {
-    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
-    [ -f "$1/com.apple.recovery.boot/kernelcache" ] || exit 1; # Boot file not found
-    sudo bless --folder "$1/com.apple.recovery.boot" --label "Recovery HD";
-    # 426F6F74-0000-11AA-AA11-00306543ECAC
-    # [ "${1##*/}" == "dmtest" -a "${2##*/}" == "BaseSystem.dmg" -a -d "$3" ] && "$1" ensureRecoveryPartition "$3" "$2" 0 0 "${2%.*}.chunklist"
-    return 0
+# for lib_remote
+remote_auto_scp() {
+    local password;
+    password=$1;
+    shift;
+    expect <<-TCL
+	set timeout 150
+	spawn scp $*
+	expect {
+		timeout { exit 2 }
+		"*yes/no" { send "yes\r"; exp_continue }
+		"*assword:" { send "$password\r" }
+	}
+	expect {
+		timeout { exit 2 }
+		"*denied*" { exit 3 }
+		"No such" { exit 4 }
+		"100%" { exit 0 }
+	}
+	expect eof
+	TCL
+
+    case $? in
+        1)
+            exit 1; # Expect Error
+        ;;
+        2)
+            exit 1; # Time Out
+        ;;
+        3)
+            exit 1; # Password Error
+        ;;
+        4)
+            exit 1; # File not found
+        ;;
+        *)
+            exit 1; # Unknown Error
+        ;;
+    esac
 }
 
-### remote tar #Usage: rtar [option] [[user@host:]target_path] [[user@host:]source_path]
-lib_rtar() {
+remote_tar() {
     [ "$1" ] || exit 1; # target url is empty
     [ "$2" ] || exit 1; # source url is empty
     local option target_host target_dir source_host source_dir;
@@ -336,7 +390,7 @@ lib_rtar() {
         *c*)
             if [ "$target_host" -a "$source_host" ]; then
                 # both
-                rtarc $source_host "${source_dir}" | rcati $target_host "$target_dir"
+                tar_c $source_host "${source_dir}" | tar_cat_i $target_host "$target_dir"
             elif [ "$target_host" ]; then
                 # local -> remote
                 [ -d "$source_dir" ] || exit 1; # source path not found.
@@ -349,34 +403,34 @@ lib_rtar() {
                 } | rcat $target_host "$target_dir";
             else
                 # remote -> local
-                rtarc $source_host "$source_dir" > "$target_dir";
+                tar_c $source_host "$source_dir" > "$target_dir";
             fi
         ;;
         *x*)
             if [ "$target_host" -a "$source_host" ]; then
                 # both
-                rcato $source_host "${source_dir}" | rtarx $target_host "$target_dir"
+                tar_cat_o $source_host "${source_dir}" | tar_x $target_host "$target_dir"
             elif [ "$target_host" ]; then
                 # local -> remote
                 [ -f "$source_dir" ] || exit 1; # source file not found.
-                cat "$source_dir" | rtarx $target_host "$target_dir"
+                cat "$source_dir" | tar_x $target_host "$target_dir"
             else
                 # remote -> local
                 cd "$target_dir";
-                rcato $source_host "$source_dir" | tar $option -;
+                tar_cat_o $source_host "$source_dir" | tar $option -;
                 cd "$OLDPWD"
             fi
         ;;
         *)
-            exit 1; # args error
+            exit 1; # invalid option
         ;;
     esac
 
     return 0
 }
 
-# for lib_rtar
-rtarc() {
+# for remote_tar
+tar_c() {
     {
         [ "${option/P/}" == "$option" ] && \
         printf %s 'cd "'"${2%/*}"'" >/dev/null && tar '$option' - "'"${2##*/}"'"' || \
@@ -384,51 +438,145 @@ rtarc() {
     } | ssh $1 bash
 }
 
-# for lib_rtar
-rtarx() {
+# for remote_tar
+tar_x() {
     [ "${option/P/}" == "$option" ] && {
         ssh $1 'cd "'"$2"'" >/dev/null && tar '$option' -'
     } || ssh $1 'tar '$option' - '
 }
 
-# for lib_rtar
-rcati() {
+# for remote_tar
+tar_cat_i() {
     ssh $1 'cat > "'"$2"'"'
 }
 
-# for lib_rtar
-rcato() {
+# for remote_tar
+tar_cat_o() {
     ssh $1 'cat "'"$2"'"'
 }
 
-### Hidden file | directory #Usage: hid [yes|no]
-lib_hid() {
+
+### OS globle setting #Usage: oset [option] [args...] # -a             Allow all app install # -hid [yes|no]  Hidden file/directory
+lib_oset() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
-    [ "$1" == "yes" -o "$1" == "no" ] || exit 1; # must select 'yes' or 'no'
-    defaults write com.apple.finder AppleShowAllFiles $1;
-    return 0
+    case $1 in
+        -a)
+            sudo spctl --master-disable;
+        ;;
+        -hid)
+            [ "$2" == "yes" -o "$2" == "no" ] || exit 1; # must select 'yes' or 'no'
+            defaults write com.apple.finder AppleShowAllFiles $2;
+        ;;
+        *)
+            exit 1; # invalid option
+        ;;
+    esac
 }
 
-### No hidden directory #Usage: nohid [dir_path]
-lib_nohid() {
-    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
-    [ -d "$1" ] || exit 1; # target not found or not directory
-    chflags nohidden "$1"/*;
-    return 0
+### File / directory tools #Usage: files [option] [args...] # -uh    [dir_path]   No hidden directory # --own  [dir_path]   Set directory owner # --boot [dir_path]   Rebuild boot file # --sums [file_path]  Print md5 sha1 sha256 checksums
+lib_files() {
+    case $1 in
+        -uh|--unhidden)
+            shift;
+            [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
+            [ -d "$1" ] || exit 1; # target not found or not directory
+            chflags nohidden "$1"/*;
+            sudo spctl --master-disable;
+        ;;
+        --own)
+            shift;
+            [ -d "$1" ] || exit 1; # directory not found
+            local USER arg;
+            USER=${2:-bin}
+            [ ${1:(-1)} == / ] && arg="${1:0:${#1}-1}" || arg="$1";
+            sudo chown -R $USER:`id -gn $USER` "$arg" || return 1;
+            sudo chmod -R 644 "$arg/*"
+            sudo find "$arg" -type d -exec chmod 755 {} \;
+        ;;
+        -s|--sums)
+            which openssl >/dev/null 2>&1 || exit 1; # openssl command not found
+            local h="$(
+                {
+                    [ -f "$2" ] && {
+                        cat "$2" | tee >(openssl dgst -sha1 >&2) >(openssl dgst -md5 >&2) | openssl dgst -sha256;
+                        :
+                    } || tee >(openssl dgst -sha1 >&2) >(openssl dgst -md5 >&2) | openssl dgst -sha256;
+                } 2>&1
+            )";
+            h="${h/(stdin)=/MD5:}";
+            h="${h/(stdin)=/SHA1:}";
+            h="${h/(stdin)=/SHA256:}";
+            printf "$h\n"
+        ;;
+        --boot)
+            [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
+            [ -f "$2/com.apple.recovery.boot/kernelcache" ] || exit 1; # Boot file not found
+            sudo bless --folder "$2/com.apple.recovery.boot" --label "Recovery HD";
+            # 426F6F74-0000-11AA-AA11-00306543ECAC
+            # [ "${1##*/}" == "dmtest" -a "${2##*/}" == "BaseSystem.dmg" -a -d "$3" ] && "$2" ensureRecoveryPartition "$3" "$2" 0 0 "${2%.*}.chunklist"
+        ;;
+        *)
+            exit 1; # invalid option
+        ;;
+    esac
 }
 
-### Allow all app install
-lib_aapp() {
-    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
-    sudo spctl --master-disable;
-    return 0
-}
-
-### Print text not in ASCII char #Usage: unascii [dir_path]
-lib_unascii() {
-    [ -d "$1" ] || exit 1; # target not found or not directory
-    grep -r '[^[:alnum:][:punct:][:space:]]' "$1";
-    return 0
+### String filter #Usage: filter [option] # -l -r [str]        Convert lower/upper case # -xv   [tag_name]   Get xml value # -ua   [dir_path]   Print text not in ASCII char # -t    [text_file] [line_num]    save tail n line
+lib_filter() {
+    case $1 in
+        -l|--lower)
+            shift;
+            [ "$1" ] && {
+                tr "[:upper:]" "[:lower:]" <<< "$@"
+            } || tr "[:upper:]" "[:lower:]";
+        ;;
+        -u|--upper)
+            shift;
+            [ "$1" ] && {
+                tr "[:lower:]" "[:upper:]" <<< "$@";
+            } || tr "[:lower:]" "[:upper:]"
+        ;;
+        -xv|--xmlvalue)
+            [ "$2" ] || exit 1; # Args is empty
+            # grep -oP '(?<=\>)[\d\w_]+(?=\<\/'$2')' && return 0;
+            perl -ne 'STDOUT->autoflush; print m/(?<=\>)[\d\w_]+(?=\<\/'"$2"')/g, "\n"' && return 0;
+            return 1
+        ;;
+        # -xt|--xmltrim)
+        #     # -xt [text_file_path] Get xml without annotations
+        #     shift;
+        #     awk '/<!--/{i++}/-->/{i--}!i&&!/-->/&&!/^$/' "$@"
+        # ;;
+        -st|--spacetrim)
+            # -st [text_file_path]  Replace all space to one space
+            # [ -f "$2" ] || exit 1; # File not found
+            # [ "`uname`" == "Linux" ] && {
+            #     sed -r ':1;N;$!b1;s/\s+/ /g' "$2"
+            #     :
+            # } || perl -i -pe 's/\s+/ /g' "$2"
+        ;;
+        -ua|--unascii)
+            if [ -d "$2" ]; then
+                grep -r '[^[:alnum:][:punct:][:space:]]' "$2";
+            elif [ -f "$2" ]; then
+                grep '[^[:alnum:][:punct:][:space:]]' "$2";
+            else
+                grep '[^[:alnum:][:punct:][:space:]]'
+            fi
+        ;;
+        -t|--tailto)
+            shift;
+            [ -f "$1" ] || exit 1; # File not found
+            lib_inum $2 || exit 1; # Not number
+            [ "$2" -gt 0 ] 2>/dev/null || exit 1; # Num too small
+            mv "$1" "$1.swp";
+            tail -$2 "$1.swp" > "$1";
+            rm -f "$1.swp"
+        ;;
+        *)
+            exit 1; # invalid option
+        ;;
+    esac
 }
 
 ### Print random string match [A-Za-z0-9] #Usage: rand [[size]]
@@ -440,33 +588,27 @@ lib_rand() {
     printf "${rand:0:${1:-32}}\n"
 }
 
-### Show IPv4
-lib_lip() {
-    # netstat -rn | grep "default"
-    local route_ip=`route -n get default | grep gateway | awk '{print $2}'`;
-    # ifconfig | grep -oE "inet ([0-9]+\.)+[0-9]+" | awk '$2 != "127.0.0.1" {print $2}';
-    ifconfig | grep -oE "inet ${route_ip%.*}\.[0-9]+" | awk '{print $2}';
-    return 0
+### Show/find IPv4 #Usage: ip [option] [args...] # -l            Show IPv4 # -f [mac_addr] Search IPv4 by MAC or Host name #               support alias, see lib hosts
+lib_ip() {
+    case $1 in
+        -l|--list)
+            # netstat -rn | grep "default"
+            local route_ip=`route -n get default | grep gateway | awk '{print $2}'`;
+            # ifconfig | grep -oE "inet ([0-9]+\.)+[0-9]+" | awk '$2 != "127.0.0.1" {print $2}';
+            ifconfig | grep -oE "inet ${route_ip%.*}\.[0-9]+" | awk '{print $2}';
+        ;;
+        -f|--find)
+            shift;
+            ip_find "$@"
+        ;;
+        *)
+            exit 1; # invalid option
+        ;;
+    esac
 }
 
-### Convert upper case #Usage: caps [[-l]] #    -l lower case
-lib_caps() {
-    [ "-l" == "$1" ] && {
-        shift;
-        [ "$1" ] && {
-            tr "[:upper:]" "[:lower:]" <<< "$@"
-        } || tr "[:upper:]" "[:lower:]";
-        :
-    } || {
-        [ "$1" ] && {
-            tr "[:lower:]" "[:upper:]" <<< "$@";
-        } || tr "[:lower:]" "[:upper:]"
-    };
-    return 0
-}
-
-### Search IPv4 by MAC or Host name #Usage: sip [mac_addr] #    support alias, see lib hosts
-lib_sip() {
+# for lib_ip
+ip_find() {
     [ "$1" ] || exit 1; # MAC addr or Host name is empty
 
     # Clear arp cache
@@ -505,7 +647,7 @@ lib_sip() {
             # cache max variable length
             [ ${#i} -gt $l ] && l=${#i};
             # convert lowercase
-            mac=`lib_caps -l $mac`;
+            mac=`lib_filter -l $mac`;
             # trim ^0
             for j in {0..9} {a..f};
             do
@@ -560,7 +702,6 @@ lib_sip() {
     } || arp -n | awk 'NR>1 {system("arp -d "$1)}' || return 1;
 
 }
-
 
 # thread valve
 thread_valve() {
@@ -654,7 +795,7 @@ lib_hosts() {
         # override mac addr in map1
         _map -p $i 1;
         echo "$i"
-    done < <(lib_sip ${REPLY[@]});
+    done < <(lib_ip -f ${REPLY[@]});
 
     # clear map0, sip command use it before
     _map -c;
@@ -692,28 +833,6 @@ lib_hosts() {
 
 }
 
-# ### Get xml without annotations #Usage: gxmltr [text_file_path]
-# lib_gxmltr() {
-#     awk '/<!--/{i++}/-->/{i--}!i&&!/-->/&&!/^$/' "$@"
-# }
-
-### Get xml value #Usage: gxmlv [tag_name]
-lib_gxmlv() {
-    [ "$1" ] || exit 1; # Args is empty
-    # grep -oP '(?<=\>)[\d\w_]+(?=\<\/'$1')' && return 0;
-    perl -ne 'STDOUT->autoflush; print m/(?<=\>)[\d\w_]+(?=\<\/'"$1"')/g, "\n"' && return 0;
-    return 1
-}
-
-# ### Replace all space to one space #Usage: trspace [text_file_path]
-# lib_trspace() {
-#     [ -f "$1" ] || exit 1; # File not found
-#     [ "`uname`" == "Linux" ] && {
-#         sed -r ':1;N;$!b1;s/\s+/ /g' "$1"
-#         :
-#     } || perl -i -pe 's/\s+/ /g' "$1"
-# }
-
 ### Test string is ipv4 #Usage: iipv4 [str]
 lib_iipv4() {
     [ "$1" ] || return 1;
@@ -747,64 +866,6 @@ lib_vnc() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     lib_iipv4 $1 || exit 1; # Args not a ipv4
     open vnc://$1;
-    return 0
-}
-
-### Get password for stdin chpasswd -e #Usage: gmd5pw [passwd_str]
-lib_gmd5pw() {
-    [ "$1" ] || exit 1; # Args is empty
-    openssl passwd -1 "$1"
-}
-
-### Auto scp with password #Usage: scpp [pass_word] [command...]
-lib_scpp() {
-    local password;
-    password=$1;
-    shift;
-    expect <<-TCL
-	set timeout 150
-	spawn scp $*
-	expect {
-		timeout { exit 2 }
-		"*yes/no" { send "yes\r"; exp_continue }
-		"*assword:" { send "$password\r" }
-	}
-	expect {
-		timeout { exit 2 }
-		"*denied*" { exit 3 }
-		"No such" { exit 4 }
-		"100%" { exit 0 }
-	}
-	expect eof
-	TCL
-
-    case $? in
-        1)
-            exit 1; # Expect Error
-        ;;
-        2)
-            exit 1; # Time Out
-        ;;
-        3)
-            exit 1; # Password Error
-        ;;
-        4)
-            exit 1; # File not found
-        ;;
-        *)
-            exit 1; # Unknown Error
-        ;;
-    esac
-}
-
-### save tail n line #Usage: tailto [text_file] [line_num]
-lib_tailto() {
-    [ -f "$1" ] || exit 1; # File not found
-    lib_inum $2 || exit 1; # Not number
-    [ "$2" -gt 0 ] 2>/dev/null || exit 1; # Num too small
-    mv "$1" "$1.swp";
-    tail -$2 "$1.swp" > "$1";
-    rm -f "$1.swp";
     return 0
 }
 
@@ -852,7 +913,7 @@ lib_plist() {
             # sudo launchctl unload -w "$p"
         ;;
         *)
-            exit 1; # option not support
+            exit 1; # invalid option
         ;;
     esac
 }
