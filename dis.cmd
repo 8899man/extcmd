@@ -522,14 +522,15 @@ REM create exclusion list
     call lib.cmd ivergeq 6.3 || exit /b 3
     if not exist "%~1" exit /b 7
     if /i "%~x1" neq ".wim" exit /b 8
-    if "%~2"=="" mkdir ".\%~n1" 2>nul || exit /b 9
-    if "%~2" neq "" call lib.cmd idir "%~2" || exit /b 10
+    REM if "%~2"=="" mkdir ".\%~n1" 2>nul || exit /b 9
     setlocal
-    if "%~2"=="" (
-        set \\\out=.\%~n1
-    ) else set \\\out=%~f2
+    set \\\out=.
+    if "%~2" neq "" (
+        call lib.cmd idir "%~2" || exit /b 10
+        set \\\out=%~f2
+    )
     REM Trim path
-    if "%\\\out:~-1%"=="\" set \\\out=%\\\out:~0,-1%
+    REM if "%\\\out:~-1%"=="\" set \\\out=%\\\out:~0,-1%
     if "%~3"=="" (
         call :getWimLastIndex %1 \\\index
     ) else set \\\index=%~3
