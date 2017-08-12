@@ -485,7 +485,7 @@ REM Enable ServicesForNFS
 :this\wim\-n
     call lib.cmd ivergeq 6.3 || exit /b 3
     if not exist "%~1" exit /b 4
-    if "%~n1%~2"=="" exit /b 5
+    if "%~d1\"=="%~f1" if "%~2"=="" exit /b 5
     setlocal
     set "\\\input=%~f1"
     REM trim path
