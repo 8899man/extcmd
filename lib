@@ -194,7 +194,9 @@ lib_dmg() {
     case $1 in
         -c|--create)
             [ -d "$2" ] || exit 1; # target folder not found.
-            tmp=${2##*/};
+            # trim
+            [ "${2:0-1}" == "/" ] && tmp="${2:0:${#2}-1}" || tmp="$2";
+            tmp=${tmp##*/};
             hdiutil create -srcfolder "$2" -format UDZO "$tmp.dmg"
         ;;
         -v|--verify)
@@ -259,6 +261,7 @@ dmg_dd() {
             diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
             hdiutil convert "$1" -format UDRW -o "${1%.*}.dmg" >/dev/null;
             sudo dd if="${1%.*}.dmg" of=$target bs=4m || exit 1; # dd error
+            rm "${1%.*}.dmg";
             # sudo dd if="${1%.*}.dmg" of=$target bs=4m & while killall -USR1 dd; do
             #     sleep 10;
             # done | lib_log "%F %T, "
