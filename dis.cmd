@@ -485,16 +485,21 @@ REM Enable ServicesForNFS
 :this\wim\-n
     call lib.cmd ivergeq 6.3 || exit /b 3
     if not exist "%~1" exit /b 4
-    if "%~n1%~2"=="" exit /b 5
+    if "%~d1\"=="%~f1" if "%~2"=="" exit /b 5
     setlocal
+    set "\\\input=%~f1"
+    REM trim path
+    if "%\\\input:~-1%"=="\" set "\\\input=%\\\input:~0,-1%"
+
     REM wim name
-    if "%~2"=="" (
-        set \\\name=%~nx1
-    ) else set \\\name=%~2
+    if "%~2" neq "" (
+        set \\\name=%~2
+    ) else  for %%a in ("%\\\input%") do set "\\\name=%%~nxa"
 
     REM input args
-    set "\\\input=%~dp1"
-    set \\\input=%\\\input:~0,-1%
+    for %%a in ("%\\\input%") do set "\\\input=%%~dpa"
+    set "\\\input=%\\\input:~0,-1%"
+
     REM New or Append
     if exist ".\%\\\name%.wim" (set \\\create=Append) else set \\\create=Capture
     REM Create exclusion list
