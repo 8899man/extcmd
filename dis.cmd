@@ -494,18 +494,20 @@ REM Enable ServicesForNFS
     REM wim name
     if "%~2" neq "" (
         set \\\name=%~2
-    ) else  for %%a in ("%\\\input%") do set "\\\name=%%~nxa"
+    ) else for %%a in ("%\\\input%") do set "\\\name=%%~nxa"
+
+    REM New or Append
+    if exist ".\%\\\name%.wim" (set \\\create=Append) else set \\\create=Capture
+
+    REM Create exclusion list
+    call lib.cmd gnow \\\conf "%tmp%\" .log
+    set \\\args=
+    call :wim\ConfigFile "%\\\input%" > %\\\conf% && set \\\args=/ConfigFile:"%\\\conf%"
 
     REM input args
     for %%a in ("%\\\input%") do set "\\\input=%%~dpa"
     set "\\\input=%\\\input:~0,-1%"
 
-    REM New or Append
-    if exist ".\%\\\name%.wim" (set \\\create=Append) else set \\\create=Capture
-    REM Create exclusion list
-    call lib.cmd gnow \\\conf "%tmp%\" .log
-    set \\\args=
-    call :wim\ConfigFile %1 > %\\\conf% && set \\\args=/ConfigFile:"%\\\conf%"
     REM Do capture
     dism.exe /English /%\\\create%-Image /ImageFile:".\%\\\name%.wim" /CaptureDir:"%\\\input%" /Name:"%\\\name%" /Verify %\\\args% || exit /b 6
     if exist "%\\\conf%" erase "%\\\conf%"
