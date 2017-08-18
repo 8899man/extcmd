@@ -890,6 +890,7 @@ lib_log() {
 lib_plist() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     which plutil >/dev/null 2>&1 || xcode-select --install 2>/dev/null
+    [ $# -lt 2 ] && exit 1; # invalid option
     [ "${2##*.}" == "plist" ] || exit 1; # file format not support
     case $1 in
         --xml|-x)
@@ -905,15 +906,13 @@ lib_plist() {
             [ -f "$2" ] && exit 1; # file aleady exist
             sudo plutil -convert binary1 -o "$2" - || exit 1; # plutil error
         ;;
-        --load|-l)
-            # local p;
-            # p=`find ~/Library/LaunchAgents /Library/LaunchAgents /System/Library/LaunchAgents -name "*$2*.plist"``
-            # ~/Library/LaunchDaemons /Library/LaunchDaemons /System/Library/LaunchDaemons
-            # /Library/StartupItems /System/Library/StartupItems
-            # sudo launchctl load -wF "$p"
+        --load)
+            [ -f "$2" ] || exit 1; # file not exist
+            sudo launchctl load -wF "$2"
         ;;
-        --unload|-u)
-            # sudo launchctl unload -w "$p"
+        --unload)
+            [ -f "$2" ] || exit 1; # file not exist
+            sudo launchctl unload -w "$2"
         ;;
         *)
             exit 1; # invalid option
