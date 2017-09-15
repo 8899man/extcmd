@@ -227,63 +227,57 @@ lib_dmg() {
         ;;
         -dd)
             shift;
-            dmg_dd "$@"
+                # caller 0;
+            [ -f "$1" ] || exit 1; # img file not found
+            local target i j k l;
+            [ "${2:0:9}" == "/dev/disk" ] && {
+                target=$2
+            } || {
+                # cut mount info
+                while read i j k; do
+                    [ "${k%% (*}" == "$2" ] && target=$i
+                done < <(mount)
+            }
+            # trim
+            [[ $target == *disk[0-9]s[0-9] ]] && target=${target%s*};
+
+            case ${1##*.} in
+                img)
+                    diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
+                    sudo dd if="$1" of=$target bs=4m || exit 1; # dd error
+                ;;
+                iso)
+                    diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
+                    hdiutil convert "$1" -format UDRW -o "${1%.*}.dmg" >/dev/null;
+                    sudo dd if="${1%.*}.dmg" of=$target bs=4m || exit 1; # dd error
+                    rm "${1%.*}.dmg";
+                    # sudo dd if="${1%.*}.dmg" of=$target bs=4m & while killall -USR1 dd; do
+                    #     sleep 10;
+                    # done | lib_log "%F %T, "
+                ;;
+                gz)
+                    which gzcat >/dev/null 2>&1 || exit 1; # gzcat command not found
+                    diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
+                    gzcat "$1" | sudo dd of=$target bs=4m || exit 1; # dd error
+                ;;
+                xz)
+                    which xzcat >/dev/null 2>&1 || exit 1; # xzcat command not found. try: brew install xz
+                    diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
+                    xzcat "$1" | sudo dd of=$target bs=4m || exit 1; # dd error
+                ;;
+                *)
+                    exit 1; # format not support
+                ;;
+            esac
+
+            sync;
+            diskutil eject $target >/dev/null
+            return 0
         ;;
         *)
             exit 1; # invalid option
         ;;
     esac
-}
-
-# for lib_dmg
-dmg_dd() {
-    [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
-    # caller 0;
-    [ -f "$1" ] || exit 1; # img file not found
-    local target i j k l;
-    [ "${2:0:9}" == "/dev/disk" ] && {
-        target=$2
-    } || {
-        # cut mount info
-        while read i j k; do
-            [ "${k%% (*}" == "$2" ] && target=$i
-        done < <(mount)
-    }
-    # trim
-    [[ $target == *disk[0-9]s[0-9] ]] && target=${target%s*};
-
-    case ${1##*.} in
-        img)
-            diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
-            sudo dd if="$1" of=$target bs=4m || exit 1; # dd error
-        ;;
-        iso)
-            diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
-            hdiutil convert "$1" -format UDRW -o "${1%.*}.dmg" >/dev/null;
-            sudo dd if="${1%.*}.dmg" of=$target bs=4m || exit 1; # dd error
-            rm "${1%.*}.dmg";
-            # sudo dd if="${1%.*}.dmg" of=$target bs=4m & while killall -USR1 dd; do
-            #     sleep 10;
-            # done | lib_log "%F %T, "
-        ;;
-        gz)
-            diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
-            which gzcat >/dev/null 2>&1 || exit 1; # gzcat command not found
-            gzcat "$1" | sudo dd of=$target bs=4m || exit 1; # dd error
-        ;;
-        xz)
-            diskutil unmountDisk $target >/dev/null || exit 1; # Can not unmount this disk
-            which xzcat >/dev/null 2>&1 || exit 1; # xzcat command not found
-            xzcat "$1" | sudo dd of=$target bs=4m || exit 1; # dd error
-        ;;
-        *)
-            exit 1; # format not support
-        ;;
-    esac
-
-    sync;
-    diskutil eject $target >/dev/null
-    return 0
 }
 
 ### Remote tools #Usage: remote [option] [args...] # -rsa [[user@]host] [[alias]] Copy rsa public key to remote #  -tar [option] [[user@host:]target_path] [[user@host:]source_path]   remote tar # -scp [pass_word] [command...] Auto scp with password
