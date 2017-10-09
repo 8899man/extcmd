@@ -957,6 +957,7 @@ REM en zh
     if "%~1"=="" exit /b 1
     if not defined %~1 exit /b 2
     setlocal enabledelayedexpansion
+    REM todo get var value in path
     REM Trim quotes
     set \\\var=!%~1:"=!
     REM " Trim head/tail semicolons

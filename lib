@@ -135,7 +135,7 @@ gpkg_serial_number() {
     while read k v; do
         # Put in map
         [ "$v" ] && pkg[$k]="$v";
-    done < <(find "$1" -type f -iregex ".*[0-9]\.pkg" -exec ls -i {} \; 2>/dev/null);
+    done < <(sudo find "$1" -type f -iregex ".*\.[pt][km][gp]" -exec ls -i {} \; 2>/dev/null); # *.tmp *.pkg
     return 0
 }
 
