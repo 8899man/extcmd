@@ -614,7 +614,7 @@ ip_find() {
         :
     } || arp -n | awk 'NR>1 {system("arp -d "$1)}' || return 1;
 
-    local i j l=0 r mac macs=() range route_ip;
+    local i j l=0 r key mac macs macs_arr=() OLDIFS range route_ip;
 
     # get [setting]
     load_ini sip_setting;
@@ -634,28 +634,28 @@ ip_find() {
     for i in "$@"; do
 
         # get from map
-        mac=`_map -g $i`;
-        mac=${mac:-$i};
+        macs=`_map -g $i`;
+        macs=${macs:-$i};
 
         # replace separator
-        [[ $mac == *-*-*-*-*-* ]] && mac=${mac//-/:};
+        [[ $macs == *-*-*-*-*-* ]] && macs=${macs//-/:};
 
-        [[ $mac == *:*:*:*:*:* ]] && {
+        [[ $macs == *:*:*:*:*:* ]] && {
             # cache max variable length
             [ ${#i} -gt $l ] && l=${#i};
             # convert lowercase
-            mac=`lib_filter -l $mac`;
+            macs=`lib_filter -l $macs`;
             # trim ^0
             for j in {0..9} {a..f};
             do
-                mac=${mac/0$j/$j};
+                macs=${macs/0$j/$j};
             done;
             # args arr
-            macs[${#macs[@]}]=$mac.$i;
+            macs_arr[${#macs_arr[@]}]=$macs.$i;
         }
     done
 
-    [ ${#macs[@]} == 0 ] && return 0;
+    [ ${#macs_arr[@]} == 0 ] && return 0;
 
     l=$((l / 5 * 5 + 5));
 
@@ -677,9 +677,20 @@ ip_find() {
             {
                 ping -c 1 -t 1 $i >/dev/null 2>&1;
                 j=`arp $i 2>/dev/null`;
-                for mac in ${macs[@]};
+                for macs in ${macs_arr[@]};
                 do
-                    [[ $j == *${mac%%.*}* ]] && printf "%-${l}s$i\n" ${mac#*.}
+                    # cache key
+                    key=${macs#*.};
+                    # split arr with '|'
+                    OLDIFS="$IFS";
+                    IFS="|";
+                    macs=(${macs%%.*});
+                    IFS="$OLDIFS"
+                    for mac in ${macs[@]};
+                    do
+                        [[ $j == *$mac* ]] && printf "%-${l}s$i\n" $key
+                    done
+
                     # Like nbtstat
                     # [[ `smbutil status $i 2>/dev/null` == *$mac* ]] && printf $i
                 done
@@ -789,9 +800,11 @@ lib_hosts() {
 "
     while read i;
     do
-        # override mac addr in map1
-        _map -p $i 1;
-        echo "$i"
+        # override mac addr in map1, if value not ipv4
+        [[ "$(_map -g ${i%% *} 1)" == *[0-9].[0-9]*[0-9].[0-9]* ]] || {
+            _map -p $i 1;
+            echo "$i"
+        }
     done < <(lib_ip -f ${REPLY[@]});
 
     # clear map0, sip command use it before
