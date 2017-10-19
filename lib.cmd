@@ -918,7 +918,7 @@ REM load .*.ini config
     if "%~1"=="" exit /b 1
     set \\\tag=
     for /f "usebackq delims=; 	" %%a in (
-        `type "%~dp0.*ini" "%userprofile%\.*ini" 2^>nul ^| findstr.exe /v "^;"`
+        `type "%~dp0.*.ini" "%userprofile%\.*.ini" 2^>nul ^| findstr.exe /v "^;"`
     ) do for /f "usebackq tokens=1,2 delims==" %%b in (
         '%%a'
     ) do if "%%c"=="" (

@@ -1403,7 +1403,7 @@ load_ini() {
         elif [ $tag ]; then
             _map -p ${l%=*} ${l#*=} $2
         fi
-    done < <(cat ${0%/*}/.*ini ~/.*ini 2>/dev/null | awk -F\; 'gsub(/\r/,"",$1);{print $1}' | uniq);
+    done < <(cat ${0%/*}/.*.ini ~/.*.ini 2>/dev/null | awk -F\; 'gsub(/\r/,"",$1);{print $1}' | uniq);
 
     # # read environment variable
     # while read l tag;
