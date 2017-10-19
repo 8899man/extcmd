@@ -426,8 +426,9 @@ REM start /b [command...]
 :::: "first parameter is empty"
 :lib\iip
     if "%~1"=="" exit /b 1
-    for /f "usebackq tokens=1-4 delims=." %%a in (
-        '%~1'
+    REM [WARN] use usebackq will set all variable global, by :lib\hosts
+    for /f "tokens=1-4 delims=." %%a in (
+        "%~1"
     ) do (
         if "%~1" neq "%%a.%%b.%%c.%%d" exit /b 10
         for %%e in (
@@ -443,10 +444,13 @@ REM start /b [command...]
 REM Test mac addr
 :this\imac
     setlocal enabledelayedexpansion
-    for /f "usebackq tokens=1-6 delims=-:" %%a in (
-        '%~1'
+    set "\\\macs=%~1"
+    for %%z in (
+        %\\\macs:|= %
+    ) do for /f "usebackq tokens=1-6 delims=-:" %%a in (
+        '%%z'
     ) do (
-        if "%~1" neq "%%a-%%b-%%c-%%d-%%e-%%f" if "%~1" neq "%%a:%%b:%%c:%%d:%%e:%%f" exit /b 10
+        if "%%z" neq "%%a-%%b-%%c-%%d-%%e-%%f" if "%%z" neq "%%a:%%b:%%c:%%d:%%e:%%f" exit /b 10
         for %%g in (
             "%%a" "%%b" "%%c" "%%d" "%%e" "%%f"
         ) do (
@@ -655,7 +659,10 @@ REM     exit /b 0
     REM override mac to ipv4
     for /f "usebackq tokens=1*" %%a in (
         `call lib.cmd ip -f %\\\keys%`
-    ) do call :map -p %%a %%b 1 && call :lib\2la %%~a %%b
+    ) do if not defined \\\set\%%a (
+        call :map -p %%a %%b 1 && call :lib\2la %%~a %%b
+        set \\\set\%%a=-
+    )
 
     REM replace hosts in cache
     REM use tokens=2,3 will replace %%a
@@ -680,11 +687,14 @@ REM     exit /b 0
     for %%a in (
         %\\\arr%
     ) do (
-        call :lib\iip %%a && call :page -p %%~a   !\\\key!
+        call :lib\iip %%a && (
+            call :page -p %%~a   !\\\key!
+        )
         set \\\key=%%~a
     )
 
     call :page -s > %windir%\System32\drivers\etc\hosts
+
     endlocal
     goto :eof
 
@@ -732,14 +742,14 @@ REM     exit /b 0
         REM Get value
         call :map -g %%a \\\arg
         if defined \\\arg (
-            set \\\mac=!\\\arg: =!
+            set "\\\mac=!\\\arg: =!"
         ) else set \\\mac=%%a
         REM Format
-        set \\\mac=!\\\mac::=-!
+        set "\\\mac=!\\\mac::=-!"
         REM Test is mac addr
-        call :this\imac !\\\mac! && (
-            set "\\\macs=!\\\macs! !\\\mac!"
-            if defined \\\arg set "\\\macs=!\\\macs!\%%a"
+        call :this\imac "!\\\mac!" && (
+            set "\\\macs=!\\\macs! !\\\mac:|=\!"
+            if defined \\\arg set "\\\macs=!\\\macs!.%%a"
         )
     )
 
@@ -773,15 +783,24 @@ REM For thread sip
 :thread\ip\--find
     REM some ping will fail, but arp success
     ping.exe -n 1 -w 1 %1 >nul 2>nul
+    setlocal enabledelayedexpansion
     for /f "usebackq skip=3 tokens=1,2" %%a in (
         `arp.exe -a %1`
     ) do for %%c in (
         %*
-    ) do for /f "usebackq tokens=1,2 delims=\" %%d in (
+    ) do for /f "usebackq tokens=1,2 delims=." %%d in (
         '%%c'
-    ) do if /i "%%b"=="%%d" if "%%e"=="" (
-        call :lib\2la %%d %%a
-    ) else call :lib\2la %%e %%a
+    ) do (
+        set "\\\macs=%%d"
+        set "\\\macs=!\\\macs:\= !"
+        for %%f in (
+            !\\\macs!
+        ) do if /i "%%b"=="%%f" if "%%e"=="" (
+            call :lib\2la %%f %%a
+        ) else call :lib\2la %%e %%a
+    )
+
+    endlocal
     exit /b 0
 
 REM thread valve, usage: :this\thread_valve [count] [name] [commandline]
@@ -812,8 +831,8 @@ REM Map
     if "%~2"=="" exit /b 0
     setlocal enabledelayedexpansion
     set \\\value=
-    if defined \\\MAP%~3\%~1 call set \\\value=!\\\MAP\%~1!
-    endlocal & set %~2=%\\\value%
+    if defined \\\MAP%~3\%~1 call set "\\\value=!\\\MAP\%~1!"
+    endlocal & set "%~2=%\\\value%"
     exit /b 0
 
 :this\map\--remove
@@ -906,7 +925,7 @@ REM load .*.ini config
         if "%%b"=="[%~1]" (
             set \\\tag=true
         ) else set \\\tag=
-    ) else if defined \\\tag set \\\MAP%~2\%%b=%%c
+    ) else if defined \\\tag set "\\\MAP%~2\%%b=%%c"
     set \\\tag=
 
     REM REM Load
