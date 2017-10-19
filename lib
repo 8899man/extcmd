@@ -614,7 +614,7 @@ ip_find() {
         :
     } || arp -n | awk 'NR>1 {system("arp -d "$1)}' || return 1;
 
-    local i j l=0 r key mac macs macs_arr=() OLDIFS range route_ip;
+    local i j l=0 r key mac macs macs_arr=() OLDIFS="$IFS" range route_ip;
 
     # get [setting]
     load_ini sip_setting;
@@ -682,10 +682,9 @@ ip_find() {
                     # cache key
                     key=${macs#*.};
                     # split arr with '|'
-                    OLDIFS="$IFS";
                     IFS="|";
                     macs=(${macs%%.*});
-                    IFS="$OLDIFS"
+                    IFS="$OLDIFS";
                     for mac in ${macs[@]};
                     do
                         [[ $j == *$mac* ]] && printf "%-${l}s$i\n" $key
