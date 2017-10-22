@@ -1057,7 +1057,12 @@ REM for head tail
 ::: "Print or check SHA256 (256-bit) checksums." "" "usage: %~n0 sha256 [file]"
 :::: "powershell error"
 :lib\SHA256
+::: "Print or check SHA512 (512-bit) checksums." "" "usage: %~n0 sha512 [file]"
+:::: "powershell error"
+:lib\SHA512
     for %%a in (%0) do call :this\hash %%~na %1|| exit /b 1
+    shift /1
+    if exist "%~1" call %0 %1
     exit /b 0
 
 :this\hash
