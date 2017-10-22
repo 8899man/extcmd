@@ -675,7 +675,7 @@ ip_find() {
 
             # multi-thread
             {
-                ping -c 1 -t 1 $i >/dev/null 2>&1;
+                ping -c 2 -t 2 $i >/dev/null 2>&1;
                 j=`arp $i 2>/dev/null`;
                 for macs in ${macs_arr[@]};
                 do

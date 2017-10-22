@@ -300,7 +300,7 @@ play_ffplay() {
             # -sn #disable subtitling
             ffplay -hide_banner $stream_specifier -ac 2 -sn -autoexit "$1";
         ;;
-        alac|ape|flac|m4a|mp3|ogg|tta|tak|wav|wma)
+        alac|ape|flac|m4a|mp3|ogg|tta|tak|wav|webm|wma)
             ffplay -hide_banner -nodisp -autoexit "$1";
         ;;
         *)
