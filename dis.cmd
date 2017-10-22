@@ -474,7 +474,7 @@ REM Enable ServicesForNFS
 :: dism ::
 ::::::::::
 
-::: "Wim manager" "" "usage: %~n0 wim [option] [args ...]" "    --new,    -n [target_dir_path] [[image_name]]            Capture file/directory to wim" "    --apply,  -a [wim_path] [[output_path] [image_index]]    Apply WIM file" "    --mount,  -m [wim_path] [mount_path] [[image_index]]     Mount wim" "    --umount, -u [mount_path]                                Unmount wim" "    --commit, -c [mount_path]                                Unmount wim with commit" "    --export, -e [source_wim_path] [target_wim_path] [image_index] [[compress_level]]    Export wim image" "                                   compress level: 0 none, 1 fast, 2 recovery, 3 WIMBoot, 4 max" "    --umountall, -ua                                         Unmount all wim" "    --rmountall, -ra                                         Recovers mount all orphaned wim"
+::: "Wim manager" "" "usage: %~n0 wim [option] [args ...]" "    --info,   -i [image_path]                                Displays information about images in a WIM file." "    --new,    -n [target_dir_path] [[image_name]]            Capture file/directory to wim" "    --apply,  -a [wim_path] [[output_path] [image_index]]    Apply WIM file" "    --mount,  -m [wim_path] [mount_path] [[image_index]]     Mount wim" "    --umount, -u [mount_path]                                Unmount wim" "    --commit, -c [mount_path]                                Unmount wim with commit" "    --export, -e [source_wim_path] [target_wim_path] [image_index] [[compress_level]]    Export wim image" "                                   compress level: 0 none, 1 fast, 2 recovery, 3 WIMBoot, 4 max(Bootable)" "    --umountall, -ua                                         Unmount all wim" "    --rmountall, -ra                                         Recovers mount all orphaned wim"
 :::: "option invalid" "lib.cmd not found" "dism version is too old" "target not found" "need input image name" "dism error" "wim file not found" "not wim file" "output path allready use" "output path not found" "Not a path" "Target wim index not select"
 :dis\wim
     call :this\iinpath lib.cmd || exit /b /b 2
@@ -581,7 +581,7 @@ REM for wim
 :this\wim\--export
 :this\wim\-e
     if not exist %1 exit /b 7
-    if /i "%~x1" neq ".wim" exit /b 8
+    if /i "%~x1" neq ".wim" if /i "%~x1" neq ".esd" exit /b 8
     if "%~f2" neq "%~2" exit /b 11
     if /i "%~x2" neq ".wim" exit /b 8
     if "%~3"=="" exit /b 12
@@ -589,10 +589,10 @@ REM for wim
     set \\\compress=
     if "%~4"=="0" set \\\compress=/Compress:none
     if "%~4"=="1" set \\\compress=/Compress:fast
-    if "%~4"=="2" set \\\compress=/Compress:recovery
+    if "%~4"=="2" set "\\\compress=/Compress:recovery /Bootable"
     if "%~4"=="3" set \\\compress=/WIMBoot
     if "%~4"=="4" set \\\compress=/Compress:max
-    dism.exe /Export-Image /SourceImageFile:"%~f1" /SourceIndex:%3 /DestinationImageFile:"%~f2" /Bootable %\\\compress% /CheckIntegrity
+    dism.exe /Export-Image /SourceImageFile:"%~f1" /SourceIndex:%3 /DestinationImageFile:"%~f2" %\\\compress% /CheckIntegrity
     endlocal
     exit /b 0
 
@@ -620,22 +620,34 @@ REM for wim
     echo.complate.
     exit /b 0
 
-REM ::: ""
-REM :this\wim\--info
-REM     for /f "usebackq tokens=1,2*" %%b in (
-REM         `dism.exe /English /Get-WimInfo /WimFile:%1`
-REM     ) do if "%%b"=="Index" for /f "usebackq tokens=1,2*" %%f in (
-REM         `dism.exe /English /Get-WimInfo /WimFile:%1 /Index:%%d`
-REM     ) do if "%%h" neq "<undefined>" (
-REM         if "%%f"=="Description" set /p=%%h <nul
-REM         if "%%f"=="Size" set /p=%%h <nul
-REM         if "%%f%%g%%h"=="WIMBootable: Yes" set /p=wimboot <nul
-REM         if "%%f"=="Architecture" set /p=%%h <nul
-REM         if "%%f"=="Version" set /p=%%h <nul
-REM         if "%%f"=="Edition" set /p=%%h <nul
-REM         if "%%g"=="(Default)" set /p=%%f <nul
-REM     )
-REM     exit /b 0
+::: ""
+:this\wim\-i
+:this\wim\--info
+    if not exist "%~1" exit /b 4
+    for /f "usebackq tokens=1,2*" %%b in (
+        `dism.exe /English /Get-WimInfo /WimFile:%1`
+    ) do if "%%b"=="Index" (
+        for /f "usebackq tokens=1,2*" %%f in (
+            `dism.exe /English /Get-WimInfo /WimFile:%1 /Index:%%d`
+        ) do if "%%h" neq "<undefined>" (
+            if "%%f"=="Name" set /p=%%d. "%%h"<nul
+            if "%%f"=="Size" call :this\num %%h
+            if "%%f%%g%%h"=="WIMBootable: Yes" set /p=, wimboot<nul
+            if "%%f"=="Architecture" set /p=, %%h<nul
+            if "%%f"=="Version" set /p=, %%h<nul
+            if "%%f"=="Edition" set /p=, %%h<nul
+            if "%%g"=="(Default)" set /p=, %%f <nul
+        )
+        echo.
+    )
+    exit /b 0
+
+:this\num
+    setlocal
+    set \\\num=%*
+    set /p=, %\\\num:,=_%<nul
+    endlocal
+    goto :eof
 
 ::: "Component Cleanup" "" "usage: %~n0 cleanup [path]"
 :::: "option invalid" "lib.cmd not found" "not a directory"

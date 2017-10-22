@@ -423,14 +423,14 @@ REM Reg VM names
         cd /d "%%~a"
         if defined \\\random (
             for /r %%b in (
-                *.alac *.ape *.avi *.divx *.flac *.flv *.m4a *.mkv *.mp? *.ogg *.rm *.rmvb *.tta *.tak *.vob *.wav *.wm?
+                *.alac *.ape *.avi *.divx *.flac *.flv *.m4a *.mkv *.mp? *.ogg *.rm *.rmvb *.tta *.tak *.vob *.wav *.webm *.wm?
             ) do (
                 set /a \\\c+=1
                 set "\\\track!random!=%%b"
             )
         ) else (
             for /f "usebackq delims=" %%b in (
-                `dir /b /s /on *.alac *.ape *.avi *.divx *.flac *.flv *.m4a *.mkv *.mp? *.ogg *.rm *.rmvb *.tta *.tak *.vob *.wav *.wm?`
+                `dir /b /s /on *.alac *.ape *.avi *.divx *.flac *.flv *.m4a *.mkv *.mp? *.ogg *.rm *.rmvb *.tta *.tak *.vob *.wav *.webm *.wm?`
             ) do (
                 set /a \\\c+=1
                 if !\\\c! geq %\\\skip% set "\\\track!\\\c!=%%b"
@@ -452,7 +452,7 @@ REM Reg VM names
     REM -sn ::disable subtitling
     REM -ac 2 ::ED..A... set number of audio channels (from 0 to INT_MAX) (default 0) ::Convert the 5.1 track to stereo
     for %%a in (
-        avi divx flv mkv mp4 mpg rm rmvb vob wmv
+        avi divx flv mkv mp4 mpg rm rmvb vob webm wmv
     ) do if /i "%~x1"==".%%a" ffplay.exe -hide_banner %\\\stream_specifier% -ac 2 -sn -autoexit %1 2>&1
     for %%a in (
         alac ape flac m4a mp3 ogg tta tak wav wma
