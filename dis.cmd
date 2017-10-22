@@ -528,7 +528,7 @@ REM create exclusion list
 :this\wim\-a
     call lib.cmd ivergeq 6.3 || exit /b 3
     if not exist "%~1" exit /b 7
-    if /i "%~x1" neq ".wim" exit /b 8
+    if /i "%~x1" neq ".wim" if /i "%~x1" neq ".esd" exit /b 8
     REM if "%~2"=="" mkdir ".\%~n1" 2>nul || exit /b 9
     setlocal
     set \\\out=.
@@ -536,8 +536,8 @@ REM create exclusion list
         call lib.cmd idir "%~2" || exit /b 10
         set \\\out=%~f2
     )
-    REM Trim path
-    REM if "%\\\out:~-1%"=="\" set \\\out=%\\\out:~0,-1%
+    REM Must trim path
+    if "%\\\out:~-1%"=="\" set \\\out=%\\\out:~0,-1%
     if "%~3"=="" (
         call :getWimLastIndex %1 \\\index
     ) else set \\\index=%~3
