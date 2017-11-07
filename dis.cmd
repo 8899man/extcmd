@@ -323,8 +323,8 @@ REM Enable ServicesForNFS
 :: vhd ::
 :::::::::
 
-::: "Virtual Hard Disk manager" "" "usage: %~n0 vhd [option] [args...]" "" "    --new,    -n  [new_vhd_path] [size[GB]] [[mount_letter]]    Creates a virtual disk file." "    --mount,  -m  [vhd_path] [[letter]]                Mount vhd file" "    --umount, -u  [vhd_path]                           Unmount vhd file" "    --expand, -e  [vhd_path] [GB_size]                 Expands the maximum size available on a virtual disk." "    --differ, -d  [new_vhd_path] [source_vhd_path]     Create differencing vhd file by an existing virtual disk file" "    --merge,  -me  [chile_vhd_path] [[merge_depth]]    Merges a child disk with its parents" "    --rec,    -r                                       Recovery child vhd if have parent" "e.g." "    %~n0 vhd -n E:\nano.vhdx 30 V:"
-:::: "option invalid" "file suffix not vhd/vhdx" "file not found" "no volume find" "vhd size is empty" "letter already use" "diskpart error:" "not a letter" "lib.cmd not found" "size not num" "parent vhd not found" "new file allready exist"
+::: "Virtual Hard Disk manager" "" "usage: %~n0 vhd [option] [args...]" "" "    --new,    -n  [new_vhd_path] [size[GB]] [[mount letter or path]]    Creates a virtual disk file." "    --mount,  -m  [vhd_path] [[letter]]                Mount vhd file" "    --umount, -u  [vhd_path]                           Unmount vhd file" "    --expand, -e  [vhd_path] [GB_size]                 Expands the maximum size available on a virtual disk." "    --differ, -d  [new_vhd_path] [source_vhd_path]     Create differencing vhd file by an existing virtual disk file" "    --merge,  -me  [chile_vhd_path] [[merge_depth]]    Merges a child disk with its parents" "    --rec,    -r                                       Recovery child vhd if have parent" "e.g." "    %~n0 vhd -n E:\nano.vhdx 30 V:"
+:::: "option invalid" "file suffix not vhd/vhdx" "file not found" "no volume find" "vhd size is empty" "letter already use" "diskpart error:" "not a letter or path" "lib.cmd not found" "size not num" "parent vhd not found" "new file allready exist"
 :dis\vhd
     call :this\vhd\%*
     goto :eof
@@ -335,7 +335,10 @@ REM Enable ServicesForNFS
     if not exist "%~dp1" exit /b 4
     if /i "%~x1" neq ".vhd" if /i "%~x1" neq ".vhdx" exit /b 2
     if "%~2"=="" exit /b 5
-    if "%~3" neq "" if exist "%~d3" exit /b 6
+    if "%~3" neq "" (
+        if /i "%~d3"=="%~3" if exist "%~d3" exit /b 6
+        if /i "%~d3" neq "%~3" if not exist "%~3" exit /b 8
+    )
     REM make vhd
     >%tmp%\.diskpart (
         setlocal enabledelayedexpansion
@@ -345,7 +348,13 @@ REM Enable ServicesForNFS
         echo attach vdisk
         echo create partition primary
         echo format fs=ntfs quick
-        if "%~3"=="" (echo assign) else echo assign letter=%~d3
+        if "%~3"=="" (
+            echo assign
+        ) else (
+            if /i "%~d3"=="%~3" (
+                echo assign letter=%~d3
+            ) else echo assign mount="%~f3"
+        )
     )
     diskpart.exe /s %tmp%\.diskpart || exit /b 7
     exit /b 0
@@ -355,13 +364,20 @@ REM Enable ServicesForNFS
     if not exist "%~1" exit /b 3
     if /i "%~x1" neq ".vhd" if /i "%~x1" neq ".vhdx" exit /b 2
     if "%~2" neq "" (
-        if "%~d2" neq "%~2" exit /b 8
-        if exist "%~2" exit /b 6
+        if /i "%~d2"=="%~2" if exist "%~2" exit /b 6
+        if /i "%~d2" neq "%~2" if not exist "%~2" exit /b 8
     )
     >%tmp%\.diskpart (
         echo select vdisk file="%~f1"
         echo attach vdisk
-        if "%~2"=="" (echo assign) else echo assign letter=%~3
+        if "%~2" neq "" (
+            echo select partition 1
+            REM skip error
+            echo remove all noerr
+            if /i "%~d2"=="%~2" (
+                echo assign letter=%~2
+            ) else echo assign mount="%~f2"
+        )
     )
     diskpart.exe /s %tmp%\.diskpart || exit /b 7
     exit /b 0
