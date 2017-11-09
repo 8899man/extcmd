@@ -772,7 +772,7 @@ REM     exit /b 0
     ) do for /l %%b in (
         %\\\range:-=,1,%
     ) do (
-        call :this\thread_valve 50 cmd.exe ping
+        call :this\thread_valve 50 cmd.exe --find
         start /b lib.cmd "" ip\--find %%~na.%%b %\\\macs%
     )
     endlocal
@@ -809,9 +809,9 @@ REM thread valve, usage: :this\thread_valve [count] [name] [commandline]
     if %\\\thread\count% lss %~1 exit /b 0
     :thread_valve\loop
         set \\\thread\count=0
-        for /f "usebackq skip=2" %%a in (
-            `wmic.exe process where "name='%~2' and commandline like '%%%~3%%'" get processid 2^>nul`
-        ) do if %%a gtr 0 set /a \\\thread\count+=1
+        for /f "usebackq" %%a in (
+            `wmic.exe process where "name='%~2' and commandline like '%%%~3%%'" get processid 2^>nul ^| %windir%\System32\find.exe /c /v ""`
+        ) do set /a \\\thread\count=%%a - 2
         if %\\\thread\count% gtr %~1 goto thread_valve\loop
     exit /b 0
 
@@ -1123,6 +1123,8 @@ REM for head tail
 :lib\vbhide
     if "%~1"=="" exit /b 1
     REM mshta.exe VBScript:CreateObject("WScript.Shell").Run("""%~1"" %~2", 0)(Window.close)
+    REM see https://msdn.microsoft.com/en-us/library/windows/desktop/gg537745(v=vs.85).aspx?cs-save-lang=1&cs-lang=vb#code-snippet-1
+    REM mshta.exe VBScript:CreateObject("Shell.Application").ShellExecute("%~1","%2 %3 %4 %5 %6 %7 %8 %9","","open",0)(window.close)
     call :lib\vbs vbhide "%~1"
     exit /b 0
 
@@ -1161,20 +1163,6 @@ REM if /i "%~x1"==".vbs" screnc.exe %1 ./%~n1.vbe
     REM     echo [Taskbar]
     REM     echo Command=ToggleDesktop
     REM )
-    exit /b 0
-
-:::::::::::::::::
-:: advfirewall ::
-:::::::::::::::::
-
-::: "Open ssh/smb/docker port" "" "usage: %~n0 firewall [ssh/smb/docker]"
-:lib\firewall
-    REM ssh daemon
-    if /i "%~1"=="ssh" netsh.exe advfirewall firewall add rule name="SSH" dir=in protocol=tcp localport=22 action=allow
-    REM samba
-    if /i "%~1"=="smb" netsh.exe advfirewall firewall set rule group="File and Printer Sharing" new enable=yes
-    REM Open docker daemon firewall
-    if /i "%~1"=="docker" netsh.exe advfirewall firewall add rule name="Docker daemon " dir=in action=allow protocol=TCP localport=2376
     exit /b 0
 
 ::::::::::::::::::
