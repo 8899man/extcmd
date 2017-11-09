@@ -1062,7 +1062,7 @@ REM for head tail
 :lib\SHA512
     for %%a in (%0) do call :this\hash %%~na %1|| exit /b 1
     shift /1
-    if exist "%~1" call %0 %1
+    if exist "%~1" call %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
     exit /b 0
 
 :this\hash
