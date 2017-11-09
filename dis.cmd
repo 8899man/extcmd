@@ -943,7 +943,7 @@ REM for :dis\officekms
     exit /b 0
 
 :batchrc\-d
-    erase "%USERPROFILE%\.batchrc"
+    REM erase "%USERPROFILE%\.batchrc"
     reg.exe delete "HKCU\SOFTWARE\Microsoft\Command Processor" /v AutoRun /f
     exit /b 0
 
