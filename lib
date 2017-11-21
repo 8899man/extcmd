@@ -66,6 +66,8 @@ lib_cur() {
 ### Get apk file from AppStore #Usage: gpkg [[countdown_sec]] #    1. Login AppStore and Install App #    2. Run this command before download complete #    3. Keep shell open
 lib_gpkg() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
+    # sudo chown -R $USER:`id -gn $USER` /private/var/folders
+    # sudo chmod -R 755 /private/var/folders
     [ `ps -ef | grep -c "${0##*/} gpkg"` -gt 3 ] && exit 1; # gpkg command is already running
 
     local i anchor count_cache=0 pkg=() tmp=/private/var/tmp countdown=$((${1-1} * 60)) sec_on=$(date +%s);
