@@ -343,8 +343,10 @@ remote_auto_scp() {
 		timeout { exit 2 }
 		"*denied*" { exit 3 }
 		"No such" { exit 4 }
-		"100%" { exit 0 }
-	}
+
+####        "100%" { exit 0 }
+
+    }
 	expect eof
 	TCL
 
@@ -717,9 +719,9 @@ thread_valve() {
     case $1 in
         # use before loop, need count
         --init | -i)
-            mkfifo /tmp/.$USER.$$${0//\//\.}.fifo;
+            mkfifo "/tmp/.$USER+$$+${0//\//\+}.fifo";
             # &3
-            exec 3<> /tmp/.$USER.$$${0//\//\.}.fifo;
+            exec 3<> "/tmp/.$USER+$$+${0//\//\+}.fifo";
             local i;
             # init thread valve
             for i in `seq 1 $2`; do
@@ -731,7 +733,7 @@ thread_valve() {
             wait;
             exec 3>&-;
             exec 3<&-
-            rm -f /tmp/.$USER.$$${0//\//\.}.fifo
+            rm -f "/tmp/.$USER+$$+${0//\//\+}.fifo"
         ;;
         # use after multi-thread
         --return | -r)
