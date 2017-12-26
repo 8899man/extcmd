@@ -666,7 +666,7 @@ ip_find() {
     # fork: Resource temporarily unavailable
 
     # init thread valve
-    thread_valve -i 40;
+    _thread_valve --init 40;
 
     for r in ${route_ip[@]};
     do
@@ -675,37 +675,14 @@ ip_find() {
             i=${r%.*}.$i;
 
             # get thread
-            thread_valve -g;
+            _thread_valve --run _match_mac
 
-            # multi-thread
-            {
-                ping -c 2 -t 2 $i >/dev/null 2>&1;
-                j=`arp $i 2>/dev/null`;
-                for macs in ${macs_arr[@]};
-                do
-                    # cache key
-                    key=${macs#*.};
-                    # split arr with '|'
-                    IFS="|";
-                    macs=(${macs%%.*});
-                    IFS="$OLDIFS";
-                    for mac in ${macs[@]};
-                    do
-                        [[ $j == *$mac* ]] && printf "%-${l}s$i\n" $key
-                    done
-
-                    # Like nbtstat
-                    # [[ `smbutil status $i 2>/dev/null` == *$mac* ]] && printf $i
-                done
-
-                # return thread
-                thread_valve -r;
-            } &
         done;
     done;
 
     # destroy thread valve
-    thread_valve -d;
+    _thread_valve --destroy;
+
     # clear arp cache
     [[ $OSTYPE == darwin* ]] && {
         sudo arp -ad >/dev/null 2>&1 || return 1;
@@ -714,67 +691,125 @@ ip_find() {
 
 }
 
-# thread valve
-thread_valve() {
+_match_mac() {
+    ping -c 2 -t 2 $i >/dev/null 2>&1;
+    j=`arp $i 2>/dev/null`;
+    for macs in ${macs_arr[@]};
+    do
+        # cache key
+        key=${macs#*.};
+        # split arr with '|'
+        IFS="|";
+        macs=(${macs%%.*});
+        IFS="$OLDIFS";
+        for mac in ${macs[@]};
+        do
+            [[ $j == *$mac* ]] && printf "%-${l}s$i\n" $key
+        done
+
+        # Like nbtstat
+        # [[ `smbutil status $i 2>/dev/null` == *$mac* ]] && printf $i
+    done
+}
+
+# Message Queue
+_message_queue() {
     case $1 in
-        # use before loop, need count
-        --init | -i)
-            mkfifo "/tmp/.$USER+$$+${0//\//\+}.fifo";
-            # &3
-            exec 3<> "/tmp/.$USER+$$+${0//\//\+}.fifo";
-            local i;
-            # init thread valve
-            for i in `seq 1 $2`; do
-                printf "\n";
-            done >&3
+        --init)
+            mkfifo "/tmp/.message_queue+$USER+$$+${0//\//\+}.fifo";
+            # &6
+            exec 6<> "/tmp/.message_queue+$USER+$$+${0//\//\+}.fifo";
+            # make handler
+            {
+                local cmd;
+                while read -u 6 cmd;
+                do
+                    [ "$cmd" == "0" ] && {
+                        exec 6>&-;
+                        exec 6<&-;
+                        rm -f "/tmp/.message_queue+$USER+$$+${0//\//\+}.fifo";
+                        break
+                    };
+                    # run command
+                    eval ${cmd//%34/\\\"}
+                done
+            } &
         ;;
-        # use after loop
-        --destroy | -d)
-            wait;
-            exec 3>&-;
-            exec 3<&-
-            rm -f "/tmp/.$USER+$$+${0//\//\+}.fifo"
+        --put)
+            shift;
+            local a;
+            {
+                for a in "$@";
+                do
+                    a="${a//\"/%34}";
+                    [ "${a/ /}" == "$a" ] || a="\"$a\"";
+                    printf %s "$a "
+                done
+                printf "\n"
+            } >&6
         ;;
-        # use after multi-thread
-        --return | -r)
-            printf "\n" >&3
-        ;;
-        # use before multi-thread
-        --get | -g)
-            read -u 3
+        --destroy)
+            printf "0\n" >&6
         ;;
     esac
 }
 
+# thread valve
+_thread_valve() {
+    case $1 in
+        # use before loop, need count
+        --init)
+            mkfifo "/tmp/.thread_valve+$USER+$$+${0//\//\+}.fifo";
+            # &5
+            exec 5<> "/tmp/.thread_valve+$USER+$$+${0//\//\+}.fifo";
+            perl -e 'print "\n" x '$2 >&5
+        ;;
+        --run)
+            shift;
+            read -u 5;
+            {
+                "$@";
+                printf "\n" >&5
+            } &
+        ;;
+        # use after loop
+        --destroy)
+            wait;
+            exec 5>&-;
+            exec 5<&-
+            rm -f "/tmp/.thread_valve+$USER+$$+${0//\//\+}.fifo"
+        ;;
+
+    esac
+}
+
 # Only support in dash
-# # thread valve, Usage: thread_valve [-i|-d|-r|-g] [...] [pool_num]
-# thread_valve() {
+# _thread_valve() {
 #     case $1 in
 #         # use before loop, need count
-#         --init | -i)
+#         --init)
 #             # use `ulimit -n` darwin:256 linux:1023
 #             local i=$((${3:-0}+3)) j;
 #             mkfifo /tmp/$$$3.fifo;
 #             eval "exec $i<> /tmp/$$$3.fifo";
-#             rm -f /tmp/$$$3.fifo
-#             # init thread valve
-#             for j in `seq 1 $2`; do
-#                 printf "\n";
-#             done >&$i
+#             perl -e 'print "\n" x '$2 >&$i
+#         ;;
+#         --run)
+#             local i=$((${2:-0}+3));
+#             shift;
+#             shift;
+#             read -u $i;
+#             {
+#                 "$@";
+#                 printf "\n" >&$i
+#             } &
 #         ;;
 #         # use after loop
-#         --destroy | -d)
+#         --destroy)
 #             wait;
 #             local i=$((${2:-0}+3));
 #             eval "exec $i>&-; exec $i<&-";
-#         ;;
-#         # use after multi-thread
-#         --return | -r)
-#             printf "\n" >&$((${2:-0}+3))
-#         ;;
-#         # use before multi-thread
-#         --get | -g)
-#             read -u $((${2:-0}+3))
+#             rm -f /tmp/$$$3.fifo
 #         ;;
 #     esac
 # }
