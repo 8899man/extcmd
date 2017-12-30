@@ -457,7 +457,7 @@ tar_cat_o() {
 }
 
 
-### OS globle setting #Usage: oset [option] [args...] # -a             Allow all app install # -hid [yes|no]  Hidden file/directory
+### OS globle setting #Usage: oset [option] [args...] # -a             Allow all app install # -hid [yes|no]  Hidden file/directory # -rlp           Reset LaunchPad
 lib_oset() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
     case $1 in
@@ -467,6 +467,10 @@ lib_oset() {
         -hid)
             [ "$2" == "yes" -o "$2" == "no" ] || exit 1; # must select 'yes' or 'no'
             defaults write com.apple.finder AppleShowAllFiles $2;
+        ;;
+        -rlp)
+            defaults write com.apple.dock ResetLaunchPad -bool true;
+            killall Dock
         ;;
         *)
             exit 1; # invalid option
@@ -722,18 +726,20 @@ _message_queue() {
             # make handler
             {
                 local cmd;
-                while read -u 6 cmd;
+                time while read -u 6 cmd;
                 do
                     [ "$cmd" == "0" ] && {
                         exec 6>&-;
                         exec 6<&-;
                         rm -f "/tmp/.message_queue+$USER+$$+${0//\//\+}.fifo";
+                        printf "queue close.\n";
                         break
                     };
                     # run command
                     eval ${cmd//%34/\\\"}
                 done
             } &
+            printf "queue open.\n"
         ;;
         --put)
             shift;
