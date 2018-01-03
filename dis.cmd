@@ -763,8 +763,11 @@ REM OS
 
     REM Search kms key
     REM https://technet.microsoft.com/en-us/library/jj612867(v=ws.11).aspx
+    REM https://docs.microsoft.com/en-us/windows-server/get-started/kmsclientkeys
     REM [EditionID]@[key] or "[[EditionID]@[key].[BuildLab_number]],[[EditionID]@[key].[BuildLab_number]], ..."
     for %%a in (
+        100_ServerStandardACor@DPCNP-XQFKJ-BJF7R-FRC8D-GF6G4
+        100_ServerDatacenterACor@6Y6KB-N82V8-D8CQV-23MJW-BWTG6
         100_ServerStandard@WC2BQ-8NRM3-FDDYY-2BFGV-KHKQY
         100_ServerDatacenter@CB7KF-BWN84-R7R2Y-793K2-8XDDG
         100_Education@NW6C2-QMPVW-D7KKK-3GKT6-VCFB2
