@@ -941,6 +941,8 @@ REM for :dis\officekms
         echo ;use ^>^&3 in script can print
         echo set devmgr_show_nonpresent_devices=1
         echo set path=%%path%%;%~dp0
+        echo.
+        echo title Command Prompt
     )
     endlocal
     exit /b 0
