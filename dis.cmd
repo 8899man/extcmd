@@ -490,8 +490,8 @@ REM Enable ServicesForNFS
 :: dism ::
 ::::::::::
 
-::: "Wim manager" "" "usage: %~n0 wim [option] [args ...]" "    --info,   -i [image_path]                                Displays information about images in a WIM file." "    --new,    -n [target_dir_path] [[image_name]]            Capture file/directory to wim" "    --apply,  -a [wim_path] [[output_path] [image_index]]    Apply WIM file" "    --mount,  -m [wim_path] [mount_path] [[image_index]]     Mount wim" "    --umount, -u [mount_path]                                Unmount wim" "    --commit, -c [mount_path]                                Unmount wim with commit" "    --export, -e [source_wim_path] [target_wim_path] [image_index] [[compress_level]]    Export wim image" "                                   compress level: 0:none, 1:WIMBoot, 2:fast, 3:max, 4:recovery(esd)" "    --umountall, -ua                                         Unmount all wim" "    --rmountall, -ra                                         Recovers mount all orphaned wim"
-:::: "option invalid" "lib.cmd not found" "dism version is too old" "target not found" "need input image name" "dism error" "wim file not found" "not wim file" "output path allready use" "output path not found" "Not a path" "Target wim index not select"
+::: "Wim manager" "" "usage: %~n0 wim [option] [args ...]" "    --info,   -i [image_path]                                Displays information about images in a WIM file." "    --new,    -n [[compress level]] [target_dir_path] [[image_name]]            Capture file/directory to wim" "    --apply,  -a [wim_path] [[output_path] [image_index]]    Apply WIM file" "    --mount,  -m [wim_path] [mount_path] [[image_index]]     Mount wim" "    --umount, -u [mount_path]                                Unmount wim" "    --commit, -c [mount_path]                                Unmount wim with commit" "    --export, -e [source_wim_path] [target_wim_path] [image_index] [[compress_level]]    Export wim image" "                                   compress level: 0:none, 1:WIMBoot, 2:fast, 3:max, 4:recovery(esd)" "    --umountall, -ua                                         Unmount all wim" "    --rmountall, -ra                                         Recovers mount all orphaned wim"
+:::: "option invalid" "lib.cmd not found" "dism version is too old" "target not found" "need input image name" "dism error" "wim file not found" "not wim file" "output path allready use" "output path not found" "Not a path" "Target wim index not select" "compress level error"
 :dis\wim
     call :this\iinpath lib.cmd || exit /b /b 2
     call :this\wim\%*
@@ -500,9 +500,13 @@ REM Enable ServicesForNFS
 :this\wim\--new
 :this\wim\-n
     call lib.cmd ivergeq 6.3 || exit /b 3
+
+    setlocal
+    call lib.cmd inum %~1 && call :wim\setCompress %~1 && shift
+
     if not exist "%~1" exit /b 4
     if "%~d1\"=="%~f1" if "%~2"=="" exit /b 5
-    setlocal
+
     set "\\\input=%~f1"
     REM trim path
     if "%\\\input:~-1%"=="\" set "\\\input=%\\\input:~0,-1%"
@@ -525,7 +529,7 @@ REM Enable ServicesForNFS
     set "\\\input=%\\\input:~0,-1%"
 
     REM Do capture
-    dism.exe /English /%\\\create%-Image /ImageFile:".\%\\\name%.wim" /CaptureDir:"%\\\input%" /Name:"%\\\name%" /Verify %\\\args% || exit /b 6
+    dism.exe /English /%\\\create%-Image /ImageFile:".\%\\\name%.wim" /CaptureDir:"%\\\input%" /Name:"%\\\name%" %\\\compress% /Verify %\\\args% || exit /b 6
     if exist "%\\\conf%" erase "%\\\conf%"
     endlocal
     exit /b 0
@@ -594,6 +598,17 @@ REM for wim
     dism.exe /Unmount-Wim /MountDir:"%~f1" /commit
     exit /b 0
 
+:: 0->4 none|WIMBoot|fast|max|recovery(esd)
+:wim\setCompress
+    set \\\compress=
+    if "%~1"=="0" set \\\compress=/Compress:none
+    if "%~1"=="1" set \\\compress=/WIMBoot
+    if "%~1"=="2" set \\\compress=/Compress:fast
+    if "%~1"=="3" set \\\compress=/Compress:max
+    if "%~1"=="4" set \\\compress=/Compress:recovery
+    if defined \\\compress exit /b 0
+    exit /b 1
+
 :this\wim\--export
 :this\wim\-e
     if not exist %1 exit /b 7
@@ -603,24 +618,18 @@ REM for wim
     if "%~3"=="" exit /b 12
     setlocal
 
-    REM 0->4 none|WIMBoot|fast|max|recovery(esd)
-    set \\\compress=
-    if "%~4"=="0" set \\\compress=/Compress:none
-    if "%~4"=="1" set \\\compress=/WIMBoot
-    if "%~4"=="2" set \\\compress=/Compress:fast
-    if "%~4"=="3" set \\\compress=/Compress:max
-    if "%~4"=="4" set \\\compress=/Compress:recovery
+    call :wim\setCompress %~4
 
     REM test suffix
-    if /i "%~x2"==".esd" if defined \\\compress if "%\\\compress:recovery=%"=="%\\\compress%" exit /b 8
+    if /i "%~x2"==".esd" if defined \\\compress if "%\\\compress:~-8%" neq "recovery" exit /b 13
 
     REM auto esd
     if /i "%~x2"==".esd" if not defined \\\compress set \\\compress=/Compress:recovery
 
-    REM test size
-    set \\\size=%~z1 || exit /b 7
+    REM test size, TODO get image size by index
+    set "\\\size=%~z1" 2>nul || exit /b 7
     REM 0x1fffffff = 536870911
-    if "%\\\size:~9,1%"=="" if %~z1 lss 536870911 if "%\\\compress%" neq "/WIMBoot" set "\\\compress=%\\\compress% /Bootable"
+    if "%\\\size:~9,1%"=="" if %\\\size% lss 536870911 if "%\\\compress%" neq "/WIMBoot" set "\\\compress=%\\\compress% /Bootable"
 
     dism.exe /Export-Image /SourceImageFile:"%~f1" /SourceIndex:%3 /DestinationImageFile:"%~f2" %\\\compress% /CheckIntegrity
     endlocal
