@@ -1,0 +1,574 @@
+#!/bin/bash
+#   Copyright 2017 bin jin
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+# Message Queue
+_message_queue() {
+    case $1 in
+        --init)
+            mkfifo "/tmp/.message_queue+$USER+$$+${0//\//\+}.fifo";
+            # &6
+            exec 6<> "/tmp/.message_queue+$USER+$$+${0//\//\+}.fifo";
+            # make handler
+            {
+                local cmd;
+                time while read -u 6 cmd;
+                do
+                    [ "$cmd" == "0" ] && {
+                        exec 6>&-;
+                        exec 6<&-;
+                        rm -f "/tmp/.message_queue+$USER+$$+${0//\//\+}.fifo";
+                        printf "queue close.\n";
+                        break
+                    };
+                    # run command
+                    eval ${cmd//%34/\\\"}
+                done
+            } &
+            printf "queue open.\n"
+        ;;
+        --put)
+            shift;
+            local a;
+            {
+                for a in "$@";
+                do
+                    a="${a//\"/%34}";
+                    [ "${a/ /}" == "$a" ] || a="\"$a\"";
+                    printf %s "$a "
+                done
+                printf "\n"
+            } >&6
+        ;;
+        --destroy)
+            printf "0\n" >&6
+        ;;
+    esac
+}
+
+# thread valve
+_thread_valve() {
+    case $1 in
+        # use before loop, need count
+        --init)
+            mkfifo "/tmp/.thread_valve+$USER+$$+${0//\//\+}.fifo";
+            # &5
+            exec 5<> "/tmp/.thread_valve+$USER+$$+${0//\//\+}.fifo";
+            perl -e 'print "\n" x '$2 >&5
+        ;;
+        --run)
+            shift;
+            read -u 5;
+            {
+                "$@";
+                printf "\n" >&5
+            } &
+        ;;
+        # use after loop
+        --destroy)
+            wait;
+            exec 5>&-;
+            exec 5<&-
+            rm -f "/tmp/.thread_valve+$USER+$$+${0//\//\+}.fifo"
+        ;;
+
+    esac
+}
+
+# Only support in dash
+# _thread_valve() {
+#     case $1 in
+#         # use before loop, need count
+#         --init)
+#             # use `ulimit -n` darwin:256 linux:1023
+#             local i=$((${3:-0}+3)) j;
+#             mkfifo /tmp/$$$3.fifo;
+#             eval "exec $i<> /tmp/$$$3.fifo";
+#             perl -e 'print "\n" x '$2 >&$i
+#         ;;
+#         --run)
+#             local i=$((${2:-0}+3));
+#             shift;
+#             shift;
+#             read -u $i;
+#             {
+#                 "$@";
+#                 printf "\n" >&$i
+#             } &
+#         ;;
+#         # use after loop
+#         --destroy)
+#             wait;
+#             local i=$((${2:-0}+3));
+#             eval "exec $i>&-; exec $i<&-";
+#             rm -f /tmp/$$$3.fifo
+#         ;;
+#     esac
+# }
+
+# # decode encode
+# _code() {
+#     local i=0 c t;
+#     case $1 in
+#         --encode|-e)
+#             for ((; i<${#2}; i++))
+#             do
+#                 t=$(printf %d \'${2:$i:1});
+#                 [ $t -gt 0 ] && {
+#                     c+=$t;
+#                     :
+#                 } || c+=${2:$i:1}
+#             done;
+#             printf "$c"
+#         ;;
+#         --decode|-d)
+#             while [ $i -lt ${#2} ]; do
+#                 if [[ ${2:$i:1} == [^0-9] ]]; then
+#                     c+=${2:$i:1};
+#                     ((i++))
+#                 elif [ ${2:$i:2} -gt 31 ]; then
+#                     c+=$(printf \\x`printf %x ${2:$i:2}`);
+#                     ((i+=2))
+#                 else
+#                     c+=$(printf \\x`printf %x ${2:$i:3}`);
+#                     ((i+=3))
+#                 fi
+#             done;
+#             printf "$c"
+#         ;;
+#     esac
+# }
+
+# Usage: _map   [option] [arg...] [[instance num]]
+#       max instance num: 255, default: 0,
+#       if you will use _set function, num need less than 128
+#   --put, -p [key] [value] [[num]] put key value in map
+#   --get, -g [key] [[num]]         get value by key
+#   --remove, -r [key] [[num]]      remove value by key
+#   --keys, -ks [[num]]             set all keys in REPLY array
+#   --values, -vs [[num]]           set all values in REPLY array
+#   --arr, -a [[num]]               set all in REPLY array like: [key value]...
+#   --clear, -c [[num]]             clear map by instance num
+#   --size, -s [[num]]              get map size
+#   --clearall                      clear all map
+_map () {
+    # _varmap "$@"
+    _offset_map "$@"
+    # _split_map "$@"
+}
+
+# Usage: _set   [option] [arg...] [[instance_num]]
+#       max instance num: 127, default: 0. it will use map instance 128 ~ 255
+#   --add, -i   [arg] [[num]]       add if not have
+#   --contains, -t  [arg] [[num]]   test have
+#   --remove, -r    [arg] [[num]]   remove
+#   --arr, -a [[num]]               set all in REPLY array
+#   --clear, -c [[num]]             clear set by instance
+_set() {
+    [ "$1" ] || return 1;
+    local i;
+    case $1 in
+        --add | -i)
+            [ $# -ge 2 ] || return 2;
+            i=$(((${3:-0} & 0x7F) + 0x80));
+            _map --get "$2" $i >/dev/null && return 1
+            _map --put "$2" _ $i;
+            return 0
+        ;;
+        --contains | -t)
+            [ $# -ge 2 ] || return 2;
+            _map --get "$2" $(((${3:-0} & 0x7F) + 0x80)) >/dev/null && return 0;
+            return 1
+        ;;
+        --remove | -r)
+            [ $# -ge 2 ] || return 2;
+            _map $1 "$2" $(((${3:-0} & 0x7F) + 0x80)) >/dev/null || return 1
+            return 0
+        ;;
+        --arr | -a)
+            _map --keys $(((${2:-0} & 0x7F) + 0x80))
+        ;;
+        --clear | -c)
+            _map $1 $(((${2:-0} & 0x7F) + 0x80))
+        ;;
+    esac
+}
+
+_BKDRHash (){
+    local a i h=0 seed=131; # 31 131 1313 13131 131313
+    for ((i=0; i<${#1}; i++))
+    do
+        a+=" '${1:$i:1}";
+    done;
+    a=(`printf "%d " $a`);
+    for i in ${a[@]};
+    do
+        h=$((seed * h + $i));
+    done;
+    # 2^63-1 = 0x7FFFFFFFFFFFFFFF
+    # 2^31-1 = 0x7FFFFFFF
+    printf $((($h & 0x7FFFFFFFFFFFFFFF) % 0x7FFFFFFFFFFFFF + (${2:-0} & 0xFF) * 0x7FFFFFFFFFFFFF))
+    # printf $(($h & 0xF))
+}
+
+# # variable map, variable: MAP_KEY_[INT] MAP_VALUE_[INT], not support ``
+# _varmap() {
+#     [ $# -gt 1 ] || return 1;
+#     local h=`_BKDRHash "$2"` i k;
+
+#     case $1 in
+#         --put|-p)
+#             [ $# == 3 ] || return 2;
+#             # Get key count
+#             eval i=\${#MAP_KEY_$h[@]};
+#             [ $i == 0 ] && {
+#                 eval MAP_KEY_$h[0]=\"$2\";
+#                 eval MAP_VALUE_$h[0]=\"$3\";
+#                 :
+#             } || {
+#                 # Get all key index
+#                 eval i=\${!MAP_KEY_$h[@]};
+#                 for i in $i;
+#                 do
+#                     eval k=\${MAP_KEY_$h[$i]};
+#                     [ "$k" == "$2" ] && {
+#                         # If key aleady in, update value
+#                         eval MAP_VALUE_$h[$i]=\"$3\";
+#                         return 0
+#                     }
+#                 done
+#                 # Apend key value
+#                 eval MAP_KEY_$h[$i + 1]=\"$2\";
+#                 eval MAP_VALUE_$h[$i + 1]=\"$3\";
+#             }
+#         ;;
+#         --get|-g)
+#             [ $# == 2 ] || return 1;
+#             eval i=\${#MAP_KEY_$h[@]};
+#             if [ $i == 0 ]; then
+#                 return 0
+#             elif [ $i == 1 ]; then
+#                 eval echo \${MAP_VALUE_$h}
+#             else
+#                 eval i=\${!MAP_KEY_$h[@]};
+#                 for i in $i;
+#                 do
+#                     eval k=\${MAP_KEY_$h[$i]};
+#                     [ "$k" == "$2" ] && {
+#                         # If key aleady in, update value
+#                         eval echo \${MAP_VALUE_$h[$i]};
+#                         return 0
+#                     }
+#                 done
+#             fi
+#         ;;
+#     esac
+# }
+
+# Offset map, variable: MAP_OFFSET MAP_ENTRY
+_offset_map() {
+    [ "$1" ] || return 1;
+    local i h k o=0 entry;
+    case $1 in
+        --put | -p)
+            [ $# -ge 3 -a ${#2} != 0 -a ${#3} != 0 ] || return 2;
+            h=`_BKDRHash "$2" $4` || return 2;
+            [ ! "${MAP_OFFSET[$h]}" ] && {
+                MAP_OFFSET[$h]="${#2} ${#3}";
+                MAP_ENTRY[$h]="$2$3";
+                ((++MAP_ENTRY[0x7FFFFFFFFFFFFFFF - (${4:-0} & 0xFF)]));
+                return 0
+            } || {
+                k=(${MAP_OFFSET[$h]});
+                for ((i=0; i<${#k[@]}; i+=2))
+                do
+                    # If key aleady in, update value
+                    entry=${MAP_ENTRY[$h]};
+                    [ "${entry:$o:${k[$i]}}" == "$2" ] && {
+                        ((o += ${k[$i]}));
+                        # [left]$3[right]
+                        MAP_ENTRY[$h]="${entry:0:$o}$3${entry:$o + ${k[$i + 1]}}";
+                        # after value update
+                        k[$i + 1]=${#3};
+                        MAP_OFFSET[$h]="${k[@]}";
+                        return 0
+                    };
+                    ((o += ${k[$i]} + ${k[$i + 1]}))
+                done
+                # Apend key value
+                MAP_OFFSET[$h]+=" ${#2} ${#3}";
+                MAP_ENTRY[$h]+="$2$3";
+                ((++MAP_ENTRY[0x7FFFFFFFFFFFFFFF - (${4:-0} & 0xFF)]));
+                return 0
+            }
+        ;;
+        --get | -g | --remove | -r)
+            [ $# -ge 2 -a ${#2} != 0 ] || return 1;
+            h=`_BKDRHash "$2" $3` || return 2;
+            [ "${MAP_OFFSET[$h]}" ] || return 1;
+            k=(${MAP_OFFSET[$h]});
+            if [ ${#k[@]} == 2 ]; then
+                entry=${MAP_ENTRY[$h]};
+                [ "${entry:0:$k}" == "$2" ] && {
+                    REPLY="${entry:$k}";
+                    # --get | -g || --remove | -r
+                    [ "${1/-g/}" != "$1" ] && printf "$REPLY" || {
+                        unset MAP_OFFSET[$h] MAP_ENTRY[$h];
+                        ((--MAP_ENTRY[0x7FFFFFFFFFFFFFFF - (${3:-0} & 0xFF)]))
+                    };
+                    return 0;
+                }
+            elif [ ${#k[@]} -gt 2 ]; then
+                for ((i=0; i<${#k[@]}; i+=2))
+                do
+                    entry=${MAP_ENTRY[$h]};
+                    # If key aleady in, update
+                    [ "${entry:$o:${k[$i]}}" == "$2" ] && {
+                        REPLY="${entry:$o + ${k[$i]}:${k[$i + 1]}}";
+                        # --get | -g || --remove | -r
+                        [ "${1/-g/}" != "$1" ] && printf "$REPLY" || {
+                            MAP_ENTRY[$h]="${entry:0:$o}${entry:$o + ${k[$i]} + ${k[$i + 1]}}";
+                            unset k[$i] k[$i+1];
+                            MAP_OFFSET[$h]="${k[@]}";
+                            ((--MAP_ENTRY[0x7FFFFFFFFFFFFFFF - (${3:-0} & 0xFF)]))
+                        };
+                        return 0
+                    };
+                    ((o += ${k[$i]} + ${k[$i + 1]}))
+                done;
+            fi;
+            return 1
+        ;;
+        --keys | -ks | --values | -vs | --arr | -a | --clear | -c)
+            [ ${#MAP_OFFSET[@]} == 0 ] && return 1;
+            i=$((${2:-0} & 0xFF));
+            local l r;
+            ((l = i * 0x7FFFFFFFFFFFFF, r = l + 0x7FFFFFFFFFFFFF));
+            [ "${MAP_OFFSET[$l]}" ] || MAP_OFFSET[$l]=""
+            [ "${MAP_OFFSET[$r]}" ] || MAP_OFFSET[$r]=""
+            h=${!MAP_OFFSET[@]};
+            h="${h% $r*} ";
+            h=${h#*$l };
+            h=${h% };
+            [ "${MAP_OFFSET[$l]}" ] && h="$l $h" || unset MAP_OFFSET[$l];
+            [ "${MAP_OFFSET[$r]}" ] || unset MAP_OFFSET[$r];
+
+            [ "$h" ] || return 1;
+
+            case $1 in
+                --clear | -c)
+                    # unset: variable can without '$''
+                    [ "$h" ] && unset MAP_ENTRY[0x7FFFFFFFFFFFFFFF-i] MAP_OFFSET[${h// /] MAP_OFFSET[}] MAP_ENTRY[${h// /\] MAP_ENTRY[}];
+                    # }
+                ;;
+                --keys | -ks)
+                    unset REPLY r;
+                    for h in $h;
+                    do
+                        k=(${MAP_OFFSET[$h]}) o=0;
+                        for l in ${k[@]};
+                        do
+                            [ $((r++ % 2)) == 0 ] && {
+                                entry=${MAP_ENTRY[$h]};
+                                REPLY[${#REPLY[@]}]="${entry:$o:$l}";
+                            }
+                            ((o += $l));
+                        done
+                    done
+                ;;
+                --values | -vs)
+                    unset REPLY r;
+                    for h in $h;
+                    do
+                        k=(${MAP_OFFSET[$h]}) o=0;
+                        for l in ${k[@]};
+                        do
+                            [ $((r++ % 2)) == 1 ] && {
+                                entry=${MAP_ENTRY[$h]};
+                                REPLY[${#REPLY[@]}]="${entry:$o:$l}";
+                            }
+                            ((o += $l));
+                        done
+                    done
+                ;;
+                --arr | -a)
+                    unset REPLY;
+                    for h in $h;
+                    do
+                        k=(${MAP_OFFSET[$h]}) o=0;
+                        for i in ${k[@]};
+                        do
+                            entry=${MAP_ENTRY[$h]};
+                            REPLY[${#REPLY[@]}]="${entry:$o:$i}";
+                            ((o += $i));
+                        done
+                    done
+                ;;
+            esac
+            return 0
+        ;;
+        --size | -s)
+            printf "${MAP_ENTRY[0x7FFFFFFFFFFFFFFF - (${2:-0} & 0xFF)]:-0}"
+        ;;
+        --clearall)
+            unset MAP_ENTRY MAP_OFFSET
+        ;;
+        *)
+            printf "\033[31m$1: invalid option\033[0m\n" >&2
+        ;;
+    esac
+}
+
+# Split map, variable: MAP
+_split_map() {
+    [ "$1" ] || return 1;
+    local h i kv s=`printf "\b"` o=0 OLDIFS=$IFS;
+    case $1 in
+        --put | -p)
+            [ $# -ge 3 -a ${#2} != 0 -a ${#3} != 0 ] || return 2;
+            h=`_BKDRHash "$2" $4` || return 2;
+            [ ! "${MAP[$h]}" ] && {
+                MAP[$h]="$2$s$3";
+                ((++MAP[0x7FFFFFFFFFFFFFFF - (${4:-0} & 0xFF)]));
+                return 0
+            } || {
+                IFS=$s;
+                kv=(${MAP[$h]});
+                IFS=$OLDIFS;
+                for ((i=0; i<${#kv[@]}; i+=2))
+                do
+                    [ "${kv[$i]}" == "$2" ] && {
+                        ((o += ${#kv[$i]} + 1));
+                        MAP[$h]=${MAP[$h]:0:$o}$3${MAP[$h]:$o + ${#kv[$i + 1]}};
+                        return 0
+                    };
+                    ((o += ${#kv[$i]} + ${#kv[$i + 1]} + 2))
+                done;
+                MAP[$h]+="$s$2$s$3";
+                ((++MAP[0x7FFFFFFFFFFFFFFF - (${4:-0} & 0xFF)]));
+                return 0
+            };
+        ;;
+        --get | -g | --remove | -r)
+            [ $# -ge 2 -a ${#2} != 0 ] || return 1;
+            h=`_BKDRHash "$2" $3` || return 2;
+            [ "${MAP[$h]}" ] || return 1;
+            IFS=$s;
+            kv=(${MAP[$h]});
+            IFS=$OLDIFS;
+            if [ ${#kv[@]} == 2 ]; then
+                [ "$kv" == "$2" ] && {
+                    REPLY="${kv[1]}";
+                    # --get | -g || --remove | -r
+                    [ "${1/-g/}" != "$1" ] && printf "$REPLY" || {
+                        unset MAP[$h];
+                        ((--MAP[0x7FFFFFFFFFFFFFFF - (${3:-0} & 0xFF)]))
+                    };
+                    return 0;
+                }
+            elif [ ${#kv[@]} -gt 2 ]; then
+                for ((i=0; i<${#kv[@]}; i+=2))
+                do
+                    [ "${kv[$i]}" == "$2" ] && {
+                        REPLY="${kv[$i + 1]}";
+                        # --get | -g || --remove | -r
+                        [ "${1/-g/}" != "$1" ] && printf "$REPLY" || {
+                            [ $((${#kv[@]} - $i)) == 2 ] && {
+                                # remove tail
+                                MAP[$h]=${MAP[$h]:0:$o - 1};
+                            } || MAP[$h]=${MAP[$h]:0:$o}${MAP[$h]:$o + ${#kv[$i]} + ${#kv[$i + 1]} + 2};
+                            ((--MAP[0x7FFFFFFFFFFFFFFF - (${3:-0} & 0xFF)]))
+                        };
+                        return 0
+                    };
+                    ((o += ${#kv[$i]} + ${#kv[$i + 1]} + 2))
+                done;
+            fi;
+            return 1
+        ;;
+        --keys | -ks | --values | -vs | --arr | -a | --clear | -c)
+            [ ${#MAP[@]} == 0 ] && return 1;
+            i=$((${2:-0} & 0xFF));
+            local l r;
+            ((l = i * 0x7FFFFFFFFFFFFF, r = l + 0x7FFFFFFFFFFFFF));
+            [ "${MAP[$l]}" ] || MAP[$l]=""
+            [ "${MAP[$r]}" ] || MAP[$r]=""
+            h=${!MAP[@]};
+            h="${h% $r*} ";
+            h=${h#*$l };
+            h=${h% };
+            [ "${MAP[$l]}" ] && h="$l $h" || unset MAP[$l];
+            [ "${MAP[$r]}" ] || unset MAP[$r];
+
+            [ "$h" ] || return 1;
+
+            case $1 in
+                --clear | -c)
+                    # unset: variable can without '$''
+                    unset MAP[0x7FFFFFFFFFFFFFFF-i] MAP[${h// /] MAP[}];
+                    # }
+                ;;
+                --keys | -ks)
+                    unset REPLY r;
+                    for h in $h;
+                    do
+                        IFS=$s;
+                        kv=(${MAP[$h]});
+                        IFS=$OLDIFS;
+                        for l in ${!kv[@]};
+                        do
+                            [ $((r++ % 2)) == 0 ] && REPLY[${#REPLY[@]}]="${kv[$l]}";
+                        done
+                    done
+                ;;
+                --values | -vs)
+                    unset REPLY r;
+                    for h in $h;
+                    do
+                        IFS=$s;
+                        kv=(${MAP[$h]});
+                        IFS=$OLDIFS;
+                        for l in ${!kv[@]};
+                        do
+                            [ $((r++ % 2)) == 1 ] && REPLY[${#REPLY[@]}]="${kv[$l]}";
+                        done
+                    done
+                ;;
+                --arr | -a)
+                    unset REPLY;
+                    for h in $h;
+                    do
+                        IFS=$s;
+                        kv=(${MAP[$h]});
+                        IFS=$OLDIFS;
+                        for l in ${!kv[@]};
+                        do
+                            REPLY[${#REPLY[@]}]="${kv[$l]}"
+                        done
+                    done
+                ;;
+            esac
+            return 0
+        ;;
+        --size | -s)
+            printf "${MAP[0x7FFFFFFFFFFFFFFF - (${2:-0} & 0xFF)]:-0}"
+        ;;
+        --clearall)
+            unset MAP
+        ;;
+        *)
+            printf "\033[31m$1: invalid option\033[0m\n" >&2
+        ;;
+    esac
+}
