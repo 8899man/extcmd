@@ -587,7 +587,7 @@ lib_filter() {
 ### Print random string match [A-Za-z0-9] #Usage: rand [[size]]
 lib_rand() {
     # local rand=`dd if=/dev/random bs=1 count=${1:-32} 2>/dev/null | base64 | tr -d '\n'`; # tr -d '\n' support linux
-    openssl rand -base64 ${1:-9} | sed "s/[^0-9A-Za-z]/${RANDOM:0:1}/g"
+    openssl rand -base64 ${1:-9} | tr -d '\n' | sed "s/[^0-9A-Za-z]/${RANDOM:0:1}/g"
 }
 
 ### Show/find IPv4 #Usage: ip [option] [args...] # -l            Show IPv4 # -f [mac_addr] Search IPv4 by MAC or Host name #               support alias, see lib hosts
