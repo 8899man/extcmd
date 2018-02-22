@@ -225,8 +225,8 @@ lib_dmg() {
                 break;
             done < <(find /Applications/Install* -iname "createinstallmedia" 2>/dev/null);
             [ -f "$tmp" ] || exit 1; # install source not found
-            [ -f "${tmp%Resources*}SharedSupport/BaseSystem.dmg" ] || {
-                if [ -f "/macOS Install Data/BaseSystem.dmg" ]; then
+            [ -f "${tmp%Resources*}SharedSupport/InstallInfo.plist" ] || {
+                if [ -f "/macOS Install Data/InstallInfo.plist" ]; then
                     sudo mkdir -p "${tmp%Resources*}SharedSupport";
                     find "/macOS Install Data" -type f -exec sudo ln {} "${tmp%Resources*}SharedSupport" \;
                 else
