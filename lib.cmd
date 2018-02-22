@@ -788,7 +788,7 @@ REM For thread sip
         `arp.exe -a %1`
     ) do for %%c in (
         %*
-    ) do for /f "usebackq tokens=1,2 delims=." %%d in (
+    ) do for /f "usebackq tokens=1* delims=." %%d in (
         '%%c'
     ) do (
         set "\\\macs=%%d"
