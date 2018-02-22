@@ -225,7 +225,14 @@ lib_dmg() {
                 break;
             done < <(find /Applications/Install* -iname "createinstallmedia" 2>/dev/null);
             [ -f "$tmp" ] || exit 1; # install source not found
-            sudo "$tmp" --volume "$2" --applicationpath "${tmp:0:${#tmp}-38}" --nointeraction;
+            [ -f "${tmp%Resources*}SharedSupport/BaseSystem.dmg" ] || {
+                if [ -f "/macOS Install Data/BaseSystem.dmg" ]; then
+                    sudo ln -s "/macOS Install Data" "${tmp%Resources*}SharedSupport"
+                else
+                    exit 1; # img file not found
+                fi
+            };
+            sudo "$tmp" --volume "$2" --applicationpath "${tmp%/Contents*}" --nointeraction;
         ;;
         -dd)
             shift;
