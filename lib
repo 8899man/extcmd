@@ -230,7 +230,7 @@ lib_dmg() {
                     sudo mkdir -p "${tmp%Resources*}SharedSupport";
                     find "/macOS Install Data" -type f -exec sudo ln {} "${tmp%Resources*}SharedSupport" \;
                 else
-                    exit 1; # img file not found
+                    exit 1; # need to run the 'install app' and exit before 'reboot'
                 fi
             };
             sudo "$tmp" --volume "$2" --applicationpath "${tmp%/Contents*}" --nointeraction;
