@@ -39,7 +39,7 @@ REM             exit /b 10
 ::::::::::::::::::::::::::
 
 REM For thread
-if "%1"=="""" goto thread
+if "%~d1"=="\\" call :thread "%*" & exit
 
 REM Init PATH
 for %%a in (%~nx0) do if "%%~$path:a"=="" set path=%path%;%~dp0
@@ -193,9 +193,8 @@ REM for :lib\2la and :lib\rpad and
 
 REM start /b [command...]
 :thread
-    shift /1
-    call :thread\%1 %2 %3 %4 %5 %6 %7 %8 %9
-    exit 0
+    call %~pnx1
+    goto :eof
 
 :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: ::
 ::                 Framework                 ::
@@ -753,6 +752,7 @@ REM     exit /b 0
         )
     )
 
+    REM [MAC]\[MAC]\.[NAME] ...
     if not defined \\\macs exit /b 0
 
     REM Get router ip
@@ -773,14 +773,14 @@ REM     exit /b 0
         %\\\range:-=,1,%
     ) do (
         call :this\thread_valve 50 cmd.exe --find
-        start /b lib.cmd "" ip\--find %%~na.%%b %\\\macs%
+        start /b lib.cmd \\:ip\--find %%~na.%%b %\\\macs%
     )
     endlocal
     exit /b 0
 
 REM nbtstat
 REM For thread sip
-:thread\ip\--find
+:ip\--find
     REM some ping will fail, but arp success
     ping.exe -n 1 -w 1 %1 >nul 2>nul
     setlocal enabledelayedexpansion
