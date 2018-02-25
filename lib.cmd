@@ -34,6 +34,14 @@ REM             ...
 REM             REM return false status
 REM             exit /b 10
 
+REM Thead:
+REM     e.g.
+REM         \\:[function_name] [args1] [args2] ...
+REM ...
+REM :[function_name]
+REM ...
+REM goto :eof
+
 ::::::::::::::::::::::::::
 :: some basic functions ::
 ::::::::::::::::::::::::::
