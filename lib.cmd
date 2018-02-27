@@ -1074,16 +1074,20 @@ REM for head tail
     exit /b 0
 
 :this\hash
+    if exist "%~2" for /f "usebackq tokens=1,2" %%a in (
+        `certutil.exe -hashfile %2 %~1`
+    ) do if "%%b"=="" echo %%a   %2& exit /b 0
     setlocal
     call :this\gpsv
     if not errorlevel 2 exit /b 1
-    set \\\arg=-
-    if exist "%~2" (
-        set "\\\arg=%~2"
-        for /f "usebackq" %%a in (
-            `PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "[System.BitConverter]::ToString((New-Object -TypeName System.Security.Cryptography.%~1CryptoServiceProvider).ComputeHash([System.IO.File]::Open(\"%2\",[System.IO.Filemode]::Open,[System.IO.FileAccess]::Read))).ToString() -replace \"-\""`
-        ) do set \\\hash=%%a
-    ) else for /f "usebackq" %%a in (
+    REM set \\\arg=-
+    REM if exist "%~2" (
+    REM     set "\\\arg=%~2"
+    REM     for /f "usebackq" %%a in (
+    REM         `PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "[System.BitConverter]::ToString((New-Object -TypeName System.Security.Cryptography.%~1CryptoServiceProvider).ComputeHash([System.IO.File]::Open(\"%2\",[System.IO.Filemode]::Open,[System.IO.FileAccess]::Read))).ToString() -replace \"-\""`
+    REM     ) do set \\\hash=%%a
+    REM ) else
+    for /f "usebackq" %%a in (
         `PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "[System.BitConverter]::ToString((New-Object -TypeName System.Security.Cryptography.%~1CryptoServiceProvider).ComputeHash([Console]::OpenStandardInput())).ToString() -replace \"-\""`
     ) do set \\\hash=%%a
     if "%\\\hash%"=="" exit /b 2
@@ -1093,7 +1097,7 @@ REM for head tail
     set \\\hash=%\\\hash:D=d%
     set \\\hash=%\\\hash:E=e%
     set \\\hash=%\\\hash:F=f%
-    endlocal & echo %\\\hash%   %\\\arg%
+    endlocal & echo %\\\hash%   -
     exit /b 0
 
 ::: "Test PowerShell version" "" "Return errorlevel"
