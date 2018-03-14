@@ -13,6 +13,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+# Tag prefix each line, support `date` format
+_log() {
+    if [[ $OSTYPE == darwin* ]]; then
+        perl -ne 'use POSIX qw(strftime); print strftime("'"$1"'", localtime), $_'
+    else
+        gawk '{print strftime("'"$1"'") $0};fflush(stdout)'
+    fi
+}
+
 # Message Queue
 _message_queue() {
     case $1 in

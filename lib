@@ -834,11 +834,11 @@ lib_inum() {
     return 0
 }
 
-### Tag date time each line #Usage: [command] | log [strftime format]
+### Tag prefix each line, support `date` format #Usage: [command] | log [strftime format]
 lib_log() {
     [ "$1" ] || exit 1; # Args is empty
-    # gawk '{print strftime("'"$1"'") $0}'
-    perl -ne 'use POSIX qw(strftime); print strftime("'"$1"'", localtime), $_'
+    source "$(cd `dirname $0`; pwd)/.lib";
+    _log "$@"
 }
 
 ### Plist editer #Usage: plist [--xml|-x|--json|-j|--binary|-b] [path...]
