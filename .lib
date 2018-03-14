@@ -19,10 +19,12 @@ _prefix() {
     if [ "${1/\%/}" == "$1" ]; then
         awk '{print '"$1"' $0};fflush(stdout)'
     else
-        if [[ $OSTYPE == darwin* ]]; then
+        if which gawk >/dev/null; then
+            gawk '{print strftime("'"$1"'") $0};fflush(stdout)';
+        elif which perl >/dev/null; then
             perl -ne 'use POSIX qw(strftime); print strftime("'"$1"'", localtime), $_'
         else
-            which gawk >/dev/null && gawk '{print strftime("'"$1"'") $0};fflush(stdout)'
+            return 1;
         fi
     fi
 }
