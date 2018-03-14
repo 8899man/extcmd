@@ -124,7 +124,7 @@ lib_gpkg() {
         sleep 1;
     done;
 
-    } | lib_log "%F %T, GPKG, "
+    } | lib_prefix "%F %T, GPKG, "
 
     # wait all thread over
     wait
@@ -263,7 +263,7 @@ lib_dmg() {
                     rm "${1%.*}.dmg";
                     # sudo dd if="${1%.*}.dmg" of=$target bs=4m & while killall -USR1 dd; do
                     #     sleep 10;
-                    # done | lib_log "%F %T, "
+                    # done | lib_prefix "%F %T, "
                 ;;
                 gz)
                     which gzcat >/dev/null 2>&1 || exit 1; # gzcat command not found
@@ -834,11 +834,11 @@ lib_inum() {
     return 0
 }
 
-### Tag prefix each line, support `date` format #Usage: [command] | log [strftime format]
-lib_log() {
+### Tag prefix each line, support `date` format #Usage: [command] | prefix [strftime format]
+lib_prefix() {
     [ "$1" ] || exit 1; # Args is empty
     source "$(cd `dirname $0`; pwd)/.lib";
-    _log "$@"
+    _prefix "$@"
 }
 
 ### Plist editer #Usage: plist [--xml|-x|--json|-j|--binary|-b] [path...]

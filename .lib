@@ -14,11 +14,16 @@
 #   limitations under the License.
 
 # Tag prefix each line, support `date` format
-_log() {
-    if [[ $OSTYPE == darwin* ]]; then
-        perl -ne 'use POSIX qw(strftime); print strftime("'"$1"'", localtime), $_'
+_prefix() {
+    [ "$1" ] || return 1;
+    if [ "${1/\%/}" == "$1" ]; then
+        awk '{print '"$1"' $0};fflush(stdout)'
     else
-        gawk '{print strftime("'"$1"'") $0};fflush(stdout)'
+        if [[ $OSTYPE == darwin* ]]; then
+            perl -ne 'use POSIX qw(strftime); print strftime("'"$1"'", localtime), $_'
+        else
+            which gawk >/dev/null && gawk '{print strftime("'"$1"'") $0};fflush(stdout)'
+        fi
     fi
 }
 
