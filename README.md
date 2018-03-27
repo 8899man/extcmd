@@ -182,8 +182,8 @@ lib.cmd
         kill            Kill process
                         关闭进程。
 
-        log             Tag date time each line
-                        给输出添加日志标记。
+        prefix          Tag prefix each line, support `date` format
+                        给输出添加前缀，支持输出时间。
 
         MD5             Print or check MD5 (128-bit) checksums.
                         计算文件 MD5。
