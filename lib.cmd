@@ -681,7 +681,7 @@ REM     exit /b 0
         if defined \\\MAP1\%%e (
             for %%f in (
                 !\\\MAP1\%%e!
-            ) do call :lib\iip %%f && (
+            ) do call :lib\iip "%%~f" && (
                 set \\\line=%%b
                 call :page -p !\\\line:%%d=%%f!
             ) || call :page -p %%b
