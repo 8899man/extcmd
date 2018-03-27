@@ -46,11 +46,11 @@ set errorlevel=
 
 REM Help
 setlocal
-    set \\\12=%~1%~2
-    if not defined \\\12 set \\\12=-
-    set \\\12=%\\\12:--help=%
-    set \\\12=%\\\12:-h=%
-endlocal & if "%~1%~2" neq "%\\\12%" (
+    set _12=%~1%~2
+    if not defined _12 set _12=-
+    set _12=%_12:--help=%
+    set _12=%_12:-h=%
+endlocal & if "%~1%~2" neq "%_12%" (
     if "%~2"=="" (call :this\annotation) else call :this\annotation :%~n0\%~1
     goto :eof
 )
@@ -73,8 +73,8 @@ REM Show INFO or ERROR
     ) do (
         REM Set annotation, errorlevel will reset after some times
         if %errorlevel% geq 1 (
-            if /i "%%~a"=="::::" set \\\tmp=%errorlevel% %%b %%c
-        ) else if /i "%%~a"==":::" set \\\tmp=%%b %%c
+            if /i "%%~a"=="::::" set _tmp=%errorlevel% %%b %%c
+        ) else if /i "%%~a"==":::" set _tmp=%%b %%c
 
         if /i "%%~a"==":%~n0" (
             REM Display func info or error
@@ -82,40 +82,40 @@ REM Show INFO or ERROR
                 if %errorlevel% geq 1 (
                     REM Inherit errorlevel
                     call :serrlv %errorlevel%
-                    call %0\error %%~a\%%~b !\\\tmp!
-                ) else call %0\more !\\\tmp!
+                    call %0\error %%~a\%%~b !_tmp!
+                ) else call %0\more !_tmp!
                 goto :eof
             )
             REM init func var, for display all func, or show sort func name
-            set \\\args\%%~b=!\\\tmp! ""
+            set _args\%%~b=!_tmp! ""
             REM Clean var
-            set \\\tmp=
+            set _tmp=
         )
     )
 
     REM Foreach func list
-    call :this\gcols \\\col
-    set /a \\\i=0, \\\col/=16
+    call :this\gcols _col
+    set /a _i=0, _col/=16
     for /f usebackq^ tokens^=1^,2^ delims^=^=^" %%a in (
-        `set \\\args\%~n1 2^>nul`
+        `set _args\%~n1 2^>nul`
     ) do if "%~1" neq "" (
         REM " Sort func name expansion
-        set /a \\\i+=1
-        set \\\target=%%~nxa %2 %3 %4 %5 %6 %7 %8 %9
-        if !\\\i!==1 set \\\tmp=%%~nxa
-        if !\\\i!==2 call :this\rpad !\\\tmp! %\\\col%
-        if !\\\i! geq 2 call :this\rpad %%~nxa %\\\col%
+        set /a _i+=1
+        set _target=%%~nxa %2 %3 %4 %5 %6 %7 %8 %9
+        if !_i!==1 set _tmp=%%~nxa
+        if !_i!==2 call :this\rpad !_tmp! %_col%
+        if !_i! geq 2 call :this\rpad %%~nxa %_col%
     ) else call :this\2la %%~nxa "%%~b"
     REM Close rpad
-    if !\\\i! gtr 0 call :this\rpad 0 0
+    if !_i! gtr 0 call :this\rpad 0 0
     REM Display func or call func
-    endlocal & if %\\\i% gtr 1 (
+    endlocal & if %_i% gtr 1 (
         echo.
         >&2 echo Warning: function sort name conflict
         exit /b 1
-    ) else if %\\\i%==0 (
+    ) else if %_i%==0 (
         if "%~1" neq "" >&2 echo Error: No function found& exit /b 1
-    ) else if %\\\i%==1 call :%~n0\%\\\target% || call %0 :%~n0\%\\\target%
+    ) else if %_i%==1 call :%~n0\%_target% || call %0 :%~n0\%_target%
     goto :eof
 
 :this\annotation\error
@@ -135,35 +135,35 @@ REM Make the second column left-aligned
 :this\2la
     if "%~2"=="" exit /b 1
     setlocal enabledelayedexpansion
-    set \\\str=%~10123456789abcdef
-    if "%\\\str:~31,1%" neq "" call :strModulo
-    set /a \\\len=0x%\\\str:~15,1%
-    set "\\\spaces=                "
-    echo %~1!\\\spaces:~0,%\\\len%!%~2
+    set _str=%~10123456789abcdef
+    if "%_str:~31,1%" neq "" call :strModulo
+    set /a _len=0x%_str:~15,1%
+    set "_spaces=                "
+    echo %~1!_spaces:~0,%_len%!%~2
     endlocal
     exit /b 0
 
 REM Use right pads spaces, make all column left-aligned
 :this\rpad
     if "%~1"=="" exit /b 1
-    if "%~2" neq "" if 1%~2 lss 12 (if defined \\\rpad echo. & set \\\rpad=) & exit /b 0
+    if "%~2" neq "" if 1%~2 lss 12 (if defined _rpad echo. & set _rpad=) & exit /b 0
     setlocal enabledelayedexpansion
-    set \\\str=%~10123456789abcdef
-    if "%\\\str:~31,1%" neq "" call :strModulo
-    if "%~2" neq "" if 1%\\\rpad% geq 1%~2 echo. & set /a \\\rpad-=%~2-1
-    set /a \\\len=0x%\\\str:~15,1%
-    set "\\\spaces=                "
-    >&3 set /p=%~1!\\\spaces:~0,%\\\len%!<nul
-    set /a \\\rpad+=1
-    if "%~2" neq "" if 1%\\\rpad% geq 1%~2 echo. & set \\\rpad=
-    endlocal & set \\\rpad=%\\\rpad%
+    set _str=%~10123456789abcdef
+    if "%_str:~31,1%" neq "" call :strModulo
+    if "%~2" neq "" if 1%_rpad% geq 1%~2 echo. & set /a _rpad-=%~2-1
+    set /a _len=0x%_str:~15,1%
+    set "_spaces=                "
+    >&3 set /p=%~1!_spaces:~0,%_len%!<nul
+    set /a _rpad+=1
+    if "%~2" neq "" if 1%_rpad% geq 1%~2 echo. & set _rpad=
+    endlocal & set _rpad=%_rpad%
     exit /b 0
 
 REM for :this\rpad
 :strModulo
-    set /a \\\rpad+=1
-    set \\\str=%\\\str:~15%
-    if "%\\\str:~31,1%"=="" exit /b 0
+    set /a _rpad+=1
+    set _str=%_str:~15%
+    if "%_str:~31,1%"=="" exit /b 0
     goto %0
 
 REM Get cmd cols
@@ -201,30 +201,30 @@ REM Test target in $path
         hook?
     ) do if exist "%%~dpaobjects" (
         REM git repository
-        set "\\\src=%%~dpa"
-        set "\\\src=!\\\src:~0,-1!"
+        set "_src=%%~dpa"
+        set "_src=!_src:~0,-1!"
 
         REM project name
-        set \\\name=!\\\src:\.git=!
-        set \\\name=!\\\name:.git=!
-        for %%b in ("!\\\name!") do set "\\\name=%%~nxb"
+        set _name=!_src:\.git=!
+        set _name=!_name:.git=!
+        for %%b in ("!_name!") do set "_name=%%~nxb"
 
         REM get latest update version
         for /f "usebackq delims=" %%b in (
-            `git.exe --git-dir^="!\\\src!" log -1 --all --pretty^=format:%%cd --date^=format:%%y%%m%%d%%H%%M`
-        ) do set \\\tamp=%%b
+            `git.exe --git-dir^="!_src!" log -1 --all --pretty^=format:%%cd --date^=format:%%y%%m%%d%%H%%M`
+        ) do set _tamp=%%b
 
-        if defined \\\tamp (
-            set "\\\out=.\!\\\name!_!\\\tamp!.git"
+        if defined _tamp (
+            set "_out=.\!_name!_!_tamp!.git"
 
-            if not exist "!\\\out!" (
-                echo create bundle: !\\\name!
-                REM git.exe --git-dir="!\\\src!" bundle create "!\\\out!" HEAD master
-                git.exe --git-dir="!\\\src!" bundle create "!\\\out!" --all && git.exe bundle verify "!\\\out!"
-                git.exe --git-dir="!\\\src!" gc
+            if not exist "!_out!" (
+                echo create bundle: !_name!
+                REM git.exe --git-dir="!_src!" bundle create "!_out!" HEAD master
+                git.exe --git-dir="!_src!" bundle create "!_out!" --all && git.exe bundle verify "!_out!"
+                git.exe --git-dir="!_src!" gc
                 echo.
-            ) else echo exist: !\\\out!
-        ) else echo skip: !\\\src!
+            ) else echo exist: !_out!
+        ) else echo skip: !_src!
     )
     endlocal
     exit /b 0
@@ -235,17 +235,17 @@ REM Test target in $path
 :3rd\orcl
     if "%~1"=="" exit /b 1
     setlocal
-    set \\\sid=OracleService%~1
+    set _sid=OracleService%~1
     for /f "usebackq tokens=1,3" %%a in (
-        `sc.exe query %\\\sid%`
+        `sc.exe query %_sid%`
     ) do if /i "%%a"=="STATE" (
-        set \\\srv=OracleOraDb11g_home1TNSListener
+        set _srv=OracleOraDb11g_home1TNSListener
         if "%%b"=="4" (
             call :orcl\setService
             call :orcl STOP START
         ) else call :orcl START STOP
     )
-    if not defined \\\srv >&2 echo Error: No %\\\sid% Service
+    if not defined _srv >&2 echo Error: No %_sid% Service
     echo.
     endlocal
     exit /b 0
@@ -253,20 +253,20 @@ REM Test target in $path
 REM For :3rd\orcl
 :orcl
     echo Oracle Service allready %~2, Press {Enter} to %~1
-    set /p \\\input=or type any characters to EXIT.
-    if defined \\\input exit /b 0
+    set /p _input=or type any characters to EXIT.
+    if defined _input exit /b 0
     echo.
-    net.exe %1 %\\\srv%
-    net.exe %1 %\\\sid%
+    net.exe %1 %_srv%
+    net.exe %1 %_sid%
     exit /b 0
 
 REM For :3rd\orcl
 :orcl\setService
     for /f "usebackq tokens=1,3" %%a in (
-        `sc.exe qc %\\\srv%`
+        `sc.exe qc %_srv%`
     ) do if /i "%%a%%b" == "START_TYPE2" >nul (
         for %%c in (
-            %\\\srv% %\\\sid%
+            %_srv% %_sid%
         ) do sc.exe config %%c start= demand
         for %%c in (
 			OracleVssWriterORCL
@@ -301,13 +301,13 @@ REM     exit /b 0
     endlocal & exit /b %errorlevel%
 
 REM List all VM name, tag running VM
-REM todo MAC VBoxManage.exe showvminfo %\\\vms% --machinereadable | find "macaddress"
+REM todo MAC VBoxManage.exe showvminfo %_vms% --machinereadable | find "macaddress"
 :this\vbox\
-    call :vbox\setVar vms \\\vms
-    call :vbox\setVar runningvms \\\run
+    call :vbox\setVar vms _vms
+    call :vbox\setVar runningvms _run
     for /f "usebackq delims==" %%a in (
-        `set \\\vms 2^>nul`
-    ) do if defined \\\run\%%~nxa (
+        `set _vms 2^>nul`
+    ) do if defined _run\%%~nxa (
         call :this\rpad %%~nxa
         call :this\rpad (running^)
         echo.
@@ -318,7 +318,7 @@ REM todo MAC VBoxManage.exe showvminfo %\\\vms% --machinereadable | find "macadd
 REM Start VM
 :this\vbox\start
     call :vbox\init %1 || exit /b 0
-    if defined \\\run\%vm% (
+    if defined _run\%vm% (
         echo %vm% is running...
     ) else VBoxManage.exe startvm %vm% -type headless
     exit /b 0
@@ -327,7 +327,7 @@ REM Stop VM
 :this\vbox\stop
 REM :this\vbox\save
     call :vbox\init %1 || exit /b 0
-    if defined \\\run\%vm% (
+    if defined _run\%vm% (
         VBoxManage.exe controlvm %vm% poweroff
     ) else echo %vm% not running...
     exit /b 0
@@ -344,13 +344,13 @@ REM Set vm variable
 :vbox\init
     if "%1"=="" exit /b 1
     REM Init variable
-    call :vbox\setVar vms \\\vms
-    call :vbox\setVar runningvms \\\run
+    call :vbox\setVar vms _vms
+    call :vbox\setVar runningvms _run
     REM sort name auto complete
     set vm=
     set i=0
     for /f "usebackq delims==" %%a in (
-        `set \\\vms\%1 2^>nul`
+        `set _vms\%1 2^>nul`
     ) do (
         set /a i+=1
         if !i!==2 call :this\rpad !vm!
@@ -398,62 +398,62 @@ REM Reg VM names
     call :this\iinpath lib.cmd || exit /b 3
     if "%~1"=="" exit /b 2
     setlocal enabledelayedexpansion
-    set \\\media=
-    set \\\random=
-    set \\\stream_specifier=
-    set \\\skip=
+    set _media=
+    set _random=
+    set _stream_specifier=
+    set _skip=
 :play\args
-    if /i "%~1"=="--random" set \\\random=RANDOM
-    if /i "%~1"=="-r" set \\\random=RANDOM
+    if /i "%~1"=="--random" set _random=RANDOM
+    if /i "%~1"=="-r" set _random=RANDOM
     REM -ast stream_specifier  select desired audio stream
-    if /i "%~1"=="--ast" call lib.cmd inum %~2 && set "\\\stream_specifier=-ast %~2"& shift /1
-    if /i "%~1"=="-a" call lib.cmd inum %~2 && set "\\\stream_specifier=-ast %~2"& shift /1
-    if /i "%~1"=="--skip" call lib.cmd inum %~2 && set "\\\skip=%~2"& shift /1
-    if /i "%~1"=="-j" call lib.cmd inum %~2 && set "\\\skip=%~2"& shift /1
-    call lib.cmd iDir %1 && set \\\media=%\\\media% "%~1"
+    if /i "%~1"=="--ast" call lib.cmd inum %~2 && set "_stream_specifier=-ast %~2"& shift /1
+    if /i "%~1"=="-a" call lib.cmd inum %~2 && set "_stream_specifier=-ast %~2"& shift /1
+    if /i "%~1"=="--skip" call lib.cmd inum %~2 && set "_skip=%~2"& shift /1
+    if /i "%~1"=="-j" call lib.cmd inum %~2 && set "_skip=%~2"& shift /1
+    call lib.cmd iDir %1 && set _media=%_media% "%~1"
     shift /1
     if "%~1" neq "" goto play\args
 
-    set \\\c=1000000000
-    set /a \\\skip+=\\\c
+    set _c=1000000000
+    set /a _skip+=_c
     for %%a in (
-        %\\\media%
+        %_media%
     ) do (
         pushd "%cd%"
         cd /d "%%~a"
-        if defined \\\random (
+        if defined _random (
             for /r %%b in (
                 *.alac *.ape *.avi *.divx *.flac *.flv *.m4a *.mkv *.mp? *.ogg *.rm *.rmvb *.tta *.tak *.vob *.wav *.webm *.wm?
             ) do (
-                set /a \\\c+=1
-                set "\\\track!random!=%%b"
+                set /a _c+=1
+                set "_track!random!=%%b"
             )
         ) else (
             for /f "usebackq delims=" %%b in (
                 `dir /b /s /on *.alac *.ape *.avi *.divx *.flac *.flv *.m4a *.mkv *.mp? *.ogg *.rm *.rmvb *.tta *.tak *.vob *.wav *.webm *.wm?`
             ) do (
-                set /a \\\c+=1
-                if !\\\c! geq %\\\skip% set "\\\track!\\\c!=%%b"
+                set /a _c+=1
+                if !_c! geq %_skip% set "_track!_c!=%%b"
             )
         )
         popd
     )
-    set /a \\\c=%\\\c% %% 1000000000, \\\i=%\\\skip% %% 1000000000
+    set /a _c=%_c% %% 1000000000, _i=%_skip% %% 1000000000
 
     for /f "usebackq tokens=2 delims==" %%a in (
-        `set \\\track 2^>nul`
-    ) do set /a \\\i+=1& call :this\ffplay "%%a"
+        `set _track 2^>nul`
+    ) do set /a _i+=1& call :this\ffplay "%%a"
 
     endlocal
     exit /b 0
 
 :this\ffplay
-    echo Progress #%\\\i% / %\\\c%, %\\\random%
+    echo Progress #%_i% / %_c%, %_random%
     REM -sn ::disable subtitling
     REM -ac 2 ::ED..A... set number of audio channels (from 0 to INT_MAX) (default 0) ::Convert the 5.1 track to stereo
     for %%a in (
         avi divx flv mkv mp4 mpg rm rmvb vob webm wmv
-    ) do if /i "%~x1"==".%%a" ffplay.exe -hide_banner %\\\stream_specifier% -ac 2 -sn -autoexit -af "volume=0.25" %1 2>&1
+    ) do if /i "%~x1"==".%%a" ffplay.exe -hide_banner %_stream_specifier% -ac 2 -sn -autoexit -af "volume=0.25" %1 2>&1
     for %%a in (
         alac ape flac m4a mp3 ogg tta tak wav wma
     ) do if /i "%~x1"==".%%a" start /b /wait /min ffplay.exe -hide_banner -autoexit -af "volume=0.25" %1 2>&1
@@ -515,28 +515,28 @@ REM     exit /b 0
 		call :this\tarDecompresses %1
 		goto :eof
 	)
-	for %%a in (%0) do set \\\suffix=%%~nxa
-	set \\\suffix=%\\\suffix:~4%
+	for %%a in (%0) do set _suffix=%%~nxa
+	set _suffix=%_suffix:~4%
 	call :this\tarCompresses %*
     endlocal
     exit /b 0
 
 REM for :3rd\tar.*
 :this\tarCompresses
-	if not defined \\\tarName set \\\tarName=%~n1
+	if not defined _tarName set _tarName=%~n1
 	if "%~2"=="" call lib.cmd iDir %1 || for %%a in (
 		7z cab rar zip
 	) do if /i "%~x1"==".%%~a" (
 		pushd %cd%
-		call lib.cmd gNow \\\nowTar && set \\\nowTar=%temp%\!\\\nowTar!
-		mkdir !\\\nowTar! && chdir /d !\\\nowTar! && 7za.exe x %1 -aoa
+		call lib.cmd gNow _nowTar && set _nowTar=%temp%\!_nowTar!
+		mkdir !_nowTar! && chdir /d !_nowTar! && 7za.exe x %1 -aoa
 		popd
-		call %0 !\\\nowTar!\*
-		rmdir /s /q !\\\nowTar! && set \\\nowTar=
+		call %0 !_nowTar!\*
+		rmdir /s /q !_nowTar! && set _nowTar=
 		goto :eof
 	)
-	7za.exe a dummy -ttar -so %* | 7za.exe a -si -t%\\\suffix:z=zip% "!\\\tarName!.tar.%\\\suffix%" -aoa
-	set \\\tarName=
+	7za.exe a dummy -ttar -so %* | 7za.exe a -si -t%_suffix:z=zip% "!_tarName!.tar.%_suffix%" -aoa
+	set _tarName=
 	goto :eof
 
 REM for :3rd\tar.*
@@ -553,15 +553,15 @@ REM 	if "%~1"=="" goto :eof
 REM 	REM if "%~2"=="" goto :eof
 REM 	for /f "usebackq delims=" %%a in (
 REM 		`dir /a /b "%~1"`
-REM 	) do if not defined \\\molting (
+REM 	) do if not defined _molting (
 REM 		call lib.cmd iDir "%~1\%%a" || goto :eof
-REM 		set "\\\molting=%%a"
-REM 	) else set \\\molting= & goto :eof
-REM 	call lib.cmd gNow \\\nowM && rename "%~1" !\\\nowM!
-REM 	>nul move /y "%~dp1!\\\nowM!\!\\\molting!" "%~dp1" && rmdir /s /q "%~dp1!\\\nowM!"
-REM 	set \\\nowM=
-REM 	REM set "%~2=%~dp1!\\\molting!"
-REM 	set \\\molting=
+REM 		set "_molting=%%a"
+REM 	) else set _molting= & goto :eof
+REM 	call lib.cmd gNow _nowM && rename "%~1" !_nowM!
+REM 	>nul move /y "%~dp1!_nowM!\!_molting!" "%~dp1" && rmdir /s /q "%~dp1!_nowM!"
+REM 	set _nowM=
+REM 	REM set "%~2=%~dp1!_molting!"
+REM 	set _molting=
 REM 	REM call %0 "!%~2!" %~2
 REM 	goto :eof
 

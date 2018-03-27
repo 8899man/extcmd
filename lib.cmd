@@ -62,11 +62,11 @@ set errorlevel=
 
 REM Help
 setlocal
-    set \\\12=%~1%~2
-    if not defined \\\12 set \\\12=-
-    set \\\12=%\\\12:--help=%
-    set \\\12=%\\\12:-h=%
-endlocal & if "%~1%~2" neq "%\\\12%" (
+    set _12=%~1%~2
+    if not defined _12 set _12=-
+    set _12=%_12:--help=%
+    set _12=%_12:-h=%
+endlocal & if "%~1%~2" neq "%_12%" (
     if "%~2"=="" (call :this\annotation) else call :this\annotation :%~n0\%~1
     goto :eof
 )
@@ -89,8 +89,8 @@ REM Show INFO or ERROR
     ) do (
         REM Set annotation, errorlevel will reset after some times
         if %errorlevel% geq 1 (
-            if /i "%%~a"=="::::" set \\\tmp=%errorlevel% %%b %%c
-        ) else if /i "%%~a"==":::" set \\\tmp=%%b %%c
+            if /i "%%~a"=="::::" set _tmp=%errorlevel% %%b %%c
+        ) else if /i "%%~a"==":::" set _tmp=%%b %%c
 
         if /i "%%~a"==":%~n0" (
             REM Display func info or error
@@ -98,40 +98,40 @@ REM Show INFO or ERROR
                 if %errorlevel% geq 1 (
                     REM Inherit errorlevel
                     call :%~n0\serrlv %errorlevel%
-                    call %0\error %%~a\%%~b !\\\tmp!
-                ) else call %0\more !\\\tmp!
+                    call %0\error %%~a\%%~b !_tmp!
+                ) else call %0\more !_tmp!
                 goto :eof
             )
             REM init func var, for display all func, or show sort func name
-            set \\\args\%%~b=!\\\tmp! ""
+            set _args\%%~b=!_tmp! ""
             REM Clean var
-            set \\\tmp=
+            set _tmp=
         )
     )
 
     REM Foreach func list
-    call :%~n0\gcols \\\col
-    set /a \\\i=0, \\\col/=16
+    call :%~n0\gcols _col
+    set /a _i=0, _col/=16
     for /f usebackq^ tokens^=1^,2^ delims^=^=^" %%a in (
-        `set \\\args\%~n1 2^>nul`
+        `set _args\%~n1 2^>nul`
     ) do if "%~1" neq "" (
         REM " Sort func name expansion
-        set /a \\\i+=1
-        set \\\target=%%~nxa %2 %3 %4 %5 %6 %7 %8 %9
-        if !\\\i!==1 set \\\tmp=%%~nxa
-        if !\\\i!==2 call :%~n0\rpad !\\\tmp! %\\\col%
-        if !\\\i! geq 2 call :%~n0\rpad %%~nxa %\\\col%
+        set /a _i+=1
+        set _target=%%~nxa %2 %3 %4 %5 %6 %7 %8 %9
+        if !_i!==1 set _tmp=%%~nxa
+        if !_i!==2 call :%~n0\rpad !_tmp! %_col%
+        if !_i! geq 2 call :%~n0\rpad %%~nxa %_col%
     ) else call :%~n0\2la %%~nxa "%%~b"
     REM Close rpad
-    if !\\\i! gtr 0 call :%~n0\rpad 0 0
+    if !_i! gtr 0 call :%~n0\rpad 0 0
     REM Display func or call func
-    endlocal & if %\\\i% gtr 1 (
+    endlocal & if %_i% gtr 1 (
         echo.
         >&2 echo Warning: function sort name conflict
         exit /b 1
-    ) else if %\\\i%==0 (
+    ) else if %_i%==0 (
         if "%~1" neq "" >&2 echo Error: No function found& exit /b 1
-    ) else if %\\\i%==1 call :%~n0\%\\\target% || call %0 :%~n0\%\\\target%
+    ) else if %_i%==1 call :%~n0\%_target% || call %0 :%~n0\%_target%
     goto :eof
 
 :this\annotation\error
@@ -152,11 +152,11 @@ REM Show INFO or ERROR
 :lib\2la
     if "%~2"=="" exit /b 1
     setlocal enabledelayedexpansion
-    set \\\str=%~10123456789abcdef
-    if "%\\\str:~31,1%" neq "" call :strModulo
-    set /a \\\len=0x%\\\str:~15,1%
-    set "\\\spaces=                "
-    echo %~1!\\\spaces:~0,%\\\len%!%~2
+    set _str=%~10123456789abcdef
+    if "%_str:~31,1%" neq "" call :strModulo
+    set /a _len=0x%_str:~15,1%
+    set "_spaces=                "
+    echo %~1!_spaces:~0,%_len%!%~2
     endlocal
     exit /b 0
 
@@ -164,24 +164,24 @@ REM Show INFO or ERROR
 :::: "input string is empty"
 :lib\rpad
     if "%~1"=="" exit /b 1
-    if "%~2" neq "" if 1%~2 lss 12 (if defined \\\rpad echo. & set \\\rpad=) & exit /b 0
+    if "%~2" neq "" if 1%~2 lss 12 (if defined _rpad echo. & set _rpad=) & exit /b 0
     setlocal enabledelayedexpansion
-    set \\\str=%~10123456789abcdef
-    if "%\\\str:~31,1%" neq "" call :strModulo
-    if "%~2" neq "" if 1%\\\rpad% geq 1%~2 echo. & set /a \\\rpad-=%~2-1
-    set /a \\\len=0x%\\\str:~15,1%
-    set "\\\spaces=                "
-    >&3 set /p=%~1!\\\spaces:~0,%\\\len%!<nul
-    set /a \\\rpad+=1
-    if "%~2" neq "" if 1%\\\rpad% geq 1%~2 echo. & set \\\rpad=
-    endlocal & set \\\rpad=%\\\rpad%
+    set _str=%~10123456789abcdef
+    if "%_str:~31,1%" neq "" call :strModulo
+    if "%~2" neq "" if 1%_rpad% geq 1%~2 echo. & set /a _rpad-=%~2-1
+    set /a _len=0x%_str:~15,1%
+    set "_spaces=                "
+    >&3 set /p=%~1!_spaces:~0,%_len%!<nul
+    set /a _rpad+=1
+    if "%~2" neq "" if 1%_rpad% geq 1%~2 echo. & set _rpad=
+    endlocal & set _rpad=%_rpad%
     exit /b 0
 
 REM for :lib\2la and :lib\rpad and
 :strModulo
-    set /a \\\rpad+=1
-    set \\\str=%\\\str:~15%
-    if "%\\\str:~31,1%"=="" exit /b 0
+    set /a _rpad+=1
+    set _str=%_str:~15%
+    if "%_str:~31,1%"=="" exit /b 0
     goto %0
 
 ::: "Get cmd cols" "" "usage: %~n0 gcols [[var_name]]"
@@ -214,37 +214,37 @@ REM start /b [command...]
 :lib\search
     if "%~1"=="" exit /b 1
     setlocal enabledelayedexpansion
-    call :lib\gcols \\\col
-    set /a \\\i=0, \\\col/=16
+    call :lib\gcols _col
+    set /a _i=0, _col/=16
     call :lib\trimpath path
     for /f "usebackq delims==" %%a in (
         `dir /a-d /b "!path:;=\%~1*" "!\%~1*" 2^>nul`
     ) do if "%pathext%" neq "!pathext:%%~xa=!" (
-        set /a \\\i+=1
-        if !\\\i!==1 set \\\tmp=%%~nxa
-        if !\\\i!==2 call :lib\rpad !\\\tmp! %\\\col%
-        if !\\\i! geq 2 call :lib\rpad %%~nxa %\\\col%
+        set /a _i+=1
+        if !_i!==1 set _tmp=%%~nxa
+        if !_i!==2 call :lib\rpad !_tmp! %_col%
+        if !_i! geq 2 call :lib\rpad %%~nxa %_col%
     )
     REM Close rpad
     call :lib\rpad 0 0
-    endlocal & if %\\\i% gtr 1 (
+    endlocal & if %_i% gtr 1 (
         echo.
-        echo.Find %\\\i% exec file.
-    ) else if %\\\i%==0 (
+        echo.Find %_i% exec file.
+    ) else if %_i%==0 (
         echo.No exec file found.
-    ) else call :lib\which %\\\tmp%
+    ) else call :lib\which %_tmp%
     exit /b 0
 
 ::: "Locate a program file in the user's path" "" "usage: %~n0 which [file_full_name]"
 :lib\which
-    if not defined \\\p (
+    if not defined _p (
         setlocal enabledelayedexpansion
         call :lib\trimpath path
-        set \\\p=!path:;=\;!\
+        set _p=!path:;=\;!\
     )
-    if "%~a$\\\p:1"=="" endlocal & exit /b 0
-    echo %~$\\\p:1
-    set \\\p=!\\\p:%~dp$\\\p:1=!
+    if "%~a$_p:1"=="" endlocal & exit /b 0
+    echo %~$_p:1
+    set _p=!_p:%~dp$_p:1=!
     goto %0
 
 ::: "Get UUID" "" "usage: %~n0 guuid [[var_name]]"
@@ -253,19 +253,19 @@ REM start /b [command...]
         for /l %%a in (
             1,1,8
         ) do (
-            set /a \1=!random!%%16,\2=!random!%%16,\3=!random!%%16,\4=!random!%%16
-            set \0=!\0!!\1!.!\2!.!\3!.!\4!.
-            if %%a gtr 1 if %%a lss 6 set \0=!\0!-
+            set /a _1=!random!%%16,_2=!random!%%16,_3=!random!%%16,_4=!random!%%16
+            set _0=!_0!!_1!.!_2!.!_3!.!_4!.
+            if %%a gtr 1 if %%a lss 6 set _0=!_0!-
         )
-        set \0=%\0:10.=a%
-        set \0=%\0:11.=b%
-        set \0=%\0:12.=c%
-        set \0=%\0:13.=d%
-        set \0=%\0:14.=e%
-        set \0=%\0:15.=f%
+        set _0=%_0:10.=a%
+        set _0=%_0:11.=b%
+        set _0=%_0:12.=c%
+        set _0=%_0:13.=d%
+        set _0=%_0:14.=e%
+        set _0=%_0:15.=f%
     endlocal & if "%~1"=="" (
-        echo %\0:.=%
-    ) else set %~1=%~2%\0:.=%%~3
+        echo %_0:.=%
+    ) else set %~1=%~2%_0:.=%%~3
     exit /b 0
 
 ::: "Get sid by username" "" "usage: %~n0 gsid [user_name] [[var_name]]"
@@ -284,17 +284,17 @@ REM start /b [command...]
 :lib\glen
     if "%~1"=="" exit /b 1
     setlocal enabledelayedexpansion
-    set \\\len=
-    set \\\str=%~1fedcba9876543210
-    if "%\\\str:~31,1%" neq "" (
+    set _len=
+    set _str=%~1fedcba9876543210
+    if "%_str:~31,1%" neq "" (
         for %%a in (
             4096 2048 1024 512 256 128 64 32 16 8 4 2 1
-        ) do if !\\\str:~%%a^,1!. neq . set /a \\\len+=%%a & set \\\str=!\\\str:~%%a!
-        set /a \\\len-=15
-    ) else set /a \\\len=0x!\\\str:~15^,1!
+        ) do if !_str:~%%a^,1!. neq . set /a _len+=%%a & set _str=!_str:~%%a!
+        set /a _len-=15
+    ) else set /a _len=0x!_str:~15^,1!
     endlocal & if "%~2"=="" (
-        echo %\\\len%
-    ) else set %~2=%\\\len%
+        echo %_len%
+    ) else set %~2=%_len%
     exit /b 0
 
 ::: "Get first path foreach Partiton" "" "usage: %~n0 gfirstpath [path_name] [[var_name]]"
@@ -314,13 +314,13 @@ REM start /b [command...]
 ::: "Get Unused Device Id" "" "usage: %~n0 gfreeletter [[var_name]]"
 :lib\gfreeletter
     setlocal enabledelayedexpansion
-    set \\\di=zyxwvutsrqponmlkjihgfedcba
+    set _di=zyxwvutsrqponmlkjihgfedcba
     for /f "usebackq skip=1 delims=:" %%a in (
         `wmic.exe logicaldisk get DeviceID`
-    ) do set \\\di=!\\\di:%%a=!
+    ) do set _di=!_di:%%a=!
     endlocal & if "%~1"=="" (
-        echo.%\\\di:~0,1%:
-    ) else set %~1=%\\\di:~0,1%:
+        echo.%_di:~0,1%:
+    ) else set %~1=%_di:~0,1%:
     exit /b 0
 
 ::: "Get Device IDs" "" "usage: %~n0 gletters [var_name] [[l/r/n]]" "       no param view all" "       l: Local Fixed Disk" "       r: CD-ROM Disc" "       n: Network Connection"
@@ -333,28 +333,28 @@ REM start /b [command...]
     :: [WARNING] Not support nano server ::
     :::::::::::::::::::::::::::::::::::::::
     if "%~1"=="" exit /b 1
-    set \\\var=
+    set _var=
     setlocal enabledelayedexpansion
-    set \\\desc=
+    set _desc=
     REM Test sort
-    for %%a in (%0) do if "%%~na"=="grettels" set \\\desc=1
+    for %%a in (%0) do if "%%~na"=="grettels" set _desc=1
     REM add where conditions
     if "%~2" neq "" (
-        set \\\DriveType=
-        if /i "%~2"=="l" set \\\DriveType=3
-        if /i "%~2"=="r" set \\\DriveType=5
-        if /i "%~2"=="n" set \\\DriveType=4
-        if not defined \\\DriveType exit /b 2
-        set "\\\DriveType=where DriveType^^=!\\\DriveType!"
+        set _DriveType=
+        if /i "%~2"=="l" set _DriveType=3
+        if /i "%~2"=="r" set _DriveType=5
+        if /i "%~2"=="n" set _DriveType=4
+        if not defined _DriveType exit /b 2
+        set "_DriveType=where DriveType^^=!_DriveType!"
     )
     REM main
     for /f "usebackq skip=1 delims=:" %%a in (
-        `wmic.exe logicaldisk %\\\DriveType% get DeviceID`
-    ) do if defined \\\desc (
-        set "\\\var=%%a !\\\var!"
-    ) else set "\\\var=!\\\var! %%a"
-    if defined \\\var set \\\var=%\\\var:~1,-2%
-    endlocal & set %~1=%\\\var%
+        `wmic.exe logicaldisk %_DriveType% get DeviceID`
+    ) do if defined _desc (
+        set "_var=%%a !_var!"
+    ) else set "_var=!_var! %%a"
+    if defined _var set _var=%_var:~1,-2%
+    endlocal & set %~1=%_var%
     exit /b 0
 
 ::: "Get OS language bit and version" "" "usage: %~n0 gosinf [os_path] [[var_name]]" "       return [var].lang [var].bit [var].ver"
@@ -370,8 +370,8 @@ REM start /b [command...]
             "%%~na"
         ) do if "%~2"=="" (
             setlocal enabledelayedexpansion
-            set /a \\\ver=%%b*10+%%c
-            >&3 set /p=ver:!\\\ver!, <nul
+            set /a _ver=%%b*10+%%c
+            >&3 set /p=ver:!_ver!, <nul
             endlocal
         ) else set /a %2.ver=%%b*10+%%c
 
@@ -397,11 +397,11 @@ REM start /b [command...]
 ::: "Test path is directory" "" "usage: call %~n0 idir [path]"
 :lib\idir
     setlocal
-    set \\\path=%~a1-
+    set _path=%~a1-
     REM quick return
-    set \\\code=10
-    if %\\\path:~0,1%==d set \\\code=0
-    endlocal & exit /b %\\\code%
+    set _code=10
+    if %_path:~0,1%==d set _code=0
+    endlocal & exit /b %_code%
 
 ::: "Test path is Symbolic Link" "" "usage: call %~n0 iln [file_path]" "       e.g. call %~n0 iln C:\Test"
 :lib\iln
@@ -423,11 +423,11 @@ REM start /b [command...]
 :lib\inum
     if "%~1"=="" exit /b 10
     setlocal
-    set \\\tmp=
+    set _tmp=
     REM quick return
-    2>nul set /a \\\code=10, \\\tmp=%~1
-    if "%~1"=="%\\\tmp%" set \\\code=0
-    endlocal & exit /b %\\\code%
+    2>nul set /a _code=10, _tmp=%~1
+    if "%~1"=="%_tmp%" set _code=0
+    endlocal & exit /b %_code%
 
 ::: "Test string if ip" "" "usage: call %~n0 iip [string]"
 :::: "first parameter is empty"
@@ -451,9 +451,9 @@ REM start /b [command...]
 REM Test mac addr
 :this\imac
     setlocal enabledelayedexpansion
-    set "\\\macs=%~1"
+    set "_macs=%~1"
     for %%z in (
-        %\\\macs:|= %
+        %_macs:|= %
     ) do for /f "usebackq tokens=1-6 delims=-:" %%a in (
         '%%z'
     ) do (
@@ -461,8 +461,8 @@ REM Test mac addr
         for %%g in (
             "%%a" "%%b" "%%c" "%%d" "%%e" "%%f"
         ) do (
-            set /a \\\hx=0x%%~g 2>nul || exit /b 10
-            if !\\\hx! gtr 255 exit /b 10
+            set /a _hx=0x%%~g 2>nul || exit /b 10
+            if !_hx! gtr 255 exit /b 10
         )
     )
     endlocal
@@ -474,13 +474,13 @@ REM Test mac addr
 :lib\igui
     setlocal
     set cmdcmdline=
-    set \\\cmdcmdline=%cmdcmdline:"='%
+    set _cmdcmdline=%cmdcmdline:"='%
     rem "
-    set \\\code=0
-    if /i "%0"==":lib\ipipe" if "%\\\cmdcmdline%"=="%\\\cmdcmdline:  /S /D /c' =%" set \\\code=10
-    if /i "%0"==":lib\igui" if "%\\\cmdcmdline%"=="%\\\cmdcmdline: /c ''=%" set \\\code=10
-    REM if /i "%0"==":lib\igui" for %%a in (%cmdcmdline%) do if /i %%~a==/c set \\\code=0
-    endlocal & exit /b %\\\code%
+    set _code=0
+    if /i "%0"==":lib\ipipe" if "%_cmdcmdline%"=="%_cmdcmdline:  /S /D /c' =%" set _code=10
+    if /i "%0"==":lib\igui" if "%_cmdcmdline%"=="%_cmdcmdline: /c ''=%" set _code=10
+    REM if /i "%0"==":lib\igui" for %%a in (%cmdcmdline%) do if /i %%~a==/c set _code=0
+    endlocal & exit /b %_code%
 
 ::: "Test this system version" "" "usage: call %~n0 ivergeq [version]"
 :::: "Parameter is empty or Not a float"
@@ -492,13 +492,13 @@ REM Test mac addr
             `dir /ad /b %windir%\servicing\Version\*.*`
         ) do for /f "usebackq tokens=1,2 delims=." %%c in (
             '%~1'
-        ) do set /a \\\tmp=%%a*10+%%b-%%c*10-%%d
+        ) do set /a _tmp=%%a*10+%%b-%%c*10-%%d
     ) else for /f "usebackq delims=" %%a in (
         `ver`
     ) do for %%b in (%%a) do if "%%~xb" neq "" for /f "usebackq tokens=1-4 delims=." %%c in (
         '%~1.%%b'
-    ) do set /a \\\tmp=%%e*10+%%f-%%c*10-%%d
-    endlocal & if %\\\tmp% geq 0 exit /b 0
+    ) do set /a _tmp=%%e*10+%%f-%%c*10-%%d
+    endlocal & if %_tmp% geq 0 exit /b 0
     exit /b 10
 
 ::: "Test exe if live" "" "usage: %~n0 irun [exec_name]"
@@ -587,15 +587,15 @@ REM for :lib\trimdir
     mkdir ".\%~n1" 2>nul || exit /b 3
     setlocal
     REM Init
-    call :lib\gfreeletter \\\letter
-    subst.exe %\\\letter% ".\%~n1"
+    call :lib\gfreeletter _letter
+    subst.exe %_letter% ".\%~n1"
 
     REM Uncompress msi file
-    start /wait msiexec.exe /a %1 /qn targetdir=%\\\letter%
-    erase "%\\\letter%\%~nx1"
+    start /wait msiexec.exe /a %1 /qn targetdir=%_letter%
+    erase "%_letter%\%~nx1"
     REM for %%a in (".\%~n1") do echo output: %%~fa
 
-    subst.exe %\\\letter% /d
+    subst.exe %_letter% /d
     endlocal
     exit /b 0
 
@@ -645,14 +645,14 @@ REM     exit /b 0
     set time=
     for /f "tokens=1-4 delims=:." %%a in (
         "%time%"
-    ) do set /a \\\tmp=%%a*360000+1%%b%%100*6000+1%%c%%100*100+1%%d%%100
-    if defined \\\centiTime (
-        set /a \\\tmp-=\\\centiTime
-        set /a \\\h=\\\tmp/360000,\\\min=\\\tmp%%360000/6000,\\\s=\\\tmp%%6000/100,\\\cs=\\\tmp%%100
-        set \\\tmp=
+    ) do set /a _tmp=%%a*360000+1%%b%%100*6000+1%%c%%100*100+1%%d%%100
+    if defined _centiTime (
+        set /a _tmp-=_centiTime
+        set /a _h=_tmp/360000,_min=_tmp%%360000/6000,_s=_tmp%%6000/100,_cs=_tmp%%100
+        set _tmp=
     )
-    if defined \\\centiTime echo %\\\h%h %\\\min%min %\\\s%s %\\\cs%cs
-    endlocal & set \\\centiTime=%\\\tmp%
+    if defined _centiTime echo %_h%h %_min%min %_s%s %_cs%cs
+    endlocal & set _centiTime=%_tmp%
     exit /b 0
 
 ::: "Update hosts by ini"
@@ -662,13 +662,13 @@ REM     exit /b 0
     REM load ini config
     call :this\load_ini hosts 1 || exit /b 1
     REM get key array
-    call :map -ks \\\keys 1
+    call :map -ks _keys 1
     REM override mac to ipv4
     for /f "usebackq tokens=1*" %%a in (
-        `call lib.cmd ip -f %\\\keys%`
-    ) do if not defined \\\set\%%a (
+        `call lib.cmd ip -f %_keys%`
+    ) do if not defined _set\%%a (
         call :map -p %%a %%b 1 && call :lib\2la %%~a %%b
-        set \\\set\%%a=-
+        set _set\%%a=-
     )
 
     REM replace hosts in cache
@@ -678,26 +678,26 @@ REM     exit /b 0
     ) do for /f "usebackq tokens=1-3" %%c in (
         '. %%b'
     ) do call :lib\iip %%d && (
-        if defined \\\MAP1\%%e (
+        if defined _MAP1\%%e (
             for %%f in (
-                !\\\MAP1\%%e!
+                !_MAP1\%%e!
             ) do call :lib\iip "%%~f" && (
-                set \\\line=%%b
-                call :page -p !\\\line:%%d=%%f!
+                set _line=%%b
+                call :page -p !_line:%%d=%%f!
             ) || call :page -p %%b
-            set \\\MAP1\%%e=
+            set _MAP1\%%e=
         ) else call :page -p %%b
     ) || call :page -p %%b
 
-    call :map -a \\\arr 1
+    call :map -a _arr 1
 
     for %%a in (
-        %\\\arr%
+        %_arr%
     ) do (
         call :lib\iip %%a && (
-            call :page -p %%~a   !\\\key!
+            call :page -p %%~a   !_key!
         )
-        set \\\key=%%~a
+        set _key=%%~a
     )
 
     call :page -s > %windir%\System32\drivers\etc\hosts
@@ -716,10 +716,10 @@ REM     exit /b 0
 :this\ip\--list
     setlocal
     REM Get router ip
-    call :this\grouteIp \\\route
+    call :this\grouteIp _route
     REM "
     for %%a in (
-        %\\\route%
+        %_route%
     ) do for /f usebackq^ skip^=1^ tokens^=2^ delims^=^" %%b in (
         `wmic.exe NicConfig get IPAddress`
     ) do if "%%~nb"=="%%~na" echo %%b
@@ -733,55 +733,55 @@ REM     exit /b 0
 
     REM get config
     call :this\load_ini sip_setting
-    call :map -g route \\\routes
-    call :map -g range \\\range
+    call :map -g route _routes
+    call :map -g range _range
     call :map -c
-    if not defined \\\range set \\\range=1-127
+    if not defined _range set _range=1-127
 
     call :this\load_ini hosts
 
-    set \\\macs=
+    set _macs=
 
     for %%a in (
         %*
     ) do (
-        set \\\arg=
+        set _arg=
         REM Get value
-        call :map -g %%a \\\arg
-        if defined \\\arg (
-            set "\\\mac=!\\\arg: =!"
-        ) else set \\\mac=%%a
+        call :map -g %%a _arg
+        if defined _arg (
+            set "_mac=!_arg: =!"
+        ) else set _mac=%%a
         REM Format
-        set "\\\mac=!\\\mac::=-!"
+        set "_mac=!_mac::=-!"
         REM Test is mac addr
-        call :this\imac "!\\\mac!" && (
-            set "\\\macs=!\\\macs! !\\\mac:|=\!"
-            if defined \\\arg set "\\\macs=!\\\macs!.%%a"
+        call :this\imac "!_mac!" && (
+            set "_macs=!_macs! !_mac:|=\!"
+            if defined _arg set "_macs=!_macs!.%%a"
         )
     )
 
     REM [MAC]\[MAC]\.[NAME] ...
-    if not defined \\\macs exit /b 0
+    if not defined _macs exit /b 0
 
     REM Get router ip
-    call :this\grouteIp \\\grouteIp
+    call :this\grouteIp _grouteIp
     for %%a in (
-        %\\\routes% %\\\grouteIp%
-    ) do if not defined \\\tmp\%%~na (
-        set \\\tmp\%%~na=-
-        set "\\\route=!\\\route! %%a"
+        %_routes% %_grouteIp%
+    ) do if not defined _tmp\%%~na (
+        set _tmp\%%~na=-
+        set "_route=!_route! %%a"
     )
 
     REM Clear arp cache
     arp.exe -d
     REM Search MAC
     for %%a in (
-        %\\\route%
+        %_route%
     ) do for /l %%b in (
-        %\\\range:-=,1,%
+        %_range:-=,1,%
     ) do (
         call :this\thread_valve 50 cmd.exe --find
-        start /b lib.cmd \\:ip\--find %%~na.%%b %\\\macs%
+        start /b lib.cmd \\:ip\--find %%~na.%%b %_macs%
     )
     endlocal
     exit /b 0
@@ -799,10 +799,10 @@ REM For thread sip
     ) do for /f "usebackq tokens=1* delims=." %%d in (
         '%%c'
     ) do (
-        set "\\\macs=%%d"
-        set "\\\macs=!\\\macs:\= !"
+        set "_macs=%%d"
+        set "_macs=!_macs:\= !"
         for %%f in (
-            !\\\macs!
+            !_macs!
         ) do if /i "%%b"=="%%f" if "%%e"=="" (
             call :lib\2la %%f %%a
         ) else call :lib\2la %%e %%a
@@ -813,14 +813,14 @@ REM For thread sip
 
 REM thread valve, usage: :this\thread_valve [count] [name] [commandline]
 :this\thread_valve
-    set /a \\\thread\count+=1
-    if %\\\thread\count% lss %~1 exit /b 0
+    set /a _thread\count+=1
+    if %_thread\count% lss %~1 exit /b 0
     :thread_valve\loop
-        set \\\thread\count=0
+        set _thread\count=0
         for /f "usebackq" %%a in (
             `wmic.exe process where "name='%~2' and commandline like '%%%~3%%'" get processid 2^>nul ^| %windir%\System32\find.exe /c /v ""`
-        ) do set /a \\\thread\count=%%a - 2
-        if %\\\thread\count% gtr %~1 goto thread_valve\loop
+        ) do set /a _thread\count=%%a - 2
+        if %_thread\count% gtr %~1 goto thread_valve\loop
     exit /b 0
 
 REM Map
@@ -831,68 +831,68 @@ REM Map
 :this\map\--put
 :this\map\-p
     if "%~2"=="" exit /b 0
-    set "\\\MAP%~3\%~1=%~2"
+    set "_MAP%~3\%~1=%~2"
     exit /b 0
 
 :this\map\--get
 :this\map\-g
     if "%~2"=="" exit /b 0
     setlocal enabledelayedexpansion
-    set \\\value=
-    if defined \\\MAP%~3\%~1 call set "\\\value=!\\\MAP\%~1!"
-    endlocal & set "%~2=%\\\value%"
+    set _value=
+    if defined _MAP%~3\%~1 call set "_value=!_MAP\%~1!"
+    endlocal & set "%~2=%_value%"
     exit /b 0
 
 :this\map\--remove
 :this\map\-r
-    set \\\MAP%~2\%~1=
+    set _MAP%~2\%~1=
     exit /b 0
 
 :this\map\--keys
 :this\map\-ks
     if "%~1"=="" exit /b 0
     setlocal enabledelayedexpansion
-    set \\\keys=
+    set _keys=
     for /f "usebackq tokens=1* delims==" %%a in (
-        `set \\\MAP%~2\ 2^>nul`
-    ) do set "\\\keys=!\\\keys! "%%~nxa""
-    endlocal & set %~1=%\\\keys%
+        `set _MAP%~2\ 2^>nul`
+    ) do set "_keys=!_keys! "%%~nxa""
+    endlocal & set %~1=%_keys%
     exit /b 0
 
 :this\map\--values
 :this\map\-vs
     if "%~1"=="" exit /b 0
     setlocal enabledelayedexpansion
-    set \\\values=
+    set _values=
     for /f "usebackq tokens=1* delims==" %%a in (
-        `set \\\MAP%~2\ 2^>nul`
-    ) do set "\\\values=!\\\values! "%%~b""
-    endlocal & set %~1=%\\\values%
+        `set _MAP%~2\ 2^>nul`
+    ) do set "_values=!_values! "%%~b""
+    endlocal & set %~1=%_values%
     exit /b 0
 
 :this\map\--arr
 :this\map\-a
     if "%~1"=="" exit /b 0
     setlocal enabledelayedexpansion
-    set \\\kv=
+    set _kv=
     for /f "usebackq tokens=1* delims==" %%a in (
-        `set \\\MAP%~2\ 2^>nul`
-    ) do set "\\\kv=!\\\kv! "%%~nxa" "%%~b""
-    endlocal & set %~1=%\\\kv%
+        `set _MAP%~2\ 2^>nul`
+    ) do set "_kv=!_kv! "%%~nxa" "%%~b""
+    endlocal & set %~1=%_kv%
     exit /b 0
 
 :this\map\--size
 :this\map\-s
     setlocal
-    set \\\count=0
+    set _count=0
     for /f "usebackq tokens=1* delims==" %%a in (
-        `set \\\MAP%~1\ 2^>nul`
-    ) do set /a \\\count+=1
-    endlocal & exit /b %\\\count%
+        `set _MAP%~1\ 2^>nul`
+    ) do set /a _count+=1
+    endlocal & exit /b %_count%
 
 :this\map\--clear
 :this\map\-c
-    call :lib\uset \\\MAP%~1\
+    call :lib\uset _MAP%~1\
     exit /b 0
 
 REM page
@@ -902,46 +902,46 @@ REM page
 
 :this\page\--put
 :this\page\-p
-    if not defined \\\page set \\\page=1000000000
-    set /a \\\page+=1
+    if not defined _page set _page=1000000000
+    set /a _page+=1
     if .%1==. (
-        set \\\page\%\\\page%=.
-    ) else set \\\page\%\\\page%=.%*
+        set _page\%_page%=.
+    ) else set _page\%_page%=.%*
     exit /b 0
 
 :this\page\--show
 :this\page\-s
     for /f "usebackq tokens=1* delims==" %%a in (
-        `set \\\page\`
+        `set _page\`
     ) do echo%%b
     exit /b 0
 
 :this\pads\--clear
 :this\page\-c
-    call :lib\uset \\\page
+    call :lib\uset _page
     exit /b 0
 
 REM load .*.ini config
 :this\load_ini
     if "%~1"=="" exit /b 1
-    set \\\tag=
+    set _tag=
     for /f "usebackq delims=; 	" %%a in (
         `type "%~dp0.*.ini" "%userprofile%\.*.ini" 2^>nul ^| findstr.exe /v "^;"`
     ) do for /f "usebackq tokens=1,2 delims==" %%b in (
         '%%a'
     ) do if "%%c"=="" (
         if "%%b"=="[%~1]" (
-            set \\\tag=true
-        ) else set \\\tag=
-    ) else if defined \\\tag set "\\\MAP%~2\%%b=%%c"
-    set \\\tag=
+            set _tag=true
+        ) else set _tag=
+    ) else if defined _tag set "_MAP%~2\%%b=%%c"
+    set _tag=
 
     REM REM Load
     REM for /f "usebackq tokens=1* delims==" %%a in (
     REM     `set`
     REM ) do if "%%~da" neq "\\" (
-    REM     call :this\imac %%~b && set \\\MAP%~2\%%a=%%~b
-    REM     call :lib\iip %%~b && set \\\MAP%~2\%%a=%%~b
+    REM     call :this\imac %%~b && set _MAP%~2\%%a=%%~b
+    REM     call :lib\iip %%~b && set _MAP%~2\%%a=%%~b
     REM )
 
     call :map -s %~2 && exit /b 1
@@ -986,21 +986,21 @@ REM en zh
     setlocal enabledelayedexpansion
     REM todo get var value in path
     REM Trim quotes
-    set \\\var=!%~1:"=!
+    set _var=!%~1:"=!
     REM " Trim head/tail semicolons
-    if "%\\\var:~0,1%"==";" set \\\var=%\\\var:~1%
-    if "%\\\var:~-1%"==";" set \\\var=%\\\var:~0,-1%
+    if "%_var:~0,1%"==";" set _var=%_var:~1%
+    if "%_var:~-1%"==";" set _var=%_var:~0,-1%
     REM Replace slash end of path
-    set \\\var=%\\\var:\;=;%;
+    set _var=%_var:\;=;%;
     REM Delete path if not exist
-    call :this\trimpath "%\\\var:;=" "%"
-    endlocal & set %~1=%\\\var:~0,-1%
+    call :this\trimpath "%_var:;=" "%"
+    endlocal & set %~1=%_var:~0,-1%
     exit  /b 0
 
 REM for :lib\trimpath, delete path if not exist
 :this\trimpath
     if "%~1"=="" exit /b 0
-    if not exist %1 set \\\var=!\\\var:%~1;=!
+    if not exist %1 set _var=!_var:%~1;=!
     shift /1
     goto %0
 
@@ -1046,12 +1046,12 @@ REM for head tail
 :this\lines
     setlocal
     if "%~2"=="" exit /b 1
-    set \\\count=%~2
-    set \\\count=%\\\count:-=%
-    call :lib\inum %\\\count% || exit /b 1
+    set _count=%~2
+    set _count=%_count:-=%
+    call :lib\inum %_count% || exit /b 1
     if exist "%~3" (
-        PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "Get-Content \"%~3\" %~1 %\\\count%"
-    ) else PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "$Input | Select-Object %~1 %\\\count%"
+        PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "Get-Content \"%~3\" %~1 %_count%"
+    ) else PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "$Input | Select-Object %~1 %_count%"
     endlocal
     goto :eof
 
@@ -1080,24 +1080,24 @@ REM for head tail
     setlocal
     call :this\gpsv
     if not errorlevel 2 exit /b 1
-    REM set \\\arg=-
+    REM set _arg=-
     REM if exist "%~2" (
-    REM     set "\\\arg=%~2"
+    REM     set "_arg=%~2"
     REM     for /f "usebackq" %%a in (
     REM         `PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "[System.BitConverter]::ToString((New-Object -TypeName System.Security.Cryptography.%~1CryptoServiceProvider).ComputeHash([System.IO.File]::Open(\"%2\",[System.IO.Filemode]::Open,[System.IO.FileAccess]::Read))).ToString() -replace \"-\""`
-    REM     ) do set \\\hash=%%a
+    REM     ) do set _hash=%%a
     REM ) else
     for /f "usebackq" %%a in (
         `PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "[System.BitConverter]::ToString((New-Object -TypeName System.Security.Cryptography.%~1CryptoServiceProvider).ComputeHash([Console]::OpenStandardInput())).ToString() -replace \"-\""`
-    ) do set \\\hash=%%a
-    if "%\\\hash%"=="" exit /b 2
-    set \\\hash=%\\\hash:A=a%
-    set \\\hash=%\\\hash:B=b%
-    set \\\hash=%\\\hash:C=c%
-    set \\\hash=%\\\hash:D=d%
-    set \\\hash=%\\\hash:E=e%
-    set \\\hash=%\\\hash:F=f%
-    endlocal & echo %\\\hash%   -
+    ) do set _hash=%%a
+    if "%_hash%"=="" exit /b 2
+    set _hash=%_hash:A=a%
+    set _hash=%_hash:B=b%
+    set _hash=%_hash:C=c%
+    set _hash=%_hash:D=d%
+    set _hash=%_hash:E=e%
+    set _hash=%_hash:F=f%
+    endlocal & echo %_hash%   -
     exit /b 0
 
 ::: "Test PowerShell version" "" "Return errorlevel"
@@ -1161,12 +1161,12 @@ REM if /i "%~x1"==".vbs" screnc.exe %1 ./%~n1.vbe
 :lib\zip
     if not exist "%~1" exit /b 1
     setlocal
-    set "\\\output=.\%~n1"
-    if "%~2" neq "" set "\\\output=%~2"
+    set "_output=.\%~n1"
+    if "%~2" neq "" set "_output=%~2"
     REM zip
-    if /i "%~x1" neq ".zip" call :lib\vbs zip "%~f1" "%\\\output%.zip"
+    if /i "%~x1" neq ".zip" call :lib\vbs zip "%~f1" "%_output%.zip"
     REM unzip
-    if /i "%~x1"==".zip" call :lib\vbs unzip "%~f1" "%\\\output%"
+    if /i "%~x1"==".zip" call :lib\vbs unzip "%~f1" "%_output%"
     endlocal
     REM >.\zip.ZFSendToTarget (
     REM     echo [Shell]
@@ -1211,10 +1211,10 @@ REM if /i "%~x1"==".vbs" screnc.exe %1 ./%~n1.vbe
     REM empty name
     if "%~n1"=="" (
         setlocal enabledelayedexpansion
-        set \\\args=%~1
-        if "!\\\args:~-1!" neq "\" (
+        set _args=%~1
+        if "!_args:~-1!" neq "\" (
             call :lib\serrlv 2
-        ) else call %0 "!\\\args:~0,-1!"
+        ) else call %0 "!_args:~0,-1!"
         endlocal & goto :eof
     )
 
@@ -1249,7 +1249,7 @@ REM if /i "%~x1"==".vbs" screnc.exe %1 ./%~n1.vbe
 
 REM from Window 10 aik, will download oscdimg.exe at script path
 :init\oscdimg
-    for %%a in (\\\%0) do if %processor_architecture:~-2%==64 (
+    for %%a in (_%0) do if %processor_architecture:~-2%==64 (
         REM amd64
         call :this\getCab %%~na 0/A/A/0AA382BA-48B4-40F6-8DD0-BEBB48B6AC18/adk bbf55224a0290f00676ddc410f004498 fild40c79d789d460e48dc1cbd485d6fc2e
 
@@ -1283,8 +1283,8 @@ REM for :init\?
 :lib\execline
     if "%~1"=="" exit /b 1
     if not exist "%~2" exit /b 2
-    set \\\log=nul
-    set "\\\exec=REM "
+    set _log=nul
+    set "_exec=REM "
     for /f "usebackq skip=%~2 delims=" %%a in (
         "%~f1"
     ) do for /f "tokens=1,2*" %%b in (
@@ -1293,15 +1293,15 @@ REM for :init\?
         if "%%c"=="%%~fc" if not exist "%%~dpc" (
             mkdir "%%~dpc"
         ) else if exist "%%~c" erase "%%~c"
-        set "\\\log=%%~c"
-        set "\\\exec=%%~d"
-    ) else >>!\\\log! !\\\exec!%%~a
-    set \\\log=
-    set \\\exec=
+        set "_log=%%~c"
+        set "_exec=%%~d"
+    ) else >>!_log! !_exec!%%~a
+    set _log=
+    set _exec=
     exit /b 0
 
 REM text format for :lib\execline
-EOF !temp!\!\\\now!.log "echo "
+EOF !temp!\!_now!.log "echo "
 some codes
 EOF nul set
 a=1

@@ -46,11 +46,11 @@ set errorlevel=
 
 REM Help
 setlocal
-    set \\\12=%~1%~2
-    if not defined \\\12 set \\\12=-
-    set \\\12=%\\\12:--help=%
-    set \\\12=%\\\12:-h=%
-endlocal & if "%~1%~2" neq "%\\\12%" (
+    set _12=%~1%~2
+    if not defined _12 set _12=-
+    set _12=%_12:--help=%
+    set _12=%_12:-h=%
+endlocal & if "%~1%~2" neq "%_12%" (
     if "%~2"=="" (call :this\annotation) else call :this\annotation :%~n0\%~1
     goto :eof
 )
@@ -73,8 +73,8 @@ REM Show INFO or ERROR
     ) do (
         REM Set annotation, errorlevel will reset after some times
         if %errorlevel% geq 1 (
-            if /i "%%~a"=="::::" set \\\tmp=%errorlevel% %%b %%c
-        ) else if /i "%%~a"==":::" set \\\tmp=%%b %%c
+            if /i "%%~a"=="::::" set _tmp=%errorlevel% %%b %%c
+        ) else if /i "%%~a"==":::" set _tmp=%%b %%c
 
         if /i "%%~a"==":%~n0" (
             REM Display func info or error
@@ -82,40 +82,40 @@ REM Show INFO or ERROR
                 if %errorlevel% geq 1 (
                     REM Inherit errorlevel
                     call :serrlv %errorlevel%
-                    call %0\error %%~a\%%~b !\\\tmp!
-                ) else call %0\more !\\\tmp!
+                    call %0\error %%~a\%%~b !_tmp!
+                ) else call %0\more !_tmp!
                 goto :eof
             )
             REM init func var, for display all func, or show sort func name
-            set \\\args\%%~b=!\\\tmp! ""
+            set _args\%%~b=!_tmp! ""
             REM Clean var
-            set \\\tmp=
+            set _tmp=
         )
     )
 
     REM Foreach func list
-    call :this\gcols \\\col
-    set /a \\\i=0, \\\col/=16
+    call :this\gcols _col
+    set /a _i=0, _col/=16
     for /f usebackq^ tokens^=1^,2^ delims^=^=^" %%a in (
-        `set \\\args\%~n1 2^>nul`
+        `set _args\%~n1 2^>nul`
     ) do if "%~1" neq "" (
         REM " Sort func name expansion
-        set /a \\\i+=1
-        set \\\target=%%~nxa %2 %3 %4 %5 %6 %7 %8 %9
-        if !\\\i!==1 set \\\tmp=%%~nxa
-        if !\\\i!==2 call :this\rpad !\\\tmp! %\\\col%
-        if !\\\i! geq 2 call :this\rpad %%~nxa %\\\col%
+        set /a _i+=1
+        set _target=%%~nxa %2 %3 %4 %5 %6 %7 %8 %9
+        if !_i!==1 set _tmp=%%~nxa
+        if !_i!==2 call :this\rpad !_tmp! %_col%
+        if !_i! geq 2 call :this\rpad %%~nxa %_col%
     ) else call :this\2la %%~nxa "%%~b"
     REM Close rpad
-    if !\\\i! gtr 0 call :this\rpad 0 0
+    if !_i! gtr 0 call :this\rpad 0 0
     REM Display func or call func
-    endlocal & if %\\\i% gtr 1 (
+    endlocal & if %_i% gtr 1 (
         echo.
         >&2 echo Warning: function sort name conflict
         exit /b 1
-    ) else if %\\\i%==0 (
+    ) else if %_i%==0 (
         if "%~1" neq "" >&2 echo Error: No function found& exit /b 1
-    ) else if %\\\i%==1 call :%~n0\%\\\target% || call %0 :%~n0\%\\\target%
+    ) else if %_i%==1 call :%~n0\%_target% || call %0 :%~n0\%_target%
     goto :eof
 
 :this\annotation\error
@@ -135,35 +135,35 @@ REM Make the second column left-aligned
 :this\2la
     if "%~2"=="" exit /b 1
     setlocal enabledelayedexpansion
-    set \\\str=%~10123456789abcdef
-    if "%\\\str:~31,1%" neq "" call :strModulo
-    set /a \\\len=0x%\\\str:~15,1%
-    set "\\\spaces=                "
-    echo %~1!\\\spaces:~0,%\\\len%!%~2
+    set _str=%~10123456789abcdef
+    if "%_str:~31,1%" neq "" call :strModulo
+    set /a _len=0x%_str:~15,1%
+    set "_spaces=                "
+    echo %~1!_spaces:~0,%_len%!%~2
     endlocal
     exit /b 0
 
 REM Use right pads spaces, make all column left-aligned
 :this\rpad
     if "%~1"=="" exit /b 1
-    if "%~2" neq "" if 1%~2 lss 12 (if defined \\\rpad echo. & set \\\rpad=) & exit /b 0
+    if "%~2" neq "" if 1%~2 lss 12 (if defined _rpad echo. & set _rpad=) & exit /b 0
     setlocal enabledelayedexpansion
-    set \\\str=%~10123456789abcdef
-    if "%\\\str:~31,1%" neq "" call :strModulo
-    if "%~2" neq "" if 1%\\\rpad% geq 1%~2 echo. & set /a \\\rpad-=%~2-1
-    set /a \\\len=0x%\\\str:~15,1%
-    set "\\\spaces=                "
-    >&3 set /p=%~1!\\\spaces:~0,%\\\len%!<nul
-    set /a \\\rpad+=1
-    if "%~2" neq "" if 1%\\\rpad% geq 1%~2 echo. & set \\\rpad=
-    endlocal & set \\\rpad=%\\\rpad%
+    set _str=%~10123456789abcdef
+    if "%_str:~31,1%" neq "" call :strModulo
+    if "%~2" neq "" if 1%_rpad% geq 1%~2 echo. & set /a _rpad-=%~2-1
+    set /a _len=0x%_str:~15,1%
+    set "_spaces=                "
+    >&3 set /p=%~1!_spaces:~0,%_len%!<nul
+    set /a _rpad+=1
+    if "%~2" neq "" if 1%_rpad% geq 1%~2 echo. & set _rpad=
+    endlocal & set _rpad=%_rpad%
     exit /b 0
 
 REM for :lib\2la and :lib\rpad and
 :strModulo
-    set /a \\\rpad+=1
-    set \\\str=%\\\str:~15%
-    if "%\\\str:~31,1%"=="" exit /b 0
+    set /a _rpad+=1
+    set _str=%_str:~15%
+    if "%_str:~31,1%"=="" exit /b 0
     goto %0
 
 REM Get cmd cols
@@ -220,22 +220,22 @@ REM Test target in $path
 :this\crede\-a
     if "%~1"=="" exit /b 2
     setlocal
-    set \\\prefix=
-    set \\\suffix=
+    set _prefix=
+    set _suffix=
     for /f "usebackq tokens=1* delims=@" %%a in (
         '%~1'
-    ) do set \\\prefix=%%a& set \\\suffix=%%b
+    ) do set _prefix=%%a& set _suffix=%%b
 
-    if not defined \\\suffix exit /b 4
+    if not defined _suffix exit /b 4
 
     REM Clear Credential
-    call :this\crede\-r %\\\suffix% >nul
+    call :this\crede\-r %_suffix% >nul
 
-    set \\\arg=
-    if "%~2" neq "" set \\\arg=/pass:%~2
+    set _arg=
+    if "%~2" neq "" set _arg=/pass:%~2
     REM Add credential
-    echo cmdkey.exe /add:%\\\suffix% /user:%\\\prefix% %\\\arg%
-    >nul cmdkey.exe /add:%\\\suffix% /user:%\\\prefix% %\\\arg% || exit /b 3
+    echo cmdkey.exe /add:%_suffix% /user:%_prefix% %_arg%
+    >nul cmdkey.exe /add:%_suffix% /user:%_prefix% %_arg% || exit /b 3
     endlocal
     exit /b 0
 
@@ -342,8 +342,8 @@ REM Enable ServicesForNFS
     REM make vhd
     >%tmp%\.diskpart (
         setlocal enabledelayedexpansion
-        set /a \\\size=%2*1024+8
-        echo create vdisk file="%~f1" maximum=!\\\size! type=expandable
+        set /a _size=%2*1024+8
+        echo create vdisk file="%~f1" maximum=!_size! type=expandable
         endlocal
         echo attach vdisk
         echo create partition primary
@@ -403,10 +403,10 @@ REM Enable ServicesForNFS
     REM unmount vhd
     call :dis\vumount %1 > nul
     setlocal
-    set /a \\\size=%~2*1024+8
+    set /a _size=%~2*1024+8
     >%tmp%\.diskpart (
         echo select vdisk file="%~f1"
-        echo expand vdisk maximum=%\\\size%
+        echo expand vdisk maximum=%_size%
     )
     diskpart.exe /s %tmp%\.diskpart || exit /b 7
     endlocal
@@ -426,11 +426,11 @@ REM Enable ServicesForNFS
     if not exist "%~1" exit /b 3
     if /i "%~x1" neq ".vhd" if /i "%~x1" neq ".vhdx" exit /b 2
     setlocal
-    set \\\depth=1
-    if "%~2" neq "" set \\\depth=%~2
+    set _depth=1
+    if "%~2" neq "" set _depth=%~2
     >%tmp%\.diskpart (
         echo select vdisk file="%~f1"
-        echo merge vdisk depth=%\\\depth%
+        echo merge vdisk depth=%_depth%
     )
     endlocal
     diskpart.exe /s %tmp%\.diskpart || exit /b 7
@@ -440,8 +440,8 @@ REM Enable ServicesForNFS
 :this\vhd\--rec
 :this\vhd\-r
     setlocal
-    set /p \\\i=[Warning] Child vhd will be recovery, Yes^|No:
-    if /i "%\\\i%" neq "y" if /i "%\\\i%" neq "yes" exit /b 0
+    set /p _i=[Warning] Child vhd will be recovery, Yes^|No:
+    if /i "%_i%" neq "y" if /i "%_i%" neq "yes" exit /b 0
     endlocal
 
     chcp.com 437 >nul
@@ -507,30 +507,30 @@ REM Enable ServicesForNFS
     if not exist "%~1" exit /b 4
     if "%~d1\"=="%~f1" if "%~2"=="" exit /b 5
 
-    set "\\\input=%~f1"
+    set "_input=%~f1"
     REM trim path
-    if "%\\\input:~-1%"=="\" set "\\\input=%\\\input:~0,-1%"
+    if "%_input:~-1%"=="\" set "_input=%_input:~0,-1%"
 
     REM wim name
     if "%~2" neq "" (
-        set \\\name=%~2
-    ) else for %%a in ("%\\\input%") do set "\\\name=%%~nxa"
+        set _name=%~2
+    ) else for %%a in ("%_input%") do set "_name=%%~nxa"
 
     REM New or Append
-    if exist ".\%\\\name%.wim" (set \\\create=Append) else set \\\create=Capture
+    if exist ".\%_name%.wim" (set _create=Append) else set _create=Capture
 
     REM Create exclusion list
-    call lib.cmd gnow \\\conf "%tmp%\" .log
-    set \\\args=
-    call :wim\ConfigFile "%\\\input%" > %\\\conf% && set \\\args=/ConfigFile:"%\\\conf%"
+    call lib.cmd gnow _conf "%tmp%\" .log
+    set _args=
+    call :wim\ConfigFile "%_input%" > %_conf% && set _args=/ConfigFile:"%_conf%"
 
     REM input args
-    for %%a in ("%\\\input%") do set "\\\input=%%~dpa"
-    set "\\\input=%\\\input:~0,-1%"
+    for %%a in ("%_input%") do set "_input=%%~dpa"
+    set "_input=%_input:~0,-1%"
 
     REM Do capture
-    dism.exe /English /%\\\create%-Image /ImageFile:".\%\\\name%.wim" /CaptureDir:"%\\\input%" /Name:"%\\\name%" %\\\compress% /Verify %\\\args% || exit /b 6
-    if exist "%\\\conf%" erase "%\\\conf%"
+    dism.exe /English /%_create%-Image /ImageFile:".\%_name%.wim" /CaptureDir:"%_input%" /Name:"%_name%" %_compress% /Verify %_args% || exit /b 6
+    if exist "%_conf%" erase "%_conf%"
     endlocal
     exit /b 0
 
@@ -551,17 +551,17 @@ REM create exclusion list
     if /i "%~x1" neq ".wim" if /i "%~x1" neq ".esd" exit /b 8
     REM if "%~2"=="" mkdir ".\%~n1" 2>nul || exit /b 9
     setlocal
-    set \\\out=.
+    set _out=.
     if "%~2" neq "" (
         call lib.cmd idir "%~2" || exit /b 10
-        set \\\out=%~f2
+        set _out=%~f2
     )
     REM Must trim path
-    if "%\\\out:~-1%"=="\" set \\\out=%\\\out:~0,-1%
+    if "%_out:~-1%"=="\" set _out=%_out:~0,-1%
     if "%~3"=="" (
-        call :getWimLastIndex %1 \\\index
-    ) else set \\\index=%~3
-    dism.exe /English /Apply-Image /ImageFile:"%~f1" /Index:%\\\index% /ApplyDir:"%\\\out%" /Verify || exit /b 6
+        call :getWimLastIndex %1 _index
+    ) else set _index=%~3
+    dism.exe /English /Apply-Image /ImageFile:"%~f1" /Index:%_index% /ApplyDir:"%_out%" /Verify || exit /b 6
     endlocal
     exit /b 0
 
@@ -580,9 +580,9 @@ REM for wim
     call lib.cmd idir %2 || exit /b 4
     setlocal
     if "%~3"=="" (
-        call :getWimLastIndex %1 \\\index
-    ) else set \\\index=%3
-    dism.exe /Mount-Wim /WimFile:"%~f1" /index:%\\\index% /MountDir:"%~f2" || exit /b 6
+        call :getWimLastIndex %1 _index
+    ) else set _index=%3
+    dism.exe /Mount-Wim /WimFile:"%~f1" /index:%_index% /MountDir:"%~f2" || exit /b 6
     endlocal
     exit /b 0
 
@@ -600,13 +600,13 @@ REM for wim
 
 :: 0->4 none|WIMBoot|fast|max|recovery(esd)
 :wim\setCompress
-    set \\\compress=
-    if "%~1"=="0" set \\\compress=/Compress:none
-    if "%~1"=="1" set \\\compress=/WIMBoot
-    if "%~1"=="2" set \\\compress=/Compress:fast
-    if "%~1"=="3" set \\\compress=/Compress:max
-    if "%~1"=="4" set \\\compress=/Compress:recovery
-    if defined \\\compress exit /b 0
+    set _compress=
+    if "%~1"=="0" set _compress=/Compress:none
+    if "%~1"=="1" set _compress=/WIMBoot
+    if "%~1"=="2" set _compress=/Compress:fast
+    if "%~1"=="3" set _compress=/Compress:max
+    if "%~1"=="4" set _compress=/Compress:recovery
+    if defined _compress exit /b 0
     exit /b 1
 
 :this\wim\--export
@@ -621,17 +621,17 @@ REM for wim
     call :wim\setCompress %~4
 
     REM test suffix
-    if /i "%~x2"==".esd" if defined \\\compress if "%\\\compress:~-8%" neq "recovery" exit /b 13
+    if /i "%~x2"==".esd" if defined _compress if "%_compress:~-8%" neq "recovery" exit /b 13
 
     REM auto esd
-    if /i "%~x2"==".esd" if not defined \\\compress set \\\compress=/Compress:recovery
+    if /i "%~x2"==".esd" if not defined _compress set _compress=/Compress:recovery
 
     REM test size, TODO get image size by index
-    set "\\\size=%~z1" 2>nul || exit /b 7
+    set "_size=%~z1" 2>nul || exit /b 7
     REM 0x1fffffff = 536870911
-    if "%\\\size:~9,1%"=="" if %\\\size% lss 536870911 if "%\\\compress%" neq "/WIMBoot" set "\\\compress=%\\\compress% /Bootable"
+    if "%_size:~9,1%"=="" if %_size% lss 536870911 if "%_compress%" neq "/WIMBoot" set "_compress=%_compress% /Bootable"
 
-    dism.exe /Export-Image /SourceImageFile:"%~f1" /SourceIndex:%3 /DestinationImageFile:"%~f2" %\\\compress% /CheckIntegrity
+    dism.exe /Export-Image /SourceImageFile:"%~f1" /SourceIndex:%3 /DestinationImageFile:"%~f2" %_compress% /CheckIntegrity
     endlocal
     exit /b 0
 
@@ -651,9 +651,9 @@ REM for wim
     for /f "usebackq tokens=1-3*" %%a in (
 		`dism.exe /English /Get-MountedWimInfo`
 	) do (
-        if "%%~a"=="Mount" set \\\m=
-        if "%%~a%%~b"=="MountDir" if exist "%%~d" set "\\\m=%%~d"
-        if "%%~a%%~d"=="StatusRemount" if defined \\\m dism.exe /Remount-Wim /MountDir:"!\\\m!"
+        if "%%~a"=="Mount" set _m=
+        if "%%~a%%~b"=="MountDir" if exist "%%~d" set "_m=%%~d"
+        if "%%~a%%~d"=="StatusRemount" if defined _m dism.exe /Remount-Wim /MountDir:"!_m!"
     )
     endlocal
     echo.complate.
@@ -683,8 +683,8 @@ REM for wim
 
 :this\num
     setlocal
-    set \\\num=%*
-    set /p=, %\\\num:,=_%<nul
+    set _num=%*
+    set /p=, %_num:,=_%<nul
     endlocal
     goto :eof
 
@@ -773,16 +773,16 @@ REM OS
         if "%~d0" neq "\\" exit /b 3
         for /f "usebackq delims=\" %%a in (
             '%~p0'
-        ) do set \\\ip=%%a
-    ) else set \\\ip=%1
+        ) do set _ip=%%a
+    ) else set _ip=%1
 
     REM Get this OS version
-    call lib.cmd gosinf %SystemDrive% \\\sd
+    call lib.cmd gosinf %SystemDrive% _sd
 
     REM Get this OS Edition ID
     for /f "usebackq tokens=3" %%a in (
         `reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v "EditionID"`
-    ) do set \\\eid=%%a
+    ) do set _eid=%%a
 
     REM Search kms key
     REM https://technet.microsoft.com/en-us/library/jj612867(v=ws.11).aspx
@@ -821,25 +821,25 @@ REM OS
         60_Business@YFKBB-PQJJV-G996G-VWGXY-2V3X8
     ) do for /f "usebackq tokens=1,2 delims=@" %%b in (
         '%%~a'
-    ) do if /i "%\\\sd.ver%_%\\\eid%"=="%%b" set \\\key=%%c
+    ) do if /i "%_sd.ver%_%_eid%"=="%%b" set _key=%%c
 
     REM If not find key
-    if not defined \\\key exit /b 4
+    if not defined _key exit /b 4
 
     REM Processing same EditionID by BuildLab number
-    if "%\\\key:~30,1%" neq "" for /f "usebackq tokens=3 delims=. " %%a in (
+    if "%_key:~30,1%" neq "" for /f "usebackq tokens=3 delims=. " %%a in (
         `reg.exe query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v BuildLab`
     ) do for %%b in (
-        %\\\key%
-    ) do if ".%%a"=="%%~xb" set \\\key=%%~nb
+        %_key%
+    ) do if ".%%a"=="%%~xb" set _key=%%~nb
 
     REM Not found key in same EditionID
-    if "%\\\key:~30,1%" neq "" exit /b 4
+    if "%_key:~30,1%" neq "" exit /b 4
 
     REM Active
     for %%a in (
-        "/ipk %\\\key%"
-        "/skms %\\\ip%"
+        "/ipk %_key%"
+        "/skms %_ip%"
         /ato ::?"active"
         /xpr ::?"display expires time"
         /ckms ::?"rm key"
@@ -857,33 +857,33 @@ REM Office
         if "%~d0" neq "\\" exit /b 3
         for /f "usebackq delims=\" %%a in (
             '%~p0'
-        ) do set \\\ip=%%a
-    ) else set \\\ip=%1
+        ) do set _ip=%%a
+    ) else set _ip=%1
 
     REM Search kms key
-    set \\\key=
-    call :getOfficePath \\\office || exit /b 5
-    if "%\\\office:~-1%"=="\" set \\\office=%\\\office:~0,-1%
+    set _key=
+    call :getOfficePath _office || exit /b 5
+    if "%_office:~-1%"=="\" set _office=%_office:~0,-1%
     for %%a in (
-        "%\\\office%"
+        "%_office%"
     ) do for %%b in (
         Office15@YC7DK-G2NP3-2QQC3-J6H88-GVGXT
         Office15Visio@C2FG9-N6J68-H8BTJ-BW3QX-RM3B3
     ) do for /f "usebackq tokens=1,2 delims=@" %%c in (
         '%%b'
-    ) do if /i "%%~na"=="%%c" set \\\key=%%d
+    ) do if /i "%%~na"=="%%c" set _key=%%d
 
     REM If not find key
-    if not defined \\\key exit /b 6
+    if not defined _key exit /b 6
 
     REM Active
     for %%a in (
-        "/inpkey:%\\\key%"
-        "/sethst:%\\\ip%"
+        "/inpkey:%_key%"
+        "/sethst:%_ip%"
         /act ::?"active"
         /dstatus ::?"display expires time"
         /remhst ::?"rm key"
-    ) do cscript.exe //nologo //e:vbscript "%\\\office%\ospp.vbs" %%~a
+    ) do cscript.exe //nologo //e:vbscript "%_office%\ospp.vbs" %%~a
     endlocal
     exit /b 0
 
@@ -957,8 +957,8 @@ REM for :dis\officekms
 :batchrc\
     call :this\iinpath lib.cmd || exit /b 2
     setlocal
-    call lib.cmd gbs \\\bs
-    reg.exe add "HKCU\SOFTWARE\Microsoft\Command Processor" /v AutoRun /t REG_SZ /d "if not defined BS set BS=%\\\bs%&& (for /f \"usebackq delims=\" %%a in (\"%%USERPROFILE%%\.batchrc\") do @call %%a)>nul 2>&1" /f
+    call lib.cmd gbs _bs
+    reg.exe add "HKCU\SOFTWARE\Microsoft\Command Processor" /v AutoRun /t REG_SZ /d "if not defined BS set BS=%_bs%&& (for /f \"usebackq delims=\" %%a in (\"%%USERPROFILE%%\.batchrc\") do @call %%a)>nul 2>&1" /f
     if exist "%USERPROFILE%\.batchrc" endlocal & exit /b 0
     > "%USERPROFILE%\.batchrc" (
         echo ;use ^>^&3 in script can print
@@ -1002,10 +1002,10 @@ REM for :dis\officekms
     REM Trim Hardware and compatible ids
     for /f "usebackq tokens=1,2" %%a in (
         `devcon.exe hwids *`
-    ) do if "%%b"=="" set "\\\$%%a=$"
+    ) do if "%%b"=="" set "_$%%a=$"
     REM Print list
     for /f "usebackq tokens=2 delims==$" %%a in (
-        `set \\\$ 2^>nul`
+        `set _$ 2^>nul`
     ) do echo %%a
     endlocal
     exit /b 0
@@ -1017,25 +1017,25 @@ REM for :dis\officekms
     call lib.cmd idir %2 || exit /b 4
     REM Create inf trim vbs
     setlocal enabledelayedexpansion
-    call lib.cmd gnow \\\out %temp%\inf-
-    mkdir %\\\out%
+    call lib.cmd gnow _out %temp%\inf-
+    mkdir %_out%
     set i=0
     for /r %2 %%a in (
         *.inf
     ) do (
         set /a i+=1
         REM Cache inf file path
-        set \\\drv\inf\!i!=%%a
+        set _drv\inf\!i!=%%a
         REM trim file in a new path
-        call lib.cmd vbs inftrim "%%~a" %\\\out%\!i!.tmp
-        for %%b in (%\\\out%\!i!.tmp) do if "%%~zb"=="0" type "%%~a" > %\\\out%\!i!.tmp
+        call lib.cmd vbs inftrim "%%~a" %_out%\!i!.tmp
+        for %%b in (%_out%\!i!.tmp) do if "%%~zb"=="0" type "%%~a" > %_out%\!i!.tmp
     )
     REM Print hit file
     for /f "usebackq" %%a in (
-        `findstr.exe /e /i /m /g:%1 %\\\out%\*.tmp`
-    ) do echo !\\\drv\inf\%%~na!
+        `findstr.exe /e /i /m /g:%1 %_out%\*.tmp`
+    ) do echo !_drv\inf\%%~na!
     REM Clear temp file
-    rmdir /s /q %\\\out%
+    rmdir /s /q %_out%
     endlocal
     exit /b 0
 
@@ -1051,8 +1051,8 @@ REM for :dis\officekms
 
     if "%~1"=="" (
         setlocal
-        set /p \\\i=[Warning] Reg vhd will be change, Yes^|No:
-        if /i "%\\\i%" neq "y" if /i "%\\\i%" neq "yes" exit /b 0
+        set /p _i=[Warning] Reg vhd will be change, Yes^|No:
+        if /i "%_i%" neq "y" if /i "%_i%" neq "yes" exit /b 0
         endlocal
         call :delInteltag system
         exit /b 0
@@ -1077,32 +1077,32 @@ REM for :dis\intelAmd
     reg.exe query %1 >nul 2>nul || exit /b 1
     reg.exe load HKLM\tmp %2 || exit /b 2
     setlocal
-    if not defined \\\reg\ve for /f %%a in (
+    if not defined _reg\ve for /f %%a in (
         'reg.exe query HKLM /ve'
-    ) do set "\\\reg\ve=%%a"
+    ) do set "_reg\ve=%%a"
 
     for /f "usebackq delims=" %%a in (
         `reg.exe query %1 /s`
     ) do for /f "tokens=1,2* delims=\" %%b in (
         "%%a"
     ) do if "%%b" neq "HKEY_LOCAL_MACHINE" (
-        set "\\\tmp=%%a"
-        rem set "\\\tmp=!\\\tmp:$Windows.~bt\=!"
-        rem set "\\\tmp=!\\\tmp:\=\\!"
-        rem set "\\\tmp=!\\\tmp:"=\"!"
+        set "_tmp=%%a"
+        rem set "_tmp=!_tmp:$Windows.~bt\=!"
+        rem set "_tmp=!_tmp:\=\\!"
+        rem set "_tmp=!_tmp:"=\"!"
         for /f "tokens=1,2* delims=`" %%e in (
-            "!\\\tmp:    =`!"
-        ) do if "%%e"=="%\\\reg\ve%" (
-            reg.exe add "HKLM\tmp\!\\\temp!" /ve /t %%f /d "%%g" /f
-        ) else reg.exe add "HKLM\tmp\!\\\temp!" /v "%%e" /t %%f /d "%%g" /f
-    ) else set "\\\temp=%%d"
+            "!_tmp:    =`!"
+        ) do if "%%e"=="%_reg\ve%" (
+            reg.exe add "HKLM\tmp\!_temp!" /ve /t %%f /d "%%g" /f
+        ) else reg.exe add "HKLM\tmp\!_temp!" /v "%%e" /t %%f /d "%%g" /f
+    ) else set "_temp=%%d"
     endlocal
     reg.exe unload HKLM\tmp
     exit /b 0
 
 REM from Window 10 wdk, will download devcon.exe at script path
 :init\devcon
-    for %%a in (\\\%0) do if %processor_architecture:~-2%==64 (
+    for %%a in (_%0) do if %processor_architecture:~-2%==64 (
         REM amd64
         call :this\getCab %%~na 8/1/6/816FE939-15C7-4185-9767-42ED05524A95/wdk 787bee96dbd26371076b37b13c405890 filbad6e2cce5ebc45a401e19c613d0a28f
 
@@ -1112,7 +1112,7 @@ REM from Window 10 wdk, will download devcon.exe at script path
 
 REM from Window 10 aik, will download imagex.exe at script path
 :init\imagex
-    for %%a in (\\\%0) do if %processor_architecture:~-2%==64 (
+    for %%a in (_%0) do if %processor_architecture:~-2%==64 (
         REM amd64
         call :this\getCab %%~na 0/A/A/0AA382BA-48B4-40F6-8DD0-BEBB48B6AC18/adk d2611745022d67cf9a7703eb131ca487 fil4927034346f01b02536bd958141846b2
 
