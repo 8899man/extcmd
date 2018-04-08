@@ -46,17 +46,17 @@ REM goto :eof
 :: some basic functions ::
 ::::::::::::::::::::::::::
 
+REM init errorlevel
+set errorlevel=
+
 REM For thread
 if "%~d1"=="\\" call :thread "%*" & exit
 
 REM Init PATH
 for %%a in (%~nx0) do if "%%~$path:a"=="" set path=%path%;%~dp0
 
-if "%~2"=="-h" call :this\annotation :%~n0\%~1 & goto :eof
-if "%~2"=="--help" call :this\annotation :%~n0\%~1 & goto :eof
-
-REM init errorlevel
-set errorlevel=
+if "%~2"=="-h" call :this\annotation :%~n0\%~1 & exit /b 0
+if "%~2"=="--help" call :this\annotation :%~n0\%~1 & exit /b 0
 
 call :%~n0\%* 2>nul
 
@@ -76,7 +76,8 @@ exit /b 0
     >&2 echo 0.18.3
     exit /b 0
 
-::: "$env:path operation" "" "usage: %~n0 path [option] [...]" "" "    --contain, -i  [file_name]         Test target in $env:path" "    --search,  -s  [file_name]         Search file in $env:path, and print path" "                                       support wildcards: * ?" "                                  e.g. " "                                       %~n0 path --search *ja?a" "    --which,   -w  [file_full_name]    Locate a program file in the user's path" "    --trim,    -t  [var_name]          Path Standardize" "    --reset,   -r                      Reset default path environment variable"
+::: "$env:path operation" "" "usage: %~n0 path [option] [...]" "" "    --contain, -i  [file_name]         Test target in $env:path" "    --trim,    -t  [var_name]          Path Standardize" "    --reset,   -r                      Reset default path environment variable"
+REM  "    --search,  -s  [file_name]         Search file in $env:path, and print path" "                                       support wildcards: * ?" "                                  e.g. " "                                       %~n0 path --search *ja?a" "    --which,   -w  [file_full_name]    Locate a program file in the user's path"
 :::: "invalid option" "first args is empty" "variable name is empty" "variable name not defined"
 :lib\path
     if "%*"=="" call :this\annotation %0 & goto :eof
@@ -88,42 +89,42 @@ exit /b 0
     if "%~1" neq "" if "%~$path:1" neq "" exit /b 0
     exit /b 10
 
-:this\path\-s
-:this\path\--search
-    if "%~1"=="" exit /b 2
-    setlocal enabledelayedexpansion
-    call :lib\cols _col
-    set /a _i=0, _col/=16
-    call :lib\trimpath path
-    for /f "usebackq delims==" %%a in (
-        `dir /a-d /b "!path:;=\%~1*" "!\%~1*" 2^>nul`
-    ) do if "%pathext%" neq "!pathext:%%~xa=!" (
-        set /a _i+=1
-        if !_i!==1 set _tmp=%%~nxa
-        if !_i!==2 call :lib\lals !_tmp! %_col%
-        if !_i! geq 2 call :lib\lals %%~nxa %_col%
-    )
-    REM Close lals
-    call :lib\lals 0 0
-    endlocal & if %_i% gtr 1 (
-        echo.
-        echo.Find %_i% exec file.
-    ) else if %_i%==0 (
-        echo.No exec file found.
-    ) else call :this\path\--which %_tmp%
-    exit /b 0
+REM :this\path\-s
+REM :this\path\--search
+REM     if "%~1"=="" exit /b 2
+REM     setlocal enabledelayedexpansion
+REM     call :lib\cols _col
+REM     set /a _i=0, _col/=16
+REM     call :lib\trimpath path
+REM     for /f "usebackq delims==" %%a in (
+REM         `dir /a-d /b "!path:;=\%~1*" "!\%~1*" 2^>nul`
+REM     ) do if "%pathext%" neq "!pathext:%%~xa=!" (
+REM         set /a _i+=1
+REM         if !_i!==1 set _tmp=%%~nxa
+REM         if !_i!==2 call :lib\lals !_tmp! %_col%
+REM         if !_i! geq 2 call :lib\lals %%~nxa %_col%
+REM     )
+REM     REM Close lals
+REM     call :lib\lals 0 0
+REM     endlocal & if %_i% gtr 1 (
+REM         echo.
+REM         echo.Find %_i% exec file.
+REM     ) else if %_i%==0 (
+REM         echo.No exec file found.
+REM     ) else call :this\path\--which %_tmp%
+REM     exit /b 0
 
-:this\path\-w
-:this\path\--which
-    if not defined _p (
-        setlocal enabledelayedexpansion
-        call :lib\trimpath path
-        set _p=!path:;=\;!\
-    )
-    if "%~a$_p:1"=="" endlocal & exit /b 0
-    echo %~$_p:1
-    set _p=!_p:%~dp$_p:1=!
-    goto %0
+REM :this\path\-w
+REM :this\path\--which
+REM     if not defined _p (
+REM         setlocal enabledelayedexpansion
+REM         call :lib\trimpath path
+REM         set _p=!path:;=\;!\
+REM     )
+REM     if "%~a$_p:1"=="" endlocal & exit /b 0
+REM     echo %~$_p:1
+REM     set _p=!_p:%~dp$_p:1=!
+REM     goto %0
 
 :this\path\-t
 :this\path\--trim
@@ -577,14 +578,14 @@ REM Get router ip
 
 :this\txt\-e
 :this\txt\--head
-    call :this\gpsv
+    call :this\psv
     if not errorlevel 3 exit /b 7
     call :txt\ps1 -first %*|| exit /b 8
     goto :eof
 
 :this\txt\-t
 :this\txt\--tail
-    call :this\gpsv
+    call :this\psv
     if not errorlevel 3 exit /b 7
     call :txt\ps1 -Last %*|| exit /b 8
     goto :eof
@@ -663,7 +664,7 @@ EOF nul "rem "
         `certutil.exe -hashfile %2 %~1`
     ) do if "%%b"=="" echo %%a   %2& exit /b 0
     setlocal
-    call :this\gpsv
+    call :this\psv
     if not errorlevel 2 exit /b 1
     REM set _arg=-
     REM if exist "%~2" (
@@ -691,7 +692,7 @@ REM     net.exe use * /delete
 REM     exit /b 0
 
 ::: "Test PowerShell version" "" "Return errorlevel"
-:this\gpsv
+:this\psv
     for %%a in (PowerShell.exe) do if "%%~$path:a"=="" exit /b 0
     for /f "usebackq" %%a in (
         `PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "$PSVersionTable.WSManStackVersion.Major" 2^>nul`
