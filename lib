@@ -34,6 +34,12 @@
 #             return 1
 #         }
 
+### Output version and exit.
+lib_version() {
+    printf "0.18.3\n" >&2;
+    return 0
+}
+
 ### Create ISO by directory #Usage: udf [dir_path]
 lib_udf() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
@@ -137,7 +143,7 @@ gpkg_serial_number() {
     while read k v; do
         # Put in map
         [ "$v" ] && pkg[$k]="$v";
-    done < <(sudo find "$1" -type f -iregex ".*\.[pt][km][gp]" -exec ls -i {} \; 2>/dev/null); # *.tmp *.pkg
+    done < <(find "$1" -type f -iname "*.pkg" -exec ls -i {} \; 2>/dev/null); # *.tmp *.pkg
     return 0
 }
 
@@ -598,7 +604,7 @@ lib_rand() {
     openssl rand -base64 ${1:-9} | tr -d '\n' | sed "s/[^0-9A-Za-z]/${RANDOM:0:1}/g"
 }
 
-### Show/find IPv4 #Usage: ip [option] [args...] # -l            Show IPv4 # -f [mac_addr] Search IPv4 by MAC or Host name #               support alias, see lib hosts
+### Show/find IPv4 #Usage: ip [option] [args...] # -l            Show IPv4 # -f [mac_addr] Search IPv4 by MAC or Host name #               support alias, see lib hosts # -t [str] Test string is ipv4
 lib_ip() {
     case $1 in
         -l|--list)
@@ -611,6 +617,21 @@ lib_ip() {
             shift;
             source "$(cd `dirname $0`; pwd)/.lib";
             ip_find "$@"
+        ;;
+        -t|--test)
+            shift;
+            [ "$1" ] || return 1;
+            # command test
+            [ "${1:0:1}" == "-" ] && return 1;
+            [[ $1 != *[^.0-9]* && $1 == [1-9]*[0-9] && $1 != *..* ]] || return 1;
+            local a IFS=$IFS".";
+            a=($1);
+            [ ${#a[@]} == 4 ] || return 1;
+            for a in ${a[@]};
+            do
+                [ $a -gt 255 ] && return 1;
+            done
+            return 0
         ;;
         *)
             exit 1; # invalid option
@@ -753,7 +774,7 @@ lib_hosts() {
             _map -p $i 1;
             echo "$i"
         }
-    done < <(lib_ip -f ${REPLY[@]});
+    done < <(lib_ip --find ${REPLY[@]});
 
     # clear map0, sip command use it before
     _map -c;
@@ -763,7 +784,7 @@ lib_hosts() {
 
     for ((i=0; i<${#REPLY[@]}; i+=2))
     do
-        lib_iipv4 ${REPLY[i + 1]} && _map -p "${REPLY[$i]}" "${REPLY[i + 1]}";
+        lib_ip --test ${REPLY[i + 1]} && _map -p "${REPLY[$i]}" "${REPLY[i + 1]}";
     done
 
     while read i;
@@ -791,22 +812,6 @@ lib_hosts() {
 
 }
 
-### Test string is ipv4 #Usage: iipv4 [str]
-lib_iipv4() {
-    [ "$1" ] || return 1;
-    # command test
-    [ "${1:0:1}" == "-" ] && return 1;
-    [[ $1 != *[^.0-9]* && $1 == [1-9]*[0-9] && $1 != *..* ]] || return 1;
-    local a IFS=$IFS".";
-    a=($1);
-    [ ${#a[@]} == 4 ] || return 1;
-    for a in ${a[@]};
-    do
-        [ $a -gt 255 ] && return 1;
-    done
-    return 0
-}
-
 # Test mac addr
 imac() {
     [ "$1" ] || return 1;
@@ -822,7 +827,7 @@ imac() {
 ### Connect vnc server #Usage: vnc [ipv4][:[port]] #server listening port 5900
 lib_vnc() {
     [[ $OSTYPE == darwin* ]] || exit 1; # Only support OS X (macOS)
-    lib_iipv4 $1 || exit 1; # Args not a ipv4
+    lib_ip --test $1 || exit 1; # Args not a ipv4
     open vnc://$1;
     return 0
 }
@@ -897,7 +902,7 @@ load_ini() {
     # # read environment variable
     # while read l tag;
     # do
-    #     lib_iipv4 $tag || {
+    #     lib_ip --test $tag || {
     #         imac $tag || continue
     #     };
     #     _map -p "$l" "$tag" $2;
