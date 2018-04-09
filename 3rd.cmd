@@ -38,163 +38,37 @@ REM             exit /b 10
 :: Third-Party Programs ::
 ::::::::::::::::::::::::::
 
-REM Init PATH
-for %%a in (%~nx0) do if "%%~$path:a"=="" set path=%path%;%~dp0
-
 REM init errorlevel
 set errorlevel=
 
-REM Help
-setlocal
-    set _12=%~1%~2
-    if not defined _12 set _12=-
-    set _12=%_12:--help=%
-    set _12=%_12:-h=%
-endlocal & if "%~1%~2" neq "%_12%" (
-    if "%~2"=="" (call :this\annotation) else call :this\annotation :%~n0\%~1
-    goto :eof
-)
+REM Init PATH
+for %%a in (%~nx0) do if "%%~$path:a"=="" set path=%path%;%~dp0
+
+if "%~2"=="-h" call :this\annotation :%~n0\%~1 & goto :eof
+if "%~2"=="--help" call :this\annotation :%~n0\%~1 & goto :eof
 
 call :%~n0\%* 2>nul
+
 REM Test type function
 if errorlevel 10 exit /b 1
 if errorlevel 1 call :this\annotation :%~n0\%* & goto :eof
 exit /b 0
 
-:::::::::::::::::::::::::::::::::::::::::::::::
-::                 Framework                 ::
-:: :: :: :: :: :: :: :: :: :: :: :: :: :: :: ::
-
-REM Show INFO or ERROR
-:this\annotation
-    setlocal enabledelayedexpansion & call :serrlv %errorlevel%
-    for /f "usebackq skip=90 tokens=1,2* delims=\ " %%a in (
-        "%~f0"
-    ) do (
-        REM Set annotation, errorlevel will reset after some times
-        if %errorlevel% geq 1 (
-            if /i "%%~a"=="::::" set _tmp=%errorlevel% %%b %%c
-        ) else if /i "%%~a"==":::" set _tmp=%%b %%c
-
-        if /i "%%~a"==":%~n0" (
-            REM Display func info or error
-            if /i "%%~a\%%~b"=="%~1" (
-                if %errorlevel% geq 1 (
-                    REM Inherit errorlevel
-                    call :serrlv %errorlevel%
-                    call %0\error %%~a\%%~b !_tmp!
-                ) else call %0\more !_tmp!
-                goto :eof
-            )
-            REM init func var, for display all func, or show sort func name
-            set _args\%%~b=!_tmp! ""
-            REM Clean var
-            set _tmp=
-        )
-    )
-
-    REM Foreach func list
-    call :this\gcols _col
-    set /a _i=0, _col/=16
-    for /f usebackq^ tokens^=1^,2^ delims^=^=^" %%a in (
-        `set _args\%~n1 2^>nul`
-    ) do if "%~1" neq "" (
-        REM " Sort func name expansion
-        set /a _i+=1
-        set _target=%%~nxa %2 %3 %4 %5 %6 %7 %8 %9
-        if !_i!==1 set _tmp=%%~nxa
-        if !_i!==2 call :this\rpad !_tmp! %_col%
-        if !_i! geq 2 call :this\rpad %%~nxa %_col%
-    ) else call :this\2la %%~nxa "%%~b"
-    REM Close rpad
-    if !_i! gtr 0 call :this\rpad 0 0
-    REM Display func or call func
-    endlocal & if %_i% gtr 1 (
-        echo.
-        >&2 echo Warning: function sort name conflict
-        exit /b 1
-    ) else if %_i%==0 (
-        if "%~1" neq "" >&2 echo Error: No function found& exit /b 1
-    ) else if %_i%==1 call :%~n0\%_target% || call %0 :%~n0\%_target%
-    goto :eof
-
-:this\annotation\error
-    for /l %%a in (1,1,%2) do shift /2
-    if "%~2"=="" goto :eof
-    REM color 0c
-    >&2 echo.Error: %~2 (%~s0%~1)
-    goto :eof
-
-:this\annotation\more
-    echo.%~1
-    shift /1
-    if "%~1%~2" neq "" goto %0
+:3rd\
+:3rd\-h
+:3rd\--help
+    call :this\annotation
     exit /b 0
 
-REM Make the second column left-aligned
-:this\2la
-    if "%~2"=="" exit /b 1
-    setlocal enabledelayedexpansion
-    set _str=%~10123456789abcdef
-    if "%_str:~31,1%" neq "" call :strModulo
-    set /a _len=0x%_str:~15,1%
-    set "_spaces=                "
-    echo %~1!_spaces:~0,%_len%!%~2
-    endlocal
+::: "Output version and exit"
+:3rd\version
+    >&2 echo 0.18.3
     exit /b 0
-
-REM Use right pads spaces, make all column left-aligned
-:this\rpad
-    if "%~1"=="" exit /b 1
-    if "%~2" neq "" if 1%~2 lss 12 (if defined _rpad echo. & set _rpad=) & exit /b 0
-    setlocal enabledelayedexpansion
-    set _str=%~10123456789abcdef
-    if "%_str:~31,1%" neq "" call :strModulo
-    if "%~2" neq "" if 1%_rpad% geq 1%~2 echo. & set /a _rpad-=%~2-1
-    set /a _len=0x%_str:~15,1%
-    set "_spaces=                "
-    >&3 set /p=%~1!_spaces:~0,%_len%!<nul
-    set /a _rpad+=1
-    if "%~2" neq "" if 1%_rpad% geq 1%~2 echo. & set _rpad=
-    endlocal & set _rpad=%_rpad%
-    exit /b 0
-
-REM for :this\rpad
-:strModulo
-    set /a _rpad+=1
-    set _str=%_str:~15%
-    if "%_str:~31,1%"=="" exit /b 0
-    goto %0
-
-REM Get cmd cols
-:this\gcols
-    for /f "usebackq skip=4 tokens=2" %%a in (`mode.com con`) do (
-        if "%~1"=="" (
-            echo %%a
-        ) else set %~1=%%a
-        exit /b 0
-    )
-    exit /b 0
-
-REM Set errorlevel variable
-:serrlv
-    if "%~1"=="" goto :eof
-    exit /b %1
-
-:: :: :: :: :: :: :: :: :: :: :: :: :: :: :: ::
-::                 Framework                 ::
-:::::::::::::::::::::::::::::::::::::::::::::::
-
-REM Test target in $path
-:this\iinpath
-    if "%~1"=="" exit /b 1
-    if "%~$path:1" neq "" exit /b 0
-    exit /b 1
 
 ::: "Backup git repositories"
 :::: "git command not found"
 :3rd\gitbak
-    call :this\iinpath git.exe || exit /b 1
+    call :this\path\--contain git.exe || exit /b 1
     setlocal enabledelayedexpansion
 
     for /r /d %%a in (
@@ -294,7 +168,7 @@ REM     exit /b 0
     REM Add vbox path
     set path=%path%;%VBOX_MSI_INSTALL_PATH%
     REM Test VBoxManage command
-    call :this\iinpath VBoxManage.exe || exit /b 1
+    call :this\path\--contain VBoxManage.exe || exit /b 1
 
     call :this\vbox\%* 2>nul
     if %errorlevel%==1 if "%~2"=="" call :this\vbox\start %*
@@ -308,11 +182,11 @@ REM todo MAC VBoxManage.exe showvminfo %_vms% --machinereadable | find "macaddre
     for /f "usebackq delims==" %%a in (
         `set _vms 2^>nul`
     ) do if defined _run\%%~nxa (
-        call :this\rpad %%~nxa
-        call :this\rpad (running^)
+        call :this\lals %%~nxa
+        call :this\lals (running^)
         echo.
     ) else echo %%~nxa
-    REM call :this\rpad 0 0
+    REM call :this\lals 0 0
     exit /b 0
 
 REM Start VM
@@ -353,12 +227,12 @@ REM Set vm variable
         `set _vms\%1 2^>nul`
     ) do (
         set /a i+=1
-        if !i!==2 call :this\rpad !vm!
+        if !i!==2 call :this\lals !vm!
         set vm=%%~nxa
-        if !i! gtr 1 call :this\rpad %%~nxa
+        if !i! gtr 1 call :this\lals %%~nxa
     )
-    REM rpad over
-    call :this\rpad 0 0
+    REM lals over
+    call :this\lals 0 0
     if %i%==1 (
         exit /b 0
     ) else if %i% gtr 1 (
@@ -380,7 +254,7 @@ REM Reg VM names
 ::: "Convert alac,ape,m4a,tta,tak,wav to flac format" "need changes the current directory at target"
 :::: "ffmpeg command not found"
 :3rd\2flac
-    call :this\iinpath ffmpeg.exe || exit /b 1
+    call :this\path\--contain ffmpeg.exe || exit /b 1
     pushd "%cd%"
     for /r . %%a in (
         *.alac *.ape *.m4a *.tta *.tak *.wav
@@ -394,8 +268,8 @@ REM Reg VM names
 ::: "Play all multi-media in directory" "" "usage: %~n0 play [options] [directory...]" "    --random, -r" "    --ast, -a " "    --skip, -j"
 :::: "play command not found" "args is empty" "lib.cmd not found"
 :3rd\play
-    call :this\iinpath ffplay.exe || exit /b 1
-    call :this\iinpath lib.cmd || exit /b 3
+    call :this\path\--contain ffplay.exe || exit /b 1
+    call :this\path\--contain lib.cmd || exit /b 3
     if "%~1"=="" exit /b 2
     setlocal enabledelayedexpansion
     set _media=
@@ -476,7 +350,7 @@ REM     exit /b 0
     REM Add vbox path
     set path=%path%;%VBOX_MSI_INSTALL_PATH%
     REM Test VBoxManage command
-    call :this\iinpath VBoxManage.exe || exit /b 3
+    call :this\path\--contain VBoxManage.exe || exit /b 3
 
     call :vbox\init %1 && VBoxManage.exe export %vm% -o ".\%vm%.ova" --legacy09 --manifest --options nomacs --vsys 0 --eulafile %2
     endlocal
@@ -485,7 +359,7 @@ REM     exit /b 0
 ::: "Docker batch command" "Usage: %~n0 dockers [start/stop]"
 :::: "option invalid" "docker client command not found"
 :3rd\dockers
-    call :this\iinpath docker.exe || exit /b 2
+    call :this\path\--contain docker.exe || exit /b 2
     call :this\dockers\%* 2>nul
     goto :eof
 
@@ -507,10 +381,10 @@ REM     exit /b 0
 ::: "tar.bz2 compresses by 7za" "" "Usage: %~n0 tar.bz2 [path]"
 :::: "7za not fount" "target not found" "lib.cmd not found"
 :3rd\tar.bz2
-    call :this\iinpath 7za.exe || exit /b 1
+    call :this\path\--contain 7za.exe || exit /b 1
     setlocal enabledelayedexpansion
     if not exist "%~1" exit /b 2
-    call :this\iinpath lib.cmd || exit /b 3
+    call :this\path\--contain lib.cmd || exit /b 3
 	if "%~2"=="" call :this\equalsDeputySuffix %1 .tar && (
 		call :this\tarDecompresses %1
 		goto :eof
@@ -628,3 +502,140 @@ REM :this\ftpDir
 REM 	echo dir
 REM 	echo quit
 REM 	goto :eof
+
+::::::::::::::::::
+::     Base     ::
+  :: :: :: :: ::
+
+REM Test target in $path
+:this\path\--contain
+    if "%~1" neq "" if "%~$path:1" neq "" exit /b 0
+    exit /b 1
+
+  :: :: :: :: ::
+::     Base     ::
+::::::::::::::::::
+
+:::::::::::::::::::::::::::::::::::::::::::::::
+::                 Framework                 ::
+   :: :: :: :: :: :: :: :: :: :: :: :: :: ::
+
+REM Show INFO or ERROR
+:this\annotation
+    setlocal enabledelayedexpansion & call :serrlv %errorlevel%
+    for /f "usebackq skip=62 tokens=1,2* delims=\ " %%a in (
+        "%~f0"
+    ) do (
+        REM Set annotation, errorlevel will reset after some times
+        if %errorlevel% geq 1 (
+            if /i "%%~a"=="::::" set _tmp=%errorlevel% %%b %%c
+        ) else if /i "%%~a"==":::" set _tmp=%%b %%c
+
+        if /i "%%~a"==":%~n0" (
+            REM Display func info or error
+            if /i "%%~a\%%~b"=="%~1" (
+                if %errorlevel% geq 1 (
+                    REM Inherit errorlevel
+                    call :serrlv %errorlevel%
+                    call %0\error %%~a\%%~b !_tmp!
+                ) else call %0\more !_tmp!
+                goto :eof
+            )
+            REM init func var, for display all func, or show sort func name
+            set _args\%%~b=!_tmp! ""
+            REM Clean var
+            set _tmp=
+        )
+    )
+
+    REM Foreach func list
+    call :this\cols _col
+    set /a _i=0, _col/=16
+    for /f usebackq^ tokens^=1^,2^ delims^=^=^" %%a in (
+        `set _args\%~n1 2^>nul`
+    ) do if "%~1" neq "" (
+        REM " Sort func name expansion
+        set /a _i+=1
+        set _target=%%~nxa %2 %3 %4 %5 %6 %7 %8 %9
+        if !_i!==1 set _tmp=%%~nxa
+        if !_i!==2 call :this\lals !_tmp! %_col%
+        if !_i! geq 2 call :this\lals %%~nxa %_col%
+    ) else call :this\lali %%~nxa "%%~b"
+    REM Close lals
+    if !_i! gtr 0 call :this\lals 0 0
+    REM Display func or call func
+    endlocal & if %_i% gtr 1 (
+        echo.
+        >&2 echo Warning: function sort name conflict
+        exit /b 1
+    ) else if %_i%==0 (
+        if "%~1" neq "" >&2 echo Error: No function found& exit /b 1
+    ) else if %_i%==1 call :%~n0\%_target% || call %0 :%~n0\%_target%
+    goto :eof
+
+:this\annotation\error
+    for /l %%a in (1,1,%2) do shift /2
+    if "%~2"=="" goto :eof
+    REM color 0c
+    >&2 echo.Error: %~2 (%~s0%~1)
+    goto :eof
+
+:this\annotation\more
+    echo.%~1
+    shift /1
+    if "%~1%~2" neq "" goto %0
+    exit /b 0
+
+REM Make the second column left-aligned
+:this\lali
+    if "%~2"=="" exit /b 1
+    setlocal enabledelayedexpansion
+    set _str=%~10123456789abcdef
+    if "%_str:~31,1%" neq "" call :strModulo
+    set /a _len=0x%_str:~15,1%
+    set "_spaces=                "
+    echo %~1!_spaces:~0,%_len%!%~2
+    endlocal
+    exit /b 0
+
+REM Use right pads spaces, make all column left-aligned
+:this\lals
+    if "%~1"=="" exit /b 1
+    if "%~2" neq "" if 1%~2 lss 12 (if defined _lals echo. & set _lals=) & exit /b 0
+    setlocal enabledelayedexpansion
+    set _str=%~10123456789abcdef
+    if "%_str:~31,1%" neq "" call :strModulo
+    if "%~2" neq "" if 1%_lals% geq 1%~2 echo. & set /a _lals-=%~2-1
+    set /a _len=0x%_str:~15,1%
+    set "_spaces=                "
+    >&3 set /p=%~1!_spaces:~0,%_len%!<nul
+    set /a _lals+=1
+    if "%~2" neq "" if 1%_lals% geq 1%~2 echo. & set _lals=
+    endlocal & set _lals=%_lals%
+    exit /b 0
+
+REM for :this\lals
+:strModulo
+    set /a _lals+=1
+    set _str=%_str:~15%
+    if "%_str:~31,1%"=="" exit /b 0
+    goto %0
+
+REM Get cmd cols
+:this\cols
+    for /f "usebackq skip=4 tokens=2" %%a in (`mode.com con`) do (
+        if "%~1"=="" (
+            echo %%a
+        ) else set %~1=%%a
+        exit /b 0
+    )
+    exit /b 0
+
+REM Set errorlevel variable
+:serrlv
+    if "%~1"=="" goto :eof
+    exit /b %1
+
+   :: :: :: :: :: :: :: :: :: :: :: :: :: ::
+::                 Framework                 ::
+:::::::::::::::::::::::::::::::::::::::::::::::
