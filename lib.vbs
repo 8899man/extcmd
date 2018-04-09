@@ -30,6 +30,10 @@
 '             setErr 1 ' return false status
 '         End Function
 
+''' Output version and exit
+Function lib_version()
+    printLine "0.18.3"
+ENd Function
 
 ''' Sleep some milliseconds 'Usage: lib sleep [ms]
 Function lib_sleep(ms)
