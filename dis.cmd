@@ -1123,7 +1123,7 @@ REM OS
     ) else set _ip=%1
 
     REM Get this OS version
-    call :this\os\--info %SystemDrive% _sd
+    call :this\oset\--info %SystemDrive% _sd
 
     REM Get this OS Edition ID
     for /f "usebackq tokens=3" %%a in (
