@@ -73,7 +73,7 @@ exit /b 0
 
 ::: "Output version and exit"
 :lib\version
-    >&2 echo 0.18.3
+    >&3 echo 0.18.3
     exit /b 0
 
 ::: "$env:path operation" "" "usage: %~n0 path [option] [...]" "" "    --contain, -i  [file_name]         Test target in $env:path" "    --trim,    -t  [var_name]          Path Standardize" "    --reset,   -r                      Reset default path environment variable"

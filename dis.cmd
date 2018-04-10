@@ -62,7 +62,7 @@ exit /b 0
 
 ::: "Output version and exit"
 :dis\version
-    >&2 echo 0.18.3
+    >&3 echo 0.18.3
     exit /b 0
 
 ::: "Directory tools" "" "usage: %~n0 dir [option] [...]" "" "    --isdir,  -id  [path]       Test path is directory" "    --islink, -il  [file_path]  Test path is Symbolic Link" "    --isfree, -if  [dir_path]   Test directory is empty" "    --trim,   -c   [dir_path]   Delete empty directory"

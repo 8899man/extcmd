@@ -62,12 +62,12 @@ exit /b 0
 
 ::: "Output version and exit"
 :3rd\version
-    >&2 echo 0.18.3
+    >&3 echo 0.18.3
     exit /b 0
 
 ::: "Backup git repositories"
 :::: "git command not found"
-:3rd\gitbak
+:3rd\gitb
     call :this\path\--contain git.exe || exit /b 1
     setlocal enabledelayedexpansion
 
@@ -251,7 +251,7 @@ REM Reg VM names
 :: ffmpeg ::
 ::::::::::::
 
-::: "Convert alac,ape,m4a,tta,tak,wav to flac format" "need changes the current directory at target"
+::: "Convert alac,ape,m4a,tta,tak,wav to flac format" "" "    need changes the current directory at target"
 :::: "ffmpeg command not found"
 :3rd\2flac
     call :this\path\--contain ffmpeg.exe || exit /b 1
@@ -265,11 +265,10 @@ REM Reg VM names
     popd
     exit /b 0
 
-::: "Play all multi-media in directory" "" "usage: %~n0 play [options] [directory...]" "    --random, -r" "    --ast, -a " "    --skip, -j"
-:::: "play command not found" "args is empty" "lib.cmd not found"
+::: "Play all multi-media in directory" "" "usage: %~n0 play [options] ... [directory...]" "" "    --random, -r" "    --ast,    -a " "    --skip,   -j [count]"
+:::: "play command not found" "args is empty"
 :3rd\play
     call :this\path\--contain ffplay.exe || exit /b 1
-    call :this\path\--contain lib.cmd || exit /b 3
     if "%~1"=="" exit /b 2
     setlocal enabledelayedexpansion
     set _media=
@@ -280,11 +279,11 @@ REM Reg VM names
     if /i "%~1"=="--random" set _random=RANDOM
     if /i "%~1"=="-r" set _random=RANDOM
     REM -ast stream_specifier  select desired audio stream
-    if /i "%~1"=="--ast" call lib.cmd inum %~2 && set "_stream_specifier=-ast %~2"& shift /1
-    if /i "%~1"=="-a" call lib.cmd inum %~2 && set "_stream_specifier=-ast %~2"& shift /1
-    if /i "%~1"=="--skip" call lib.cmd inum %~2 && set "_skip=%~2"& shift /1
-    if /i "%~1"=="-j" call lib.cmd inum %~2 && set "_skip=%~2"& shift /1
-    call lib.cmd iDir %1 && set _media=%_media% "%~1"
+    if /i "%~1"=="--ast" call :this\inum %~2 && set "_stream_specifier=-ast %~2"& shift /1
+    if /i "%~1"=="-a" call :this\inum %~2 && set "_stream_specifier=-ast %~2"& shift /1
+    if /i "%~1"=="--skip" call :this\inum %~2 && set "_skip=%~2"& shift /1
+    if /i "%~1"=="-j" call :this\inum %~2 && set "_skip=%~2"& shift /1
+    call :this\dir\--isdir %1 && set _media=%_media% "%~1"
     shift /1
     if "%~1" neq "" goto play\args
 
@@ -356,35 +355,34 @@ REM     exit /b 0
     endlocal
     exit /b 0
 
-::: "Docker batch command" "Usage: %~n0 dockers [start/stop]"
+::: "Docker batch command" "Usage: %~n0 docker [start/stop]"
 :::: "option invalid" "docker client command not found"
-:3rd\dockers
+:3rd\docker
     call :this\path\--contain docker.exe || exit /b 2
-    call :this\dockers\%* 2>nul
+    call :this\docker\%* 2>nul
     goto :eof
 
-:this\dockers\start
+:this\docker\start
     for /f "usebackq skip=1" %%a in (
         `docker.exe ps -f status=exited`
     ) do docker.exe start %%a
     exit /b 0
 
-:this\dockers\stop
+:this\docker\stop
     for /f "usebackq skip=1" %%a in (
         `docker.exe ps`
     ) do docker.exe stop %%a
     exit /b 0
 
 ::: "tar.gz compresses by 7za" "" "Usage: %~n0 tar.gz [path]"
-:::: "7za not fount" "target not found" "lib.cmd not found"
+:::: "7za not fount" "target not found"
 :3rd\tar.gz
 ::: "tar.bz2 compresses by 7za" "" "Usage: %~n0 tar.bz2 [path]"
-:::: "7za not fount" "target not found" "lib.cmd not found"
+:::: "7za not fount" "target not found"
 :3rd\tar.bz2
     call :this\path\--contain 7za.exe || exit /b 1
     setlocal enabledelayedexpansion
     if not exist "%~1" exit /b 2
-    call :this\path\--contain lib.cmd || exit /b 3
 	if "%~2"=="" call :this\equalsDeputySuffix %1 .tar && (
 		call :this\tarDecompresses %1
 		goto :eof
@@ -398,11 +396,11 @@ REM     exit /b 0
 REM for :3rd\tar.*
 :this\tarCompresses
 	if not defined _tarName set _tarName=%~n1
-	if "%~2"=="" call lib.cmd iDir %1 || for %%a in (
+	if "%~2"=="" call :this\dir\--isdir %1 || for %%a in (
 		7z cab rar zip
 	) do if /i "%~x1"==".%%~a" (
 		pushd %cd%
-		call lib.cmd gNow _nowTar && set _nowTar=%temp%\!_nowTar!
+		call :this\str\--now _nowTar && set _nowTar=%temp%\!_nowTar!
 		mkdir !_nowTar! && chdir /d !_nowTar! && 7za.exe x %1 -aoa
 		popd
 		call %0 !_nowTar!\*
@@ -428,10 +426,10 @@ REM 	REM if "%~2"=="" goto :eof
 REM 	for /f "usebackq delims=" %%a in (
 REM 		`dir /a /b "%~1"`
 REM 	) do if not defined _molting (
-REM 		call lib.cmd iDir "%~1\%%a" || goto :eof
+REM 		call :this\dir\--isdir "%~1\%%a" || goto :eof
 REM 		set "_molting=%%a"
 REM 	) else set _molting= & goto :eof
-REM 	call lib.cmd gNow _nowM && rename "%~1" !_nowM!
+REM 	call :this\str\--now _nowM && rename "%~1" !_nowM!
 REM 	>nul move /y "%~dp1!_nowM!\!_molting!" "%~dp1" && rmdir /s /q "%~dp1!_nowM!"
 REM 	set _nowM=
 REM 	REM set "%~2=%~dp1!_molting!"
@@ -511,6 +509,38 @@ REM Test target in $path
 :this\path\--contain
     if "%~1" neq "" if "%~$path:1" neq "" exit /b 0
     exit /b 1
+
+REM Test string if Num \* @see lib.cmd *\
+:this\inum
+    if "%~1"=="" exit /b 10
+    setlocal
+    set _tmp=
+    REM quick return
+    2>nul set /a _code=10, _tmp=%~1
+    if "%~1"=="%_tmp%" set _code=0
+    endlocal & exit /b %_code%
+
+REM Test path is directory \* @see dis.cmd *\
+:this\dir\--isdir
+    setlocal
+    set _path=%~a1-
+    REM quick return
+    set _code=10
+    if %_path:~0,1%==d set _code=0
+    endlocal & exit /b %_code%
+
+REM Display Time at [YYYYMMDDhhmmss] \* @see lib.cmd *\
+:this\str\--now
+    if "%~1"=="" exit /b 2
+    set date=
+    set time=
+    REM en zh
+    for /f "tokens=1-8 delims=-/:." %%a in (
+      "%time: =%.%date: =.%"
+    ) do if %%e gtr 1970 (
+        set %~1=%~2%%e%%f%%g%%a%%b%%c%~3
+    ) else if %%g gtr 1970 set %~1=%~2%%g%%e%%f%%a%%b%%c%~3
+    exit /b 0
 
   :: :: :: :: ::
 ::     Base     ::
