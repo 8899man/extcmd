@@ -19,9 +19,15 @@ lib gpkg
 
         Get apk file from AppStore
         截获 AppStore 的原版安装包。完成后会放到 Download 文件夹中。
-        (详细信息看 lib shell script 描述)
+        对于小文件下载非常有效。
+        支持批量监听。
+        可以设置监听时间，默认监听 60 秒。
+        在监听时间内，新建下载和正在下载的 app 都会被纳入监控。
+        当监听结束后，脚本不会退出，会持续跟踪文件的下载状态，直到所有 app 都下载完成。
+        你可以随时使用 control + C 退出此命令。新启动的 gpkg 命令会处理上次遗留的 app。
+        （未来会加入下载失败的提示）
 
-lib ip -f
+lib ip --find, -f
 
         Search IPv4 by MAC or Host name
         通过 MAC 地址或别名搜索 IP 。（仅搜索本网段最后 255 个）
@@ -33,7 +39,7 @@ lib hosts
         Update hosts by ini
         通过 ini 配置文件，自动更新 hosts。
 
-lib _map _set
+.lib _map _set
 
         map for shell
         基于 hash 算法实现的 map 。
@@ -89,340 +95,19 @@ lib.cmd
         4.  HELP: lib -h or lib [func] -h
             有关函数用法，使用 lib.cmd -h 或 lib.cmd ［函数名］-h。
 
-        2la             Make the second column left-aligned
-                        将第二列左对齐。
-
-        cab             Create cab package
-                        压缩 cab 包。
-
-        centiTime       Calculating time intervals, print use time
-                        输出执行时间。在从第二次开始输出距离上次执行的时间。
-
-        download        Download something
-                        下载文件。
-
-        execline        Output text or read config
-                        逐行执行，可以用于输出局部文本或设置变量等。
-
-        firewall        Open ssh/smb/docker port
-                        打开一些端口。
-
-        gbase64pw       Encode password to base64 string for unattend.xml
-                        支持 unattend.xml 使用的密码编码。
-
-        gbs             Get some backspace (erases previous character)
-                        获得退格符。
-
-        gcols           Get cmd cols
-                        获得当前 cmd 窗口的宽度。
-
-        gfirstpath      Get first path foreach Partiton
-                        遍历分区查找文件夹，并返回第一个匹配的。
-
-        gfreeletter     Get Unused Device Id
-                        获得一个未被使用的分区盘符。
-
-        glen            Get string length
-                        获得字符串的长度。
-
-        gletters        Get Device IDs
-                        获得所有分盘符。
-
-        gnow            Display Time at [YYYYMMDDhhmmss]
-                        以 [YYYYMMDDhhmmss] 的格式输出时间。
-
-        gosinf          Get OS language bit and version
-                        获得目标分区的操作系统版本、位数、语言信息。
-
-        grettels        Get Device IDs DESC
-                        获得倒序的盘符。
-
-        gsid            Get sid by username
-                        获得用户的 sid。
-
-        guuid           Get UUID
-                        获得 UUID。
-
-        head            Print the first some lines of FILE to standard output.
-                        输出文件前几行。
-
-        hosts           Update hosts by ini
-                        通过 ini 配置文件，自动更新 hosts。
-
-        idir            Test path is directory
-                        测试路径是否是目录。
-
-        ifreedir        Test directory is empty
-                        测试目标是否为空文件夹。
-
-        igui            Test script start at GUI
-                        测试脚本是否是双击启动。
-
-        iip             Test string if ip
-                        测试字符串是否是 ip。
-
-        iln             Test path is Symbolic Link
-                        测试路径是否是软链接。
-
-        inum            Test string if Num
-                        测试字符是否是 10 进制整数。
-
-        ip              Ipv4
-                        -f （别名请参考 ini 文本文件格式，放入脚本所在路径或 HOME 路径下）
-
-        ipipe           Test script run after pipe
-                        测试脚本是否在管道命令之后。
-
-        irun            Test exe if live
-                        测试 exe 是否执行中。
-
-        ivergeq         Test this system version
-                        测试此系统版本是否高于给定版本号。
-
-        kill            Kill process
-                        关闭进程。
-
-        prefix          Tag prefix each line, support `date` format
-                        给输出添加前缀，支持输出时间。
-
-        MD5             Print or check MD5 (128-bit) checksums.
-                        计算文件 MD5。
-
-        own             Change file/directory owner Administrator
-                        将文件或目录的所有者变为当前用户。
-
-        ps1             Run PowerShell script
-                        执行 PowerShell script 脚本。
-
-        repath          Reset default path environment variable
-                        临时重置 PATH 变量为系统默认值。
-
-        rpad            Right pads spaces
-                        等宽输出字符串。用于批量显示结果。
-
-        search          Search file in $env:path
-                        用于寻找环境变量中的可执行文件，支持通配符。如果只匹配到一个结果，将显示其完整路径。
-
-        senvar          Set environment variable
-                        设置环境变量。
-
-        serrlv          Set errorlevel variable
-                        设置 errorlevel 的值。
-
-        SHA1            Print or check SHA1 (160-bit) checksums.
-                        计算文件 SHA1。
-
-        SHA256          Print or check SHA256 (256-bit) checksums.
-                        计算文件 SHA256。
-
-        skiprint        Print text skip some line
-                        跳过指定行输出文件的文本内容到另一个空文本中。
-
-        tail            Print the last some lines of FILE to standard output.
-                        输出文件后几行。
-
-        trimdir         Delete empty directory
-                        删除所有空文件夹。
-
-        trimpath        Path Standardize
-                        PATH 变量临时规范化，可以用于 dir 命令搜索。
-
-        uchm            Uncompress chm file
-                        解压 chm 文件。
-
-        udf             Create iso file from directory
-                        从文件夹新建 iso 文件。支持可启动操作系统盘的封装。
-
-        umsi            Uncompress msi file
-                        解压 msi 文件。
-
-        uset            Unset variable, where variable name left contains
-                        批量清空变量，从左匹配变量名。
-
-        vbhide          Run some command at background
-                        隐藏执行命令。
-
-        vbs             Run VBScript library from lib.vbs
-                        执行 lib.vbs 中的函数。
-
-        which           Locate a program file in the user's path
-                        通过文件名获得其在 PATH 中的路径，可以显示重名文件。
-
-        zip             Zip or unzip
-                        压缩解压缩 zip
-
 dis.cmd
 
         集中了一些对磁盘和 wim 的操作。
-
-        batchrc         Support load %USERPROFILE%\.batchrc before cmd.exe run
-                        使 cmd.exe 支持读取 %USERPROFILE%\.batchrc 中的变量配置。
-
-        block           Lock / Unlock partition with BitLocker
-                        使用 BitLocker 进行分区加密解密。
-
-        bootfile        Copy Window PE boot file from CDROM
-                        从 CDROM 中复制 winpe 基本启动文件。
-
-        cexe            Compresses the specified files.
-                        文件压缩（仅支持 win 10）
-
-        cleanup         Component Cleanup
-
-        cpreg           Copy reg to a reg file
-                        reg 文件导出，用于批量修改注册表。
-
-        crede           Add or Remove Web Credential
-                        主要用于管理访问网络资源的凭证。
-
-        devf            Hardware ids manager
-                        硬件 ID 管理。用于生成硬件列表和查找匹配驱动。
-
-        drv             Drivers manager
-                        添加或删除驱动。
-
-        intelAmd        Run this before Chang CPU
-                        从 Intel 切换到 Amd 执行的命令。（避免蓝屏）
-
-        kms             KMS Client
-                        KMS 简化客户端
-
-        nfs             Mount / Umount NFS
-                        挂载或卸载 NFS。
-
-        oc              Feature manager
-                        开启或关闭 windows 应用。
-
-        smb             Mount / Umount samba
-                        挂载或卸载 samba。
-
-        spower          Set power config as server type
-                        使用服务器的电源模式。（不休眠，关闭盖子不进行任何操作）
-
-        ucexe           Uncompress the specified files.
-
-        vhd             Virtual Hard Disk manager
-                        虚拟磁盘管理。
-
-        wim             Wim manager
-                        Wim 文件管理。
-
+        可以放到 samba 路径中直接执行。
+        e.g.
+            \\192.168.1.2\shared\dis.cmd --help
 
 
 lib.vbs
 
         使用 lib.cmd vbs 命令进行调用。
 
-        ansi2unic       Convert ansi head to unicode head, or reconvert
-                        在 ANSI 文件前面加（减） UNICODE 头。
-
-        bin2base64      Convert binary file to base64 string
-                        将二进制文件转换成 base64 编码字符。
-
-        doxsl           XML trans form Node by XSL
-                        执行 xsl。
-
-        gclip           Get clipboard data
-                        获得剪贴板中的内容。
-
-        get             Download and save
-                        下载。
-
-        getprint        Download and print as text
-                        显示下载文件的文本内容。
-
-        gfsd            Get target file system drive Letter
-                        获得目标文件系统的盘符。
-
-        gnow            Get format time
-                        获得特定格式的当前时间。
-
-        guuid           Get guid
-                        获得 GUID。
-
-        inftrim         Trim *.inf text for drivers
-                        处理驱动用 inf 文件。
-
-        log             Tag date time each line
-                        给输出添加日志标记。
-
-        print
-
-        sclip           Set clipboard data
-                        设置剪贴板。
-
-        sleep           Sleep some milliseconds
-                        暂停若干毫秒。
-
-        txt2bin         Convert base64 to binary file from text
-                        将 base64 字符转换为二进制文件。
-
-        unattend
-
-        unzip           Uncompress
-                        解压缩 zip。
-
-        zip             Create zip file
-                        压缩 zip。
-
 
 lib     (shell script)
 
         注意权限是否为可执行。
-        cur             Cursor
-                        对光标的操作
-
-        dmg             Create/Convert DMG file
-                        镜像工具
-
-        encode          Encode string
-                        字符编码
-
-        files           File / directory tools
-                        文件处理
-
-        filter          String filter
-                        字符过滤
-
-        gpkg            Get apk file from AppStore
-                        截获 AppStore 的原版安装包。完成后会放到 Download 文件夹中。
-                        对于小文件下载非常有效。
-                        支持批量监听。
-                        可以设置监听时间，默认监听 60 秒。
-                        在监听时间内，新建下载和正在下载的 app 都会被纳入监控。
-                        当监听结束后，脚本不会退出，会持续跟踪文件的下载状态，直到所有 app 都下载完成。
-                        你可以随时使用 control + C 退出此命令。新启动的 gpkg 命令会处理上次遗留的 app。
-                        （未来会加入下载失败的提示）
-
-        hosts           Update hosts by ini
-                        通过 ini 配置文件，自动更新 hosts。
-
-        iipv4           Test string is ipv4
-                        测试字符串是否是 ipv4
-
-        inum            Test str is num
-                        测试字符串是否是数字。
-
-        ip              Show/find IPv4
-                        显示、查找 ip。
-
-        log             Tag date time each line
-                        给输出添加日志标记。
-
-        oset            OS globle setting
-                        系统全局设置
-
-        plist           Plist editer
-                        Plist 操作
-
-        rand            Print random string match [A-Za-z0-9]
-                        获得随机字符串。
-
-        remote          Remote tools
-                        远程处理工具。
-
-        udf             Create ISO by directory
-                        从文件夹新建 iso 文件。
-
-        vnc             Connect vnc server
-                        链接 vnc 服务端。
