@@ -819,7 +819,7 @@ REM Enable ServicesForNFS
 ::::::::::
 
 ::: "Wim manager" "" "usage: %~n0 wim [option] [args ...]" "" "    --info,   -i [image_path]                                Displays information about images in a WIM file." "    --new,    -n [[compress level]] [target_dir_path] [[image_name]]            Capture file/directory to wim" "    --apply,  -a [wim_path] [[output_path] [image_index]]    Apply WIM file" "    --mount,  -m [wim_path] [mount_path] [[image_index]]     Mount wim" "    --umount, -u [mount_path]                                Unmount wim" "    --commit, -c [mount_path]                                Unmount wim with commit" "    --export, -e [source_wim_path] [target_wim_path] [image_index] [[compress_level]]    Export wim image" "                                   compress level: 0:none, 1:WIMBoot, 2:fast, 3:max, 4:recovery(esd)" "" "    --umountall, -ua                                         Unmount all wim" "    --rmountall, -ra                                         Recovers mount all orphaned wim"
-:::: "invalid option" "{UNUSE}" "dism version is too old" "target not found" "need input image name" "dism error" "wim file not found" "not wim file" "output path allready use" "output path not found" "Not a path" "Target wim index not select" "compress level error"
+:::: "invalid option" "recovery only support by --export option" "dism version is too old" "target not found" "need input image name" "dism error" "wim file not found" "not wim file" "output path allready use" "output path not found" "Not a path" "Target wim index not select" "compress level error"
 :dis\wim
     if "%*"=="" call :this\annotation %0 & goto :eof
     call :this\wim\%*
@@ -834,6 +834,7 @@ REM Enable ServicesForNFS
 
     if not exist "%~1" exit /b 4
     if "%~d1\"=="%~f1" if "%~2"=="" exit /b 5
+    if /i "%_compress%"=="/Compress:recovery" exit /b 2
 
     set "_input=%~f1"
     REM trim path
@@ -926,7 +927,8 @@ REM for wim
     dism.exe /Unmount-Wim /MountDir:"%~f1" /commit
     exit /b 0
 
-:: 0->4 none|WIMBoot|fast|max|recovery(esd)
+:: 0->4 none|WIMBoot|fast|max|recovery(esd),
+:: recovery only support '/Export-Image' option
 :wim\setCompress
     set _compress=
     if "%~1"=="0" set _compress=/Compress:none
