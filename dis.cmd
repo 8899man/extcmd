@@ -212,7 +212,7 @@ REM for :this\dir\--trim
     if "%~1"=="" exit /b 5
     for %%a in (
         %*
-    ) do dism.exe /English /Online /Enable-Feature /FeatureName:%%a /NoRestart
+    ) do dism.exe /Online /Enable-Feature /FeatureName:%%a /NoRestart
     exit /b 0
 
 :this\oset\--set-power
@@ -819,10 +819,15 @@ REM Enable ServicesForNFS
 ::::::::::
 
 ::: "Wim manager" "" "usage: %~n0 wim [option] [args ...]" "" "    --info,   -i [image_path]                                Displays information about images in a WIM file." "    --new,    -n [[compress level]] [target_dir_path] [[image_name]]            Capture file/directory to wim" "    --apply,  -a [wim_path] [[output_path] [image_index]]    Apply WIM file" "    --mount,  -m [wim_path] [mount_path] [[image_index]]     Mount wim" "    --umount, -u [mount_path]                                Unmount wim" "    --commit, -c [mount_path]                                Unmount wim with commit" "    --export, -e [source_wim_path] [target_wim_path] [image_index] [[compress_level]]    Export wim image" "                                   compress level: 0:none, 1:WIMBoot, 2:fast, 3:max, 4:recovery(esd)" "" "    --umountall, -ua                                         Unmount all wim" "    --rmountall, -ra                                         Recovers mount all orphaned wim"
-:::: "invalid option" "recovery only support by --export option" "dism version is too old" "target not found" "need input image name" "dism error" "wim file not found" "not wim file" "output path allready use" "output path not found" "Not a path" "Target wim index not select" "compress level error"
+:::: "invalid option" "SCRATCH_DIR variable not set" "dism version is too old" "target not found" "need input image name" "dism error" "wim file not found" "not wim file" "output path allready use" "output path not found" "Not a path" "Target wim index not select" "compress level error"
 :dis\wim
     if "%*"=="" call :this\annotation %0 & goto :eof
+    if /i "%username%"=="System" if not defined SCRATCH_DIR exit /b 2
+    setlocal
+    if /i "%username%" neq "System" set scratch_dir=
+    if defined scratch_dir set "scratch_dir=/ScratchDir:%scratch_dir:/ScratchDir:=%"
     call :this\wim\%*
+    endlocal
     goto :eof
 
 :this\wim\--new
@@ -834,7 +839,12 @@ REM Enable ServicesForNFS
 
     if not exist "%~1" exit /b 4
     if "%~d1\"=="%~f1" if "%~2"=="" exit /b 5
-    if /i "%_compress%"=="/Compress:recovery" exit /b 2
+
+    set _export=
+    if /i "%_compress%"=="/Compress:recovery" (
+        set _compress=/Compress:fast
+        set _export=ture
+    )
 
     set "_input=%~f1"
     REM trim path
@@ -858,8 +868,15 @@ REM Enable ServicesForNFS
     set "_input=%_input:~0,-1%"
 
     REM Do capture
-    dism.exe /English /%_create%-Image /ImageFile:".\%_name%.wim" /CaptureDir:"%_input%" /Name:"%_name%" %_compress% /Verify %_args% || exit /b 6
+    dism.exe /%_create%-Image /ImageFile:".\%_name%.wim" /CaptureDir:"%_input%" /Name:"%_name%" %_compress% /Verify %_args% %scratch_dir% || exit /b 6
     if exist "%_conf%" erase "%_conf%"
+
+    call :getWimLastIndex ".\%_name%.wim" _index
+
+    echo new index is: %_index%
+
+    if defined _export dism.exe /Export-Image /SourceImageFile:".\%_name%.wim" /SourceIndex:%_index% /DestinationImageFile:".\%_name%.esd" /Compress:recovery /CheckIntegrity %scratch_dir% || exit /b 6
+
     endlocal
     exit /b 0
 
@@ -890,7 +907,7 @@ REM create exclusion list
     if "%~3"=="" (
         call :getWimLastIndex %1 _index
     ) else set _index=%~3
-    dism.exe /English /Apply-Image /ImageFile:"%~f1" /Index:%_index% /ApplyDir:"%_out%" /Verify || exit /b 6
+    dism.exe /Apply-Image /ImageFile:"%~f1" /Index:%_index% /ApplyDir:"%_out%" /Verify || exit /b 6
     endlocal
     exit /b 0
 
@@ -911,20 +928,20 @@ REM for wim
     if "%~3"=="" (
         call :getWimLastIndex %1 _index
     ) else set _index=%3
-    dism.exe /Mount-Wim /WimFile:"%~f1" /index:%_index% /MountDir:"%~f2" || exit /b 6
+    dism.exe /Mount-Wim /WimFile:"%~f1" /index:%_index% /MountDir:"%~f2" %scratch_dir% || exit /b 6
     endlocal
     exit /b 0
 
 :this\wim\--umount
 :this\wim\-u
     call :this\dir\--isdir %1 || exit /b 4
-    dism.exe /Unmount-Wim /MountDir:"%~f1" /discard
+    dism.exe /Unmount-Wim /MountDir:"%~f1" /discard %scratch_dir% || exit /b 6
     exit /b 0
 
 :this\wim\--commit
 :this\wim\-c
     call :this\dir\--isdir %1 || exit /b 4
-    dism.exe /Unmount-Wim /MountDir:"%~f1" /commit
+    dism.exe /Unmount-Wim /MountDir:"%~f1" /commit %scratch_dir% || exit /b 6
     exit /b 0
 
 :: 0->4 none|WIMBoot|fast|max|recovery(esd),
@@ -961,7 +978,7 @@ REM for wim
     REM 0x1fffffff = 536870911
     if "%_size:~9,1%"=="" if %_size% lss 536870911 if "%_compress%" neq "/WIMBoot" set "_compress=%_compress% /Bootable"
 
-    dism.exe /Export-Image /SourceImageFile:"%~f1" /SourceIndex:%3 /DestinationImageFile:"%~f2" %_compress% /CheckIntegrity
+    dism.exe /Export-Image /SourceImageFile:"%~f1" /SourceIndex:%3 /DestinationImageFile:"%~f2" %_compress% /CheckIntegrity %scratch_dir% || exit /b 6
     endlocal
     exit /b 0
 
@@ -983,7 +1000,7 @@ REM for wim
 	) do (
         if "%%~a"=="Mount" set _m=
         if "%%~a%%~b"=="MountDir" if exist "%%~d" set "_m=%%~d"
-        if "%%~a%%~d"=="StatusRemount" if defined _m dism.exe /Remount-Wim /MountDir:"!_m!"
+        if "%%~a%%~d"=="StatusRemount" if defined _m dism.exe /Remount-Wim /MountDir:"!_m!" %scratch_dir% || exit /b 6
     )
     endlocal
     echo.complate.
@@ -1019,18 +1036,23 @@ REM for wim
     goto :eof
 
 ::: "Drivers manager" "" "usage: %~n0 drv [option] [args...]" "" "    --add,    -a  [os_path] [drv_path ...]     Add drivers offline" "    --list,   -l  [[os_path]]                  Show OS drivers list" "    --remove, -r  [os_path] [[name].inf]       remove drivers, 3rd party drivers like oem1.inf" "    --get,    -g                               display hardware ids" "    --filter, -f [devinf_path] [drivers_path]  search device inf" "                                           e.g." "                                               %~n0 drv --get" "                                               %~n0 drv --filter D:\d.log D:\drv"
-:::: "invalid option" "OS path not found" "Not drivers name" "dism error" "drivers info file not found" "drivers path error"
+:::: "invalid option" "OS path not found" "Not drivers name" "dism error" "drivers info file not found" "drivers path error" "SCRATCH_DIR variable not set"
 :dis\drv
     if "%*"=="" call :this\annotation %0 & goto :eof
+    if /i "%username%"=="System" if not defined SCRATCH_DIR exit /b 7
+    setlocal
+    if /i "%username%" neq "System" set scratch_dir=
+    if defined scratch_dir set "scratch_dir=/ScratchDir:%scratch_dir:/ScratchDir:=%"
     call :this\drv\%*
+    endlocal
     goto :eof
 
 REM Will install at \Windows\System32\DriverStore\FileRepository
 :this\drv\-a
 :this\drv\--add
     for %%a in (%*) do call :this\dir\--isdir %1 && (
-        dism.exe /Image:"%~f1" /Add-Driver /Driver:%%a /Recurse || REM
-    ) || if /i "%%~xa"==".inf" dism.exe /Image:"%~f1" /Add-Driver /Driver:%%a || exit /b 4
+        dism.exe /Image:"%~f1" /Add-Driver /Driver:%%a /Recurse %scratch_dir% || REM
+    ) || if /i "%%~xa"==".inf" dism.exe /Image:"%~f1" /Add-Driver /Driver:%%a %scratch_dir% || exit /b 4
     exit /b 0
 
 :this\drv\-l
@@ -1045,7 +1067,7 @@ REM Will install at \Windows\System32\DriverStore\FileRepository
 :this\drv\--remove
     call :this\dir\--isdir %1 || exit /b 2
     if /i "%~x2" neq ".inf" exit /b 3
-    dism.exe /Image:"%~f1" /Remove-Driver /Driver:%~2 || exit /b 4
+    dism.exe /Image:"%~f1" /Remove-Driver /Driver:%~2 %scratch_dir% || exit /b 4
     exit /b 0
 
 REM "Hardware ids manager"
