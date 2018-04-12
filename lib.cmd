@@ -569,8 +569,8 @@ REM Get router ip
     ) else set %~1=%~2%_0:.=%%~3
     exit /b 0
 
-::: "Print text to standard output." "" "usage: %~n0 txt [option] [...]" "" "    --head, -e  [-[count]]          Print the first some lines of FILE to standard output." "    --tail, -t  [-[count]]          Print the last some lines of FILE to standard output." "    --skip, -j  [source_file_path] [skip_line_num] [target_flie_path]     Print text skip some line" "    --line, -l  [text_file_path] [skip_line]         Output text or read config"  "                                                     need enabledelayedexpansion" "                                                     skip must reset" "                                                     text format: EOF [output_target] [command]"
-:::: "invalid option" "source file not found" "skip number error" "target file not found" "skip line is empty" "file not found" "powershell version is too old" "args error"
+::: "Print text to standard output." "" "usage: %~n0 txt [option] [...]" "" "    --head,  -e  [-[count]]          Print the first some lines of FILE to standard output." "    --tail,  -t  [-[count]]          Print the last some lines of FILE to standard output." "    --skip,  -j  [source_file_path] [skip_line_num] [target_flie_path]" "                                     Print text skip some line" "" "    --subtxt, -o [source_path] [tag] [skip]" "                                     Show the subdocuments in the destination file by prefix" "                        subdocuments:" "                                     ::prefix: line 1" "                                     ::prefix: line 2" "                                     ..." "" "    --line,  -l  [text_file_path] [skip_line] " "                                     Output text or read config"  "                                     need enabledelayedexpansion" "                                     skip must reset" "                                     text format: EOF [output_target] [command]"
+:::: "invalid option" "source file not found" "skip number error" "target file not found" "skip line is empty" "file not found" "powershell version is too old" "args error" "prefix is empty"
 :lib\txt
     if "%*"=="" call :this\annotation %0 & goto :eof
     call :this\txt\%*
@@ -604,6 +604,7 @@ REM for :this\txt\--head, :this\txt\--tail
     goto :eof
 
 :this\txt\--skip
+:this\txt\-j
     if not exist "%~1" exit /b 2
     call :lib\inum %~2 || exit /b 3
     if not exist "%~3" exit /b 4
@@ -614,7 +615,24 @@ REM for :this\txt\--head, :this\txt\--tail
     < "%~f1" more.com +%~2 >%3
     exit /b 0
 
+:this\txt\--subtxt [source_path] [tag] [skip]
+:this\txt\-o
+    if not exist "%~1" exit /b 2
+    if "%~2"=="" exit /b 9
+    setlocal enabledelayedexpansion
+    if "%~3" neq "" 2>nul set /a _skip=%~3
+    if not defined _skip set _skip=10
+    if %_skip% leq 0 set _skip=10
+
+    for /f "usebackq skip=%_skip% tokens=1* delims=:" %%a in (
+        "%~f1"
+    ) do if "%%a"=="%~2" echo.%%b
+
+    endlocal
+    goto :eof
+
 :this\txt\--line
+:this\txt\-l
     if "%~1"=="" exit /b 5
     if not exist "%~2" exit /b 6
     set _log=nul

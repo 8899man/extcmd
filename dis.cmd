@@ -1380,6 +1380,24 @@ REM     exit /b 0
 ::     Base     ::
   :: :: :: :: ::
 
+REM Show the subdocuments in the destination file by prefix \* @see lib.cmd *\
+::prefix: text line 1
+::prefix: text line 2
+:this\txt\--subtxt [source_path] [prefix] [skip]
+    if not exist "%~1" exit /b 1
+    if "%~2"=="" exit /b 1
+    setlocal enabledelayedexpansion
+    if "%~3" neq "" 2>nul set /a _skip=%~3
+    if not defined _skip set _skip=10
+    if %_skip% leq 0 set _skip=10
+
+    for /f "usebackq skip=%_skip% tokens=1* delims=:" %%a in (
+        "%~f1"
+    ) do if "%%a"=="%~2" echo.%%b
+
+    endlocal
+    goto :eof
+
 REM Test string if Num \* @see lib.cmd *\
 :this\inum
     if "%~1"=="" exit /b 10
