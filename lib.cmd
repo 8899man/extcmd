@@ -569,7 +569,7 @@ REM Get router ip
     ) else set %~1=%~2%_0:.=%%~3
     exit /b 0
 
-::: "Print text to standard output." "" "usage: %~n0 txt [option] [...]" "" "    --head,  -e  [-[count]]          Print the first some lines of FILE to standard output." "    --tail,  -t  [-[count]]          Print the last some lines of FILE to standard output." "    --skip,  -j  [source_file_path] [skip_line_num] [target_flie_path]" "                                     Print text skip some line" "" "    --subtxt, -o [source_path] [tag] [skip]" "                                     Show the subdocuments in the destination file by prefix" "                        subdocuments:" "                                     ::prefix: line 1" "                                     ::prefix: line 2" "                                     ..." "" "    --line,  -l  [text_file_path] [skip_line] " "                                     Output text or read config"  "                                     need enabledelayedexpansion" "                                     skip must reset" "                                     text format: EOF [output_target] [command]"
+::: "Print text to standard output." "" "usage: %~n0 txt [option] [...]" "" "    --head,  -e  [-[count]]          Print the first some lines of FILE to standard output." "    --tail,  -t  [-[count]]          Print the last some lines of FILE to standard output." "    --skip,  -j  [source_file_path] [skip_line_num] [target_flie_path]" "                                     Print text skip some line" "" "    --subtxt, -o [source_path] [tag] [skip]" "                                     Show the subdocuments in the destination file by prefix" "                        subdocuments:" "                                     ::prefix: line 1" "                                     ::prefix: line 2" "                                     ::^^^!_var^^^!: line 3" "                                     ..." ""
 :::: "invalid option" "source file not found" "skip number error" "target file not found" "skip line is empty" "file not found" "powershell version is too old" "args error" "prefix is empty"
 :lib\txt
     if "%*"=="" call :this\annotation %0 & goto :eof
@@ -631,33 +631,34 @@ REM for :this\txt\--head, :this\txt\--tail
     endlocal
     goto :eof
 
-:this\txt\--line
-:this\txt\-l
-    if "%~1"=="" exit /b 5
-    if not exist "%~2" exit /b 6
-    set _log=nul
-    set "_exec=REM "
-    for /f "usebackq skip=%~2 delims=" %%a in (
-        "%~f1"
-    ) do for /f "tokens=1,2*" %%b in (
-        "%%a"
-    ) do if "%%b"=="EOF" (
-        if "%%c"=="%%~fc" if not exist "%%~dpc" (
-            mkdir "%%~dpc"
-        ) else if exist "%%~c" erase "%%~c"
-        set "_log=%%~c"
-        set "_exec=%%~d"
-    ) else >>!_log! !_exec!%%~a
-    set _log=
-    set _exec=
-    exit /b 0
+REM "    --line,  -l  [text_file_path] [skip_line] " "                                     Output text or read config"  "                                     need enabledelayedexpansion" "                                     skip must reset" "                                     text format: EOF [output_target] [command]"
+REM :this\txt\--line
+REM :this\txt\-l
+REM     if "%~1"=="" exit /b 5
+REM     if not exist "%~2" exit /b 6
+REM     set _log=nul
+REM     set "_exec=REM "
+REM     for /f "usebackq skip=%~2 delims=" %%a in (
+REM         "%~f1"
+REM     ) do for /f "tokens=1,2*" %%b in (
+REM         "%%a"
+REM     ) do if "%%b"=="EOF" (
+REM         if "%%c"=="%%~fc" if not exist "%%~dpc" (
+REM             mkdir "%%~dpc"
+REM         ) else if exist "%%~c" erase "%%~c"
+REM         set "_log=%%~c"
+REM         set "_exec=%%~d"
+REM     ) else >>!_log! !_exec!%%~a
+REM     set _log=
+REM     set _exec=
+REM     exit /b 0
 
-REM text format for :lib\execline
-EOF !temp!\!_now!.log "echo "
-some codes
-EOF nul set
-a=1
-EOF nul "rem "
+REM REM text format for :lib\execline
+REM EOF !temp!\!_now!.log "echo "
+REM some codes
+REM EOF nul set
+REM a=1
+REM EOF nul "rem "
 
 
 ::: "Print or check MD5 (128-bit) checksums." "" "usage: %~n0 md5 [file]"
