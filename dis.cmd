@@ -255,14 +255,14 @@ REM for :this\dir\--trim
     ) do powercfg.exe /set%%bvalueindex %%a %%d %%e %%f
     exit /b 0
 
-::: "Letter info" "" "usage: %~n0 letter [option] [...]" "" "    --free, -e   [[var_name]]           Get Unused Device Id" "    --list, -l   [var_name] [[l/r/n]]   Get Device IDs" "    --tisl, --   [var_name] [[l/r/n]]   Get Device IDs DESC" "                                        no param view all" "                                     l: Local Fixed Disk" "                                     r: CD-ROM Disc" "                                     n: Network Connection" "    --firstpath, -fp  [path_name] [[var_name]]     Get first path foreach Partiton"
-:::: "invalid option" "variable name is empty" "type command not support" "The first parameter is empty" "Target path not found"
+::: "Letter info" "" "usage: %~n0 letter [option] [...]" "" "    --free,   -u [[var_name]]           Get Unused Device Id" "    --change, -x [letter1:] [letter2:]  [DANGER^^^!] Change or exchange letters, need reboot system" "    --remove, -r [letter:]              [DANGER^^^!] Remove letter, need reboot system" "    --list,   -l [var_name] [[l/r/n]]   Get Device IDs" "    --tisl,   -- [var_name] [[l/r/n]]   Get Device IDs DESC" "                            no param view all" "                            l: Local Fixed Disk" "                            r: CD-ROM Disc" "                            n: Network Connection" "" "    --firstpath, -fp  [path_name] [[var_name]]" "                                        Get first path foreach Partiton" ""
+:::: "invalid option" "variable name is empty" "type command not support" "The first parameter is empty" "Target path not found" "target not a letter or not support" "reg error" "letter not found"
 :dis\letter
     if "%*"=="" call :this\annotation %0 & goto :eof
     call :this\letter\%*
     goto :eof
 
-:this\letter\-e
+:this\letter\-u
 :this\letter\--free
     setlocal enabledelayedexpansion
     set _di=zyxwvutsrqponmlkjihgfedcba
@@ -273,6 +273,70 @@ REM for :this\dir\--trim
         echo.%_di:~0,1%:
     ) else set %~1=%_di:~0,1%:
     exit /b 0
+
+:this\letter\-x
+:this\letter\--change
+    if "%~2"=="" exit /b 6
+    if /i "%~1" neq "%~d1" exit /b 6
+    if /i "%~2" neq "%~d2" exit /b 6
+    if /i "%~d1"=="%SystemDrive%" exit /b 6
+    if /i "%~d2"=="%SystemDrive%" exit /b 6
+    setlocal enabledelayedexpansion
+    set _%~d1=
+    set _%~d2=
+    for /f "usebackq tokens=1,3" %%a in (
+        `reg.exe query HKLM\SYSTEM\MountedDevices /v \DosDevices\*`
+    ) do (
+        if /i "%%~a"=="\DosDevices\%~d1" set "_%~d1=%%~b"
+        if /i "%%~a"=="\DosDevices\%~d2" set "_%~d2=%%~b"
+    )
+    if not defined _%~d1 exit /b 6
+    if defined _%~d2 (
+        >&2 echo will exchange %~d1 with %~d2
+        reg.exe add HKLM\SYSTEM\MountedDevices /v "\DosDevices\%~d1" /t REG_BINARY /d !_%~d2! /f || exit /b 7
+    ) else (
+        >&2 echo will change %~d1 to %~d2
+        reg.exe delete HKLM\SYSTEM\MountedDevices /v "\DosDevices\%~d1" /f || exit /b 7
+    )
+    reg.exe add HKLM\SYSTEM\MountedDevices /v "\DosDevices\%~d2" /t REG_BINARY /d !_%~d1! /f || exit /b 7
+    >&2 echo.
+    >&2 echo Need reboot system.
+    endlocal
+    exit /b 0
+
+:this\letter\-r
+:this\letter\--remove
+    if /i "%~1"=="" exit /b 6
+    if /i "%~1" neq "%~d1" exit /b 6
+    if /i "%~d1"=="%SystemDrive%" exit /b 6
+    setlocal enabledelayedexpansion
+    for /f "usebackq tokens=1,3" %%a in (
+	    `reg.exe query HKLM\SYSTEM\MountedDevices /v \DosDevices\*`
+    ) do if /i "%%~a"=="\DosDevices\%~d1" (
+        reg.exe delete HKLM\SYSTEM\MountedDevices /v "%%~a" /f || exit /b 7
+        call :this\uuid _uuid
+        reg.exe add HKLM\SYSTEM\MountedDevices /v #{!_uuid!} /t REG_BINARY /d %%b /f || exit /b 7
+        >&2 echo.
+        >&2 echo Need reboot system.
+        exit /b 0
+    )
+    endlocal
+    exit /b 8
+
+REM mini uuid creater
+:this\uuid
+    if "%~1"=="" exit /b 1
+    setlocal enabledelayedexpansion
+    set _str=
+    set "_0f=0123456789abcdef"
+    for /l %%a in (8,4,20) do set _%%a=1
+    for /l %%a in (1,1,32) do (
+        set /a _ran16=!random! %% 15
+        call set "_str=!_str!%%_0f:~!_ran16!,1%%"
+        if defined _%%a set "_str=!_str!-"
+    )
+    endlocal & set "%~1=%_str%"
+    goto :eof
 
 :this\letter\-l
 :this\letter\--list
@@ -318,6 +382,7 @@ REM for :this\dir\--trim
         exit /b 0
     )
     exit /b 5
+
 
 ::: "Encode password to base64 string for unattend.xml" "" "usage: %~n0 cpwd [string] [[var_name]]"
 :::: "System version is too old" "Args is empty"
