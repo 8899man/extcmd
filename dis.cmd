@@ -65,7 +65,7 @@ exit /b 0
     >&3 echo 0.18.3
     exit /b 0
 
-::: "Directory tools" "" "usage: %~n0 dir [option] [...]" "" "    --isdir,  -id  [path]       Test path is directory" "    --islink, -il  [file_path]  Test path is Symbolic Link" "    --isfree, -if  [dir_path]   Test directory is empty" "    --trim,   -c   [dir_path]   Delete empty directory"
+::: "Directory tools" "" "usage: %~n0 dir [option] [...]" "" "    --isdir,  -id  [path]       Test path is directory" "    --islink, -il  [file_path]  Test path is Symbolic Link" "    --trim,   -t   [letter:]    Trim SSD, HDD will return false" "    --isfree, -if  [dir_path]   Test directory is empty" "    --clean,  -c   [dir_path]   Delete empty directory"
 :::: "invalid option" "Not directory" "target not found" "target not a directory"
 :dis\dir
     if "%*"=="" call :this\annotation %0 & goto :eof
@@ -89,6 +89,17 @@ exit /b 0
     REM quick return
     exit /b 10
 
+:this\dir\--trim
+:this\dir\-t
+    if /f "%~1" neq "%~d1" exit /b 10
+    if not exist "%~1" exit /b 10
+    for /f "usebackq" %%a in (
+        `defrag.exe %~d1 /l 2^>&1`
+    ) do for %%b in (
+        %%~a
+    ) do if /i "%%b"=="(0x8900002A)" exit /b 0
+    exit /b 10
+
 :this\dir\--isfree
 :this\dir\-if
     call :this\dir\--isdir %1 || exit /b 2
@@ -96,17 +107,17 @@ exit /b 0
     for /r %1 %%a in (*.*) do exit /b 10
     exit /b 0
 
-:this\dir\--trim
+:this\dir\--clean
 :this\dir\-c
     if not exist "%~1" exit /b 3
     call :this\dir\--isdir %1 || exit /b 4
     if exist %windir%\system32\sort.exe (
-        call :this\dir\rdNullDirWithSort %1
-    ) else call :this\dir\rdNullDir %1
+        call :dir\rdEmptyDirWithSort %1
+    ) else call :dir\rdEmptyDir %1
     goto :eof
 
-REM for :this\dir\--trim
-:this\dir\rdNullDir
+REM for :this\dir\--clean
+:dir\rdEmptyDir
     if "%~1"=="" exit /b 0
     if "%~2"=="" (
         call %0 "%~dp1" .
@@ -119,8 +130,8 @@ REM for :this\dir\--trim
     )
     exit /b 0
 
-REM for :this\dir\--trim
-:this\dir\rdNullDirWithSort
+REM for :this\dir\--clean
+:dir\rdEmptyDirWithSort
     if "%~1"=="" exit /b 2
     for /f "usebackq delims=" %%a in (
         `dir /ad /b /s %1 ^| sort.exe /r`
@@ -576,10 +587,27 @@ REM for :init\?
     call :lib\vbs get %1 %2
     exit /b 0
 
-::: "Copy Window PE boot file from CDROM" "" "usage: %~n0 boof [target_letter]"
-:::: "target_letter not exist" "Window PE CDROM not found"
-:dis\boof
-    if not exist "%~d1" exit /b 1
+::: "Boot tools" "" "usage: %~n0 boot [option] [args...]" "    --winpe-file, -pf  [target_letter]   Copy Window PE boot file from CDROM"
+:::: "invalid option" "target_letter not exist" "Window PE CDROM not found" "target not found"
+
+:dis\boot
+    if "%*"=="" call :this\annotation %0 & goto :eof
+    call :this\boot\%*
+    goto :eof
+
+:this\boot\--legacy
+    if "%~1"=="" (
+        bcdedit.exe /set {default} bootmenupolicy legacy
+    ) else (
+        if exist "%~1" (
+            bcdedit.exe /store "%~f1" /set {default} bootmenupolicy legacy
+        ) else exit /b 4
+    )
+    goto :eof
+
+:this\boot\--winpe-file
+:this\boot\-pf
+    if not exist "%~d1" exit /b 2
     for /l %%a in (0,1,9) do if exist \\?\CDROM%%a\boot\boot.sdi (
         for %%b in (
             \bootmgr
@@ -596,7 +624,31 @@ REM for :init\?
         copy /y \\?\CDROM%%a\sources\sxs\* %~d1\sources\sxs
         exit /b 0
     )
-    exit /b 2
+    exit /b 3
+
+REM TODO
+:this\boot\--wimboot [bcd] [sdi] [wim]
+:this\boot\-wb
+    if not exist "%~1" exit /b 4
+    if not exist "%~3" exit /b 4
+    copy /y %windir%\Boot\DVD\PCAT\boot.sdi "%~2"
+    for /f "tokens=2 delims={}" %%a in (
+        `bcdedit.exe /store "%~f1" /create /d "winpe or winre" /device`
+    ) do for /f "tokens=2 delims={}" %%b in (
+        `bcdedit.exe /store "%~f1" /create /d "Windows Preinstallation or Recovery Environment" /application osloader`
+    ) do for %%c in (
+        "{%%a} ramdisksdidevice partition=%~d3"
+        "{%%a} ramdisksdipath %~pnx2"
+        "{%%b} device ramdisk=[%~d3]%~pnx3,{%%a}"
+        ::"{%%b} path \Windows\system32\winload.efi"?
+        "{%%b} path \Windows\system32\winload.exe"
+        "{%%b} osdevice ramdisk=[%~d3]%~pnx3,{%%a}"
+        "{%%b} systemroot \Windows"
+        "{%%b} nx OptIn"
+        "{%%b} winpe Yes"
+    ) do bcdedit.exe /store "%~f1" /set %%~c
+    goto :eof
+
 
 ::: "Add or Remove Web Credential" "" "usage: %~n0 crede [option] [args...]" "" "    --add,    -a [user]@[ip or host] [[password]]" "    --remove, -r [ip or host]"
 :::: "invalid option" "parameter not enough" "Command error" "ho ip or host"
