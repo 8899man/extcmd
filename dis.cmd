@@ -580,16 +580,14 @@ REM for :init\?
 ::: "Download something" "" "usage: %~n0 download [url] [output]"
 :::: "url is empty" "output path is empty" "powershell version is too old"
 :dis\download
-    if "%~1"=="" exit /b 1
-    REM if "%~2"=="" exit /b 2
-    call :this\gpsv
+    if "%~2"=="" exit /b 2
+    call :this\psv
     if errorlevel 3 PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "Invoke-WebRequest -uri %1 -OutFile %2 -UseBasicParsing" & exit /b 0
     call :lib\vbs get %1 %2
     exit /b 0
 
 ::: "Boot tools" "" "usage: %~n0 boot [option] [args...]" "    --winpe-file, -pf  [target_letter]   Copy Window PE boot file from CDROM"
 :::: "invalid option" "target_letter not exist" "Window PE CDROM not found" "target not found"
-
 :dis\boot
     if "%*"=="" call :this\annotation %0 & goto :eof
     call :this\boot\%*
@@ -1246,22 +1244,25 @@ REM from Window 10 wdk, will download devcon.exe at script path
 :: KMS ::
 :::::::::
 
-::: "KMS Client" "" "usage: %~n0 kms [option] [args...]" "" "    --os     [[ipv4]]    Active OS" "    --office [[ipv4]]    Active office" "    e.g." "        %~n0 kms --os 192.168.1.1"
-:::: "invalid option" "{UNUSE}" "Need ip or host" "OS not support" "No office found" "office not support"
+::: "KMS Client" "" "usage: %~n0 kms [option] [args...]" "" "    --os,  -s [[host]]     Active OS" "    --odt, -o [[host]]     Active office, which install by Office Deployment Tool" "    e.g." "        %~n0 kms --os 192.168.1.1"
+:::: "invalid option" "ospp.vbs not found" "Need ip or host" "OS not support" "No office found" "office not support"
 :dis\kms
     if "%*"=="" call :this\annotation %0 & goto :eof
+    setlocal
+    if "%~2"=="" (
+        if "%~d0" neq "\\" exit /b 3
+        for /f "usebackq delims=\" %%a in (
+            '%~p0'
+        ) do set _host=%%a
+    ) else set _host=%2
+
     call :this\kms\%*
+    endlocal
     goto :eof
 
 REM OS
 :this\kms\--os
-    setlocal
-    if "%~1"=="" (
-        if "%~d0" neq "\\" exit /b 3
-        for /f "usebackq delims=\" %%a in (
-            '%~p0'
-        ) do set _ip=%%a
-    ) else set _ip=%1
+:this\kms\-s
 
     REM Get this OS version
     call :this\oset\--info %SystemDrive% _sd
@@ -1326,64 +1327,293 @@ REM OS
     REM Active
     for %%a in (
         "/ipk %_key%"
-        "/skms %_ip%"
+        "/skms %_host%"
         /ato ::?"active"
         /xpr ::?"display expires time"
         /ckms ::?"rm key"
     ) do cscript.exe //nologo //e:vbscript %windir%\System32\slmgr.vbs %%~a
 
-    endlocal
     exit /b 0
 
-REM Office
-:this\kms\--office
-    setlocal
-    if "%~1"=="" (
-        if "%~d0" neq "\\" exit /b 3
-        for /f "usebackq delims=\" %%a in (
-            '%~p0'
-        ) do set _ip=%%a
-    ) else set _ip=%1
+REM for Office Deployment Tool only
+:this\kms\--odt
+:this\kms\-o
 
-    REM Search kms key
-    set _key=
-    call :getOfficePath _office || exit /b 5
-    if "%_office:~-1%"=="\" set _office=%_office:~0,-1%
-    for %%a in (
-        "%_office%"
-    ) do for %%b in (
-        Office15@YC7DK-G2NP3-2QQC3-J6H88-GVGXT
-        Office15Visio@C2FG9-N6J68-H8BTJ-BW3QX-RM3B3
-    ) do for /f "usebackq tokens=1,2 delims=@" %%c in (
-        '%%b'
-    ) do if /i "%%~na"=="%%c" set _key=%%d
+    call :office\ClickToRun\InstallPath _officeInstallPath || exit /b 5
 
-    REM If not find key
-    if not defined _key exit /b 6
+    for /r "%_officeInstallPath%" %%a in (
+        ospp.vb?
+    ) do set "_ospp=%%a"
+
+    if not exist "%_ospp%" exit /b 2
+
+    REM set kms key
+    for /f "usebackq" %%a in (
+        `reg.exe query HKLM\Software\Microsoft\Office`
+    ) do for /f "usebackq" %%b in (
+        `reg.exe query HKLM\Software\Microsoft\Office\%%~nxa\ClickToRunStore\Applications 2^>nul`
+    ) do if "%%~nb"=="%%~b" if /i "(Default)" neq "%%~b" 2>nul call :kms\gvlk\%%~na_%%b
+
+    2>nul set _gvlk\ || exit /b 6
 
     REM Active
-    for %%a in (
-        "/inpkey:%_key%"
-        "/sethst:%_ip%"
+    for /f "usebackq tokens=1* delims==" %%a in (
+        `set _gvlk\ 2^>nul`
+    ) do for %%c in (
+        "/inpkey:%%~na"
+        "/sethst:%_host%"
         /act ::?"active"
         /dstatus ::?"display expires time"
         /remhst ::?"rm key"
-    ) do cscript.exe //nologo //e:vbscript "%_office%\ospp.vbs" %%~a
+    ) do cscript.exe //nologo //e:vbscript "%_ospp%" %%~c
+
+    exit /b 0
+
+REM https://docs.microsoft.com/en-us/deployoffice/office2016/gvlks-for-office-2016
+:kms\gvlk\16_Word
+:kms\gvlk\16_Excel
+:kms\gvlk\16_PowerPoint
+:kms\gvlk\16_OneNote
+:kms\gvlk\16_Outlook
+:kms\gvlk\16_Access
+:kms\gvlk\16_Publisher
+    REM Office Professional Plus 2016
+    set _gvlk\XQNVK-8JYDB-WJ9W3-YJ8YR-WFG99=1
+    goto :eof
+
+:kms\gvlk\16_Visio
+    REM Visio Professional 2016
+    set _gvlk\PD3PC-RHNGV-FXJ29-8JK7D-RJRJK=1
+    goto :eof
+
+:kms\gvlk\16_Project
+    REM Project Professional 2016
+    set _gvlk\YG9NW-3K39V-2T3HJ-93F3Q-G83KT=1
+    goto :eof
+
+:kms\gvlk\16_Skype
+    REM Skype for Business 2016
+    set _gvlk\869NQ-FJ69K-466HW-QYCP2-DDBV6=1
+    goto :eof
+
+REM https://technet.microsoft.com/en-us/library/dn385360.aspx
+:kms\gvlk\15_Word
+:kms\gvlk\15_Excel
+:kms\gvlk\15_PowerPoint
+:kms\gvlk\15_OneNote
+:kms\gvlk\15_Outlook
+:kms\gvlk\15_Access
+:kms\gvlk\15_Publisher
+    REM Office 2013 Professional Plus
+    set _gvlk\YC7DK-G2NP3-2QQC3-J6H88-GVGXT=1
+    goto :eof
+
+:kms\gvlk\15_Visio
+    REM Visio 2013 Professional
+    set _gvlk\C2FG9-N6J68-H8BTJ-BW3QX-RM3B3=1
+    goto :eof
+
+:kms\gvlk\15_Project
+    REM Project 2013 Professional
+    set _gvlk\FN8TT-7WMH6-2D4X9-M337T-2342K=1
+    goto :eof
+
+:office\ClickToRun\InstallPath
+    if "%~1"=="" exit /b 1
+    REM reg.exe query HKLM\Software\Microsoft\Office /f InstallRoot /s | reg.exe query "%%a" /v Path 2^>nul`
+    for /f "usebackq tokens=1,3" %%a in (
+        `reg.exe query HKLM\Software\Microsoft\Office\ClickToRun /v InstallPath 2^>nul`
+    ) do if /i "%%~a"=="InstallPath" if exist "%%~b" set "%~1=%%~b"& exit /b 0
+    exit /b 1
+
+::: "Office Deployment Tool" "" "usage: %~n0 odt [option]" "    --init,    -i  [[path]]              Download Office Deployment Tool data" "    --install, -a  [[path]] [[names]]    install office by names" "" "      names:" "          simple full" "          word excel powerpoint" "          access onenote outlook" "          project visio publisher" "" "      simple:" "          word excel onenote visio" "" "      full:" "          word excel powerpoint onenote project visio"
+:::: "invalid option" "target not found" "init fail" "must set office product ids"
+:dis\odt
+    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~2" neq "" if not exist "%~2" exit /b 2
+    if exist "%~2" shift /2
+
+    setlocal
+    set _odt_local=
+    set _odt_with_path=odt
+    set _odt_update=
+    set _odt_source_path=
+
+    if "%~2"=="" (
+        if "%~d0"=="\\" for /f "usebackq delims=\" %%a in (
+            '%~p0'
+        ) do set _odt_source_path=%%a
+    ) else set _odt_source_path=%2
+
+    if not defined _odt_source_path (
+        set _odt_local=odt
+        set _odt_with_path=
+    )
+
+    for %%a in (odt.exe) do if "%%~$path:a"=="" call :odt\ext\setup || exit /b 3
+
+    call :this\odt\%*
+    endlocal
+    goto :eof
+
+:this\odt\--init
+:this\odt\-i
+    if "%~1" neq "" if exist "%~1"
+
+    call :odt\pkg\full
+    >%temp%\odt_download.xml call :this\txt\--subtxt "%~p0" odt 1400
+
+    odt.exe /download %temp%\odt_download.xml
+    REM erase %temp%\odt_download.xml
+
+    goto :eof
+
+:this\odt\--install
+:this\odt\-a
+    if exist "%~1" shift /1
+    if "%~1" neq "" (
+        if /i "%~1"=="simple" (
+            call :odt\pkg\simple
+        ) else if /i "%~1"=="full" (
+            call :odt\pkg\full
+        ) else call :odt\init\var %*
+    ) else call :odt\pkg\simple
+
+    2>nul set _odt_pkg_ || exit /b 4
+    >%temp%\odt_install.xml call :this\txt\--subtxt "%~p0" odt 1400
+
+    odt.exe /configure %temp%\odt_install.xml
+    REM erase %temp%\odt_install.xml
+
+    REM get ospp path
+    for /r "%ProgramFiles%\Microsoft Office" %%a in (
+        ospp.vb?
+    ) do set "_ospp=%%a"
+
+    REM convert to volume license
+    for /r "%ProgramFiles%\Microsoft Office" %%a in (
+        *kms*.xrm-ms
+    ) do cscript.exe //nologo %windir%\System32\slmgr.vbs /ilc "%%~a"&& cscript.exe //nologo "%_ospp%" /inslic:"%%~a"
+
+    goto :eof
+
+:odt\pkg\simple
+    call :odt\init\var word excel onenote visio
+    goto :eof
+
+:odt\pkg\full
+    call :odt\init\var word excel powerpoint onenote project visio
+    goto :eof
+
+:odt\init\var
+    REM clear variable
+    for %%a in (
+        access excel onenote outlook powerpoint publisher word
+        project
+        visio
+    ) do set _odt_pkg_%%a=
+
+    REM init variable
+    for %%a in (%*) do for %%b in (
+        access excel onenote outlook powerpoint publisher word
+        project
+        visio
+    ) do if "%%~a"=="%%~b" set _odt_pkg_%%a=odt
+    goto :eof
+
+:odt\ext\setup
+    setlocal
+    set _out=%temp%\%random%%random%
+    mkdir %_out%
+    call :this\download https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_9119.3601.exe %_out%\officedeploymenttool16.exe || exit /b 1
+    %_out%\officedeploymenttool16.exe /extract:%_out% /quiet
+    move /y %_out%\setup.exe %~dp0odt.exe
     endlocal
     exit /b 0
 
-REM for :dis\officekms
-:getOfficePath
-    if "%~1"=="" exit /b 1
-    for /f "usebackq delims=" %%a in (
-        `reg.exe query HKLM\Software\Microsoft\Office /f InstallRoot /s`
-    ) do if "%%~na"=="InstallRoot" for /f "usebackq tokens=2*" %%b in (
-        `reg.exe query "%%a" /v Path 2^>nul`
-    ) do if exist "%%c\ospp.vbs" (
-        set %~1=%%c
-        exit /b 0
-    )
-    exit /b 1
+::odt:<!-- Office 365 client configuration file sample. To be used for Office 365 ProPlus 2016 apps,
+::odt:     Office 365 Business 2016 apps, Project Pro for Office 365 and Visio Pro for Office 365.
+::odt:
+::odt:     For detailed information regarding configuration options visit: http://aka.ms/ODT.
+::odt:     To use the configuration file be sure to remove the comments
+::odt:
+::odt:     For Office 365 client apps (verion 2013) you will need to use the 2013 version of the
+::odt:     Office Deployment Tool which can be downloaded from http://aka.ms/ODT2013
+::odt:
+::odt:     The following sample allows you to download and install Office 365 ProPlus 2016 apps
+::odt:     and Visio Pro for Office 365 directly from the Office CDN using the Current Channel
+::odt:     settings  -->
+::odt:
+::odt:<Configuration>
+::odt:
+::odt:    <!--
+::odt:    <Remove All="TRUE">
+::odt:        <Product ID="AccessRetail" />
+::odt:        <Product ID="AccessRuntimeRetail" />
+::odt:        <Product ID="ExcelRetail" />
+::odt:        <Product ID="HomeBusinessRetail" />
+::odt:        <Product ID="HomeStudentRetail" />
+::odt:        <Product ID="InfoPathRetail" />
+::odt:        <Product ID="LyncEntryRetail" />
+::odt:        <Product ID="LyncRetail" />
+::odt:        <Product ID="O365BusinessRetail" />
+::odt:        <Product ID="O365HomePremRetail" />
+::odt:        <Product ID="O365ProPlusRetail" />
+::odt:        <Product ID="O365SmallBusPremRetail" />
+::odt:        <Product ID="OneNoteRetail" />
+::odt:        <Product ID="OutlookRetail" />
+::odt:        <Product ID="PowerPointRetail" />
+::odt:        <Product ID="ProfessionalRetail" />
+::odt:        <Product ID="ProjectProRetail" />
+::odt:        <Product ID="ProjectProXVolume" />
+::odt:        <Product ID="ProjectStdRetail" />
+::odt:        <Product ID="ProjectStdXVolume" />
+::odt:        <Product ID="PublisherRetail" />
+::odt:        <Product ID="SkypeforBusinessEntryRetail" />
+::odt:        <Product ID="SkypeforBusinessRetail" />
+::odt:        <Product ID="SPDRetail" />
+::odt:        <Product ID="VisioProRetail" />
+::odt:        <Product ID="VisioProXVolume" />
+::odt:        <Product ID="VisioStdRetail" />
+::odt:        <Product ID="VisioStdXVolume" />
+::odt:        <Product ID="WordRetail" />
+::odt:    </Remove>
+::odt:    -->
+::odt:
+::!_odt_local!:    <Add OfficeClientEdition="64" Channel="Broad">
+::!_odt_with_path!:    <Add SourcePath="!_odt_source_path!" OfficeClientEdition="64" Channel="Broad">
+::odt:
+::odt:        <!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
+::odt:        <Product ID="ProfessionalRetail">
+::odt:            <Language ID="zh-cn" />
+::!_odt_pkg_access!:            <ExcludeApp ID="Access" />
+::!_odt_pkg_excel!:            <ExcludeApp ID="Excel" />
+::!_odt_pkg_onenote!:            <ExcludeApp ID="OneNote" />
+::!_odt_pkg_outlook!:            <ExcludeApp ID="Outlook" />
+::!_odt_pkg_powerpoint!:            <ExcludeApp ID="PowerPoint" />
+::!_odt_pkg_publisher!:            <ExcludeApp ID="Publisher" />
+::!_odt_pkg_word!:            <ExcludeApp ID="Word" />
+::odt:        </Product>
+::odt:
+::!_odt_pkg_visio!:        <Product ID="VisioProRetail">
+::!_odt_pkg_visio!:            <Language ID="zh-cn" />
+::!_odt_pkg_visio!:        </Product>
+::!_odt_pkg_visio!:
+::!_odt_pkg_project!:        <Product ID="ProjectProRetail">
+::!_odt_pkg_project!:            <Language ID="zh-cn" />
+::!_odt_pkg_project!:        </Product>
+::!_odt_pkg_project!:
+::odt:    </Add>
+::odt:
+::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
+::!_odt_update!:
+::odt:    <Display Level="Full" AcceptEULA="TRUE" />
+::odt:    <!--  <Display Level="None" AcceptEULA="TRUE" />  -->
+::odt:
+::odt:    <Logging Path="%temp%" />
+::odt:    <!--  <Property Name="AUTOACTIVATE" Value="1" />  -->
+::odt:
+::odt:</Configuration>
 
 
 :::::::::::
@@ -1559,6 +1789,14 @@ REM en zh
     ) do if %%e gtr 1970 (
         set %~1=%~2%%e%%f%%g%%a%%b%%c%~3
     ) else if %%g gtr 1970 set %~1=%~2%%g%%e%%f%%a%%b%%c%~3
+    exit /b 0
+
+REM Test PowerShell version, Return errorlevel \* @see lib.cmd *\
+:this\psv
+    for %%a in (PowerShell.exe) do if "%%~$path:a"=="" exit /b 0
+    for /f "usebackq" %%a in (
+        `PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "$PSVersionTable.WSManStackVersion.Major" 2^>nul`
+    ) do exit /b %%a
     exit /b 0
 
 REM Run VBScript library from lib.vbs \* @see lib.cmd *\

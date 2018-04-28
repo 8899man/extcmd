@@ -710,7 +710,7 @@ REM :lib\delLoginNote
 REM     net.exe use * /delete
 REM     exit /b 0
 
-::: "Test PowerShell version" "" "Return errorlevel"
+REM Test PowerShell version, Return errorlevel
 :this\psv
     for %%a in (PowerShell.exe) do if "%%~$path:a"=="" exit /b 0
     for /f "usebackq" %%a in (
