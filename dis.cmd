@@ -1252,7 +1252,7 @@ REM from Window 10 wdk, will download devcon.exe at script path
     if "%~2"=="" (
         if "%~d0" neq "\\" exit /b 3
         for /f "usebackq delims=\" %%a in (
-            '%~p0'
+            '%~f0'
         ) do set _host=%%a
     ) else set _host=%2
 
@@ -1430,8 +1430,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 :::: "invalid option" "target not found" "init fail" "must set office product ids"
 :dis\odt
     if "%*"=="" call :this\annotation %0 & goto :eof
-    if "%~2" neq "" if not exist "%~2" exit /b 2
-    if exist "%~2" shift /2
+    if "%~2" neq "" if "%~n2" neq "%~2" if not exist "%~2" exit /b 2
 
     setlocal
     set _odt_local=
@@ -1439,11 +1438,11 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     set _odt_update=
     set _odt_source_path=
 
-    if "%~2"=="" (
-        if "%~d0"=="\\" for /f "usebackq delims=\" %%a in (
-            '%~p0'
-        ) do set _odt_source_path=%%a
-    ) else set _odt_source_path=%2
+    if "%~2" neq "" (
+        if "%~n2" neq "%~2" (
+            set "_odt_source_path=%~2"
+        ) else call :odt\local\source_path
+    ) else call :odt\local\source_path
 
     if not defined _odt_source_path (
         set _odt_local=odt
@@ -1456,12 +1455,17 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     endlocal
     goto :eof
 
+:odt\local\source_path
+    if "%~d0"=="\\" for /f "usebackq delims=\" %%a in (
+        '%~f0'
+    ) do set _odt_source_path=%%a
+    goto :eof
+
 :this\odt\--init
 :this\odt\-i
-    if "%~1" neq "" if exist "%~1"
 
     call :odt\pkg\full
-    >%temp%\odt_download.xml call :this\txt\--subtxt "%~p0" odt 1400
+    >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt 1400
 
     odt.exe /download %temp%\odt_download.xml
     REM erase %temp%\odt_download.xml
@@ -1480,7 +1484,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     ) else call :odt\pkg\simple
 
     2>nul set _odt_pkg_ || exit /b 4
-    >%temp%\odt_install.xml call :this\txt\--subtxt "%~p0" odt 1400
+    >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt 1400
 
     odt.exe /configure %temp%\odt_install.xml
     REM erase %temp%\odt_install.xml
@@ -1531,7 +1535,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     endlocal
     exit /b 0
 
-::odt:<!-- Office 365 client configuration file sample. To be used for Office 365 ProPlus 2016 apps,
+::odt:<^!-- Office 365 client configuration file sample. To be used for Office 365 ProPlus 2016 apps,
 ::odt:     Office 365 Business 2016 apps, Project Pro for Office 365 and Visio Pro for Office 365.
 ::odt:
 ::odt:     For detailed information regarding configuration options visit: http://aka.ms/ODT.
@@ -1546,7 +1550,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 ::odt:
 ::odt:<Configuration>
 ::odt:
-::odt:    <!--
+::odt:    <^!--
 ::odt:    <Remove All="TRUE">
 ::odt:        <Product ID="AccessRetail" />
 ::odt:        <Product ID="AccessRuntimeRetail" />
@@ -1583,7 +1587,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 ::!_odt_local!:    <Add OfficeClientEdition="64" Channel="Broad">
 ::!_odt_with_path!:    <Add SourcePath="!_odt_source_path!" OfficeClientEdition="64" Channel="Broad">
 ::odt:
-::odt:        <!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
+::odt:        <^!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
 ::odt:        <Product ID="ProfessionalRetail">
 ::odt:            <Language ID="zh-cn" />
 ::!_odt_pkg_access!:            <ExcludeApp ID="Access" />
@@ -1608,10 +1612,10 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 ::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
 ::!_odt_update!:
 ::odt:    <Display Level="Full" AcceptEULA="TRUE" />
-::odt:    <!--  <Display Level="None" AcceptEULA="TRUE" />  -->
+::odt:    <^!--  <Display Level="None" AcceptEULA="TRUE" />  -->
 ::odt:
 ::odt:    <Logging Path="%temp%" />
-::odt:    <!--  <Property Name="AUTOACTIVATE" Value="1" />  -->
+::odt:    <^!--  <Property Name="AUTOACTIVATE" Value="1" />  -->
 ::odt:
 ::odt:</Configuration>
 
