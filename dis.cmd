@@ -581,8 +581,10 @@ REM for :init\?
 :::: "url is empty" "output path is empty" "powershell version is too old"
 :dis\download
     if "%~2"=="" exit /b 2
+    REM windows 10 1803+
+    for %%a in (curl.exe) do if "%%~$path:a" neq "" curl.exe -L --retry 10 -o %2 %1 && exit /b 0
     call :this\psv
-    if errorlevel 3 PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "Invoke-WebRequest -uri %1 -OutFile %2 -UseBasicParsing" & exit /b 0
+    if errorlevel 3 PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "Invoke-WebRequest -uri %1 -OutFile %2 -UseBasicParsing" && exit /b 0
     call :lib\vbs get %1 %2
     exit /b 0
 
@@ -1430,35 +1432,21 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 :::: "invalid option" "target not found" "init fail" "must set office product ids"
 :dis\odt
     if "%*"=="" call :this\annotation %0 & goto :eof
-    if "%~2" neq "" if "%~n2" neq "%~2" if not exist "%~2" exit /b 2
 
     setlocal
-    set _odt_local=
-    set _odt_with_path=odt
     set _odt_update=
-    set _odt_source_path=
 
-    if "%~2" neq "" (
-        if "%~n2" neq "%~2" (
-            set "_odt_source_path=%~2"
-        ) else call :odt\local\source_path
-    ) else call :odt\local\source_path
-
-    if not defined _odt_source_path (
-        set _odt_local=odt
-        set _odt_with_path=
+    set "_odt_source_path=%cd%"
+    if "%~d0"=="\\" set "_odt_source_path=%~dp0"
+    if "%~2" neq "" if "%~n2" neq "%~2" (
+        if not exist "%~2" exit /b 2
+        set "_odt_source_path=%~2"
     )
 
-    for %%a in (odt.exe) do if "%%~$path:a"=="" call :odt\ext\setup || exit /b 3
+    for %%a in (odt.exe) do if "%%~$path:a"=="" call :odt\ext\setup 27af1be6-dd20-4cb4-b154-ebab8a7d4a7e || exit /b 3
 
     call :this\odt\%*
     endlocal
-    goto :eof
-
-:odt\local\source_path
-    if "%~d0"=="\\" for /f "usebackq delims=\" %%a in (
-        '%~f0'
-    ) do set _odt_source_path=%%a
     goto :eof
 
 :this\odt\--init
@@ -1468,7 +1456,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt 1400
 
     odt.exe /download %temp%\odt_download.xml
-    REM erase %temp%\odt_download.xml
+    erase %temp%\odt_download.xml
 
     goto :eof
 
@@ -1526,13 +1514,13 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     goto :eof
 
 :odt\ext\setup
-    setlocal
-    set _out=%temp%\%random%%random%
-    mkdir %_out%
-    call :this\download https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_9119.3601.exe %_out%\officedeploymenttool16.exe || exit /b 1
-    %_out%\officedeploymenttool16.exe /extract:%_out% /quiet
-    move /y %_out%\setup.exe %~dp0odt.exe
-    endlocal
+    if exist %temp%\%~1\odt.exe exit /b 0
+    2>nul mkdir %temp%\%~1
+    set PATH=%temp%\%~1;%PATH%
+    call :dis\download https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_9119.3601.exe %temp%\%~1\officedeploymenttool16.exe || exit /b 1
+    %temp%\%~1\officedeploymenttool16.exe /extract:%temp%\%~1 /quiet
+    rename %temp%\%~1\setup.exe odt.exe
+    erase %temp%\%~1\officedeploymenttool16.exe %temp%\%~1\*.xml
     exit /b 0
 
 ::odt:<^!-- Office 365 client configuration file sample. To be used for Office 365 ProPlus 2016 apps,
@@ -1584,8 +1572,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 ::odt:    </Remove>
 ::odt:    -->
 ::odt:
-::!_odt_local!:    <Add OfficeClientEdition="64" Channel="Broad">
-::!_odt_with_path!:    <Add SourcePath="!_odt_source_path!" OfficeClientEdition="64" Channel="Broad">
+::odt:    <Add SourcePath="!_odt_source_path!" OfficeClientEdition="64" Channel="Broad">
 ::odt:
 ::odt:        <^!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
 ::odt:        <Product ID="ProfessionalRetail">
