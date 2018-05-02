@@ -139,8 +139,8 @@ REM for :this\dir\--clean
     exit /b 0
 
 
-::: "Operating system settings" "" "usage: %~n0 oset [option] [...]" "" "    --vergeq,  -vg [version]                  Test this system version" "    --cleanup, -c  [[path]]                   Component Cleanup" "    --info,    -i  [os_path] [[var_name]]     Get OS language bit and version" "                   return" "                         [var].lang [var].bit [var].ver" "" "    --feature-info,   -fi                     Get Feature list" "    --feature-enable, -fe [name ...]          Enable Feature" "    --set-power,      -sp                     Set power config as server type"
-:::: "invalid option" "Parameter is empty or Not a float" "not a directory" "Not OS path or Low OS version" "parameter is empty" "System version is too old"
+::: "Operating system settings" "" "usage: %~n0 oset [option] [...]" "" "    --vergeq,  -vg [version]                  Test this system version" "    --cleanup, -c  [[path]]                   Component Cleanup" "    --version, -v  [os_path] [[var_name]]     Get OS version" "    --bit,     -b  [os_path] [[var_name]]     Get OS bit" "    --install-lang,   -il  [os_path] [[var_name]]    Get OS install language" "    --current-lang,   -cl  [var_name] [[os_path]]    Get OS current language," "                                                     if not set path, will get online info" "    --feature-info,   -fi                            Get Feature list" "    --feature-enable, -fe  [name ...]                Enable Feature" "    --set-power,      -sp                            Set power config as server type"
+:::: "invalid option" "Parameter is empty or Not a float" "not a directory" "Not OS path or Low OS version" "parameter is empty" "System version is too old" "not operating system directory"
 :dis\oset
     if "%*"=="" call :this\annotation %0 & goto :eof
     call :this\oset\%*
@@ -150,13 +150,7 @@ REM for :this\dir\--clean
 :this\oset\--vergeq
     if "%~x1"=="" exit /b 2
     setlocal
-    if exist %windir%\servicing\Version\*.* (
-        for /f "usebackq tokens=1,2 delims=." %%a in (
-            `dir /ad /b %windir%\servicing\Version\*.*`
-        ) do for /f "usebackq tokens=1,2 delims=." %%c in (
-            '%~1'
-        ) do set /a _tmp=%%a*10+%%b-%%c*10-%%d
-    ) else for /f "usebackq delims=" %%a in (
+    for /f "usebackq delims=" %%a in (
         `ver`
     ) do for %%b in (%%a) do if "%%~xb" neq "" for /f "usebackq tokens=1-4 delims=." %%c in (
         '%~1.%%b'
@@ -171,41 +165,67 @@ REM for :this\dir\--clean
     dism.exe /Image:%1 /Cleanup-Image /StartComponentCleanup /ResetBase
     exit /b 0
 
-:this\oset\-i
-:this\oset\--info
-    if not exist %~1\Windows\servicing exit /b 4
+REM OS version
+:this\oset\-v
+:this\oset\--version
+    if "%~1"=="" exit /b 5
+    for /f "usebackq" %%a in (
+        `dir /ad /b %~1\Windows\servicing\Version\*.* 2^>nul`
+    ) do if "%~2"=="" (
+        echo %%a& exit /b 0
+    ) else set %~2=%%a& exit /b 0
+    exit /b 4
 
+:this\oset\--bit
+:this\oset\-b
+    if not exist %~1\Windows\servicing\Version exit /b 4
     for /d %%a in (
-        %~1\Windows\servicing\Version\*
-    ) do (
-        REM OS version
-        for /f "tokens=1,2 delims=." %%b in (
-            "%%~na"
-        ) do if "%~2"=="" (
-            setlocal enabledelayedexpansion
-            set /a _ver=%%b*10+%%c
-            >&3 set /p=ver:!_ver!, <nul
-            endlocal
-        ) else set /a %2.ver=%%b*10+%%c
-
-        REM OS bit
-        if exist %%a\amd64_installed (
-            if "%~2"=="" (
-                >&3 set /p=bin:amd64, <nul
-            ) else set %2.bit=amd64
-        ) else if "%~2"=="" (
-            >&3 set /p=bin:x86, <nul
-        ) else set %2.bit=x86
+        %~1\Windows\servicing\Version\*.*
+    ) do if exist %%a\amd64_installed (
+        if "%~2"=="" (
+            echo amd64
+        ) else set "%~2=amd64"
+        exit /b 0
+    ) else if exist %%a\x86_installed (
+        if "%~2"=="" (
+            echo x86
+        ) else set "%~2=x86"
+        exit /b 0
     )
-    REM OS language
+    exit /b 6
+
+
+REM OS language
+:this\oset\--install-lang
+:this\oset\-il
     for /d %%a in (
         %~1\Windows\servicing\??-??
     ) do if "%~2"=="" (
-        set /p=lang:%%~na<nul
-    ) else set %2.lang=%%~na
+        echo %%~na
+    ) else set %~2=%%~na
+    goto :eof
 
-    if "%~2"=="" echo.
-    exit /b 0
+REM https://technet.microsoft.com/en-us/library/cc287874(v=office.12).aspx
+REM https://docs.microsoft.com/en-us/previous-versions/commerce-server/ee825488(v=cs.20)
+:this\oset\--current-lang
+:this\oset\-cl
+    setlocal
+    if "%~2" neq "" (
+        reg.exe load HKLM\load-point %~2\Windows\System32\config\DRIVERS || exit /b 7
+        for /f "usebackq tokens=1,4 delims=x " %%a in (
+            `reg.exe query HKLM\load-point\select`
+        ) do if "%%b"=="Default" call :lang\current HKLM\load-point\ControlSet00%%b _lang
+        reg.exe load HKLM\load-point
+    ) else call :lang\current HKLM\SYSTEM\CurrentControlSet _lang
+    if "%~1"=="" echo.%_lang%
+    endlocal & if "%~1" neq "" set %~1=%_lang%
+    goto :eof
+
+:lang\current
+    for /f "usebackq tokens=1,3" %%a in (
+        `reg query %~1\Control\Nls\Language /v Default`
+    ) do if "%%a"=="Default" call :lang\%%~b %~2
+    goto :eof
 
 :this\oset\--feature-info
 :this\oset\-fi
@@ -1267,7 +1287,10 @@ REM OS
 :this\kms\-s
 
     REM Get this OS version
-    call :this\oset\--info %SystemDrive% _sd
+    call :this\oset\--version %SystemDrive% _ver
+    for /f "tokens=1,2 delims=." %%b in (
+        "%_ver%"
+    ) do set /a _ver=%%b * 10 + %%c
 
     REM Get this OS Edition ID
     for /f "usebackq tokens=3" %%a in (
@@ -1311,7 +1334,7 @@ REM OS
         60_Business@YFKBB-PQJJV-G996G-VWGXY-2V3X8
     ) do for /f "usebackq tokens=1,2 delims=@" %%b in (
         '%%~a'
-    ) do if /i "%_sd.ver%_%_eid%"=="%%b" set _key=%%c
+    ) do if /i "%_ver%_%_eid%"=="%%b" set _key=%%c
 
     REM If not find key
     if not defined _key exit /b 4
@@ -1429,12 +1452,11 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     exit /b 1
 
 ::: "Office Deployment Tool" "" "usage: %~n0 odt [option]" "    --init,    -i  [[path]]              Download Office Deployment Tool data" "    --install, -a  [[path]] [[names]]    install office by names" "" "      names:" "          simple full" "          word excel powerpoint" "          access onenote outlook" "          project visio publisher" "" "      simple:" "          word excel onenote visio" "" "      full:" "          word excel powerpoint onenote project visio"
-:::: "invalid option" "target not found" "init fail" "must set office product ids"
+:::: "invalid option" "target not found" "init fail" "must set office product ids" "install error" "setup error" "source not found"
 :dis\odt
     if "%*"=="" call :this\annotation %0 & goto :eof
 
     setlocal
-    set _odt_update=
 
     set "_odt_source_path=%cd%"
     if "%~d0"=="\\" set "_odt_source_path=%~dp0"
@@ -1443,7 +1465,9 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
         set "_odt_source_path=%~2"
     )
 
-    for %%a in (odt.exe) do if "%%~$path:a"=="" call :odt\ext\setup 27af1be6-dd20-4cb4-b154-ebab8a7d4a7e || exit /b 3
+    call :odt\ext\setup 27af1be6-dd20-4cb4-b154-ebab8a7d4a7e || exit /b 3
+    set _odt_update=
+    call :this\oset\--current-lang _odt_lang || exit /b 2
 
     call :this\odt\%*
     endlocal
@@ -1451,17 +1475,20 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 
 :this\odt\--init
 :this\odt\-i
-
     call :odt\pkg\full
     >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt 1400
 
-    odt.exe /download %temp%\odt_download.xml
+    title download...
+    echo download...
+    odt.exe /download %temp%\odt_download.xml || exit /b 6
     erase %temp%\odt_download.xml
 
     goto :eof
 
 :this\odt\--install
 :this\odt\-a
+    if not exist "%_odt_source_path%" exit /b 7
+
     if exist "%~1" shift /1
     if "%~1" neq "" (
         if /i "%~1"=="simple" (
@@ -1474,13 +1501,17 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     2>nul set _odt_pkg_ || exit /b 4
     >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt 1400
 
-    odt.exe /configure %temp%\odt_install.xml
+    title install...
+    echo install...
+    odt.exe /configure %temp%\odt_install.xml || exit /b 6
     REM erase %temp%\odt_install.xml
 
     REM get ospp path
     for /r "%ProgramFiles%\Microsoft Office" %%a in (
         ospp.vb?
     ) do set "_ospp=%%a"
+
+    if not defined _ospp exit /b 5
 
     REM convert to volume license
     for /r "%ProgramFiles%\Microsoft Office" %%a in (
@@ -1513,10 +1544,11 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     ) do if "%%~a"=="%%~b" set _odt_pkg_%%a=odt
     goto :eof
 
+REM download and set in path
 :odt\ext\setup
+    for %%a in (odt.exe) do if "%%~$path:a"=="" set PATH=%temp%\%~1;%PATH%
     if exist %temp%\%~1\odt.exe exit /b 0
     2>nul mkdir %temp%\%~1
-    set PATH=%temp%\%~1;%PATH%
     call :dis\download https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_9119.3601.exe %temp%\%~1\officedeploymenttool16.exe || exit /b 1
     %temp%\%~1\officedeploymenttool16.exe /extract:%temp%\%~1 /quiet
     rename %temp%\%~1\setup.exe odt.exe
@@ -1576,7 +1608,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 ::odt:
 ::odt:        <^!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
 ::odt:        <Product ID="ProfessionalRetail">
-::odt:            <Language ID="zh-cn" />
+::odt:            <Language ID="!_odt_lang!" />
 ::!_odt_pkg_access!:            <ExcludeApp ID="Access" />
 ::!_odt_pkg_excel!:            <ExcludeApp ID="Excel" />
 ::!_odt_pkg_onenote!:            <ExcludeApp ID="OneNote" />
@@ -1587,11 +1619,11 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 ::odt:        </Product>
 ::odt:
 ::!_odt_pkg_visio!:        <Product ID="VisioProRetail">
-::!_odt_pkg_visio!:            <Language ID="zh-cn" />
+::!_odt_pkg_visio!:            <Language ID="!_odt_lang!" />
 ::!_odt_pkg_visio!:        </Product>
 ::!_odt_pkg_visio!:
 ::!_odt_pkg_project!:        <Product ID="ProjectProRetail">
-::!_odt_pkg_project!:            <Language ID="zh-cn" />
+::!_odt_pkg_project!:            <Language ID="!_odt_lang!" />
 ::!_odt_pkg_project!:        </Product>
 ::!_odt_pkg_project!:
 ::odt:    </Add>
@@ -1734,6 +1766,415 @@ REM Show the subdocuments in the destination file by prefix \* @see lib.cmd *\
     ) do if "%%a"=="%~2" echo.%%b
 
     endlocal
+    goto :eof
+
+:lang\0436
+    set %~1=af-ZA
+    goto :eof
+:lang\041C
+    set %~1=sq-AL
+    goto :eof
+:lang\1401
+    set %~1=ar-DZ
+    goto :eof
+:lang\3C01
+    set %~1=ar-BH
+    goto :eof
+:lang\0C01
+    set %~1=ar-EG
+    goto :eof
+:lang\0801
+    set %~1=ar-IQ
+    goto :eof
+:lang\2C01
+    set %~1=ar-JO
+    goto :eof
+:lang\3401
+    set %~1=ar-KW
+    goto :eof
+:lang\3001
+    set %~1=ar-LB
+    goto :eof
+:lang\1001
+    set %~1=ar-LY
+    goto :eof
+:lang\1801
+    set %~1=ar-MA
+    goto :eof
+:lang\2001
+    set %~1=ar-OM
+    goto :eof
+:lang\4001
+    set %~1=ar-QA
+    goto :eof
+:lang\0401
+    set %~1=ar-SA
+    goto :eof
+:lang\2801
+    set %~1=ar-SY
+    goto :eof
+:lang\1C01
+    set %~1=ar-TN
+    goto :eof
+:lang\3801
+    set %~1=ar-AE
+    goto :eof
+:lang\2401
+    set %~1=ar-YE
+    goto :eof
+:lang\042B
+    set %~1=hy-AM
+    goto :eof
+:lang\082C
+    set %~1=Cy-az-AZ
+    goto :eof
+:lang\042C
+    set %~1=Lt-az-AZ
+    goto :eof
+:lang\042D
+    set %~1=eu-ES
+    goto :eof
+:lang\0423
+    set %~1=be-BY
+    goto :eof
+:lang\0402
+    set %~1=bg-BG
+    goto :eof
+:lang\0403
+    set %~1=ca-ES
+    goto :eof
+:lang\0804
+    set %~1=zh-CN
+    goto :eof
+:lang\0C04
+    set %~1=zh-HK
+    goto :eof
+:lang\1404
+    set %~1=zh-MO
+    goto :eof
+:lang\1004
+    set %~1=zh-SG
+    goto :eof
+:lang\0404
+    set %~1=zh-TW
+    goto :eof
+:lang\0004
+    set %~1=zh-CHS
+    goto :eof
+:lang\7C04
+    set %~1=zh-CHT
+    goto :eof
+:lang\041A
+    set %~1=hr-HR
+    goto :eof
+:lang\0405
+    set %~1=cs-CZ
+    goto :eof
+:lang\0406
+    set %~1=da-DK
+    goto :eof
+:lang\0465
+    set %~1=div-MV
+    goto :eof
+:lang\0813
+    set %~1=nl-BE
+    goto :eof
+:lang\0413
+    set %~1=nl-NL
+    goto :eof
+:lang\0C09
+    set %~1=en-AU
+    goto :eof
+:lang\2809
+    set %~1=en-BZ
+    goto :eof
+:lang\1009
+    set %~1=en-CA
+    goto :eof
+:lang\2409
+    set %~1=en-CB
+    goto :eof
+:lang\1809
+    set %~1=en-IE
+    goto :eof
+:lang\2009
+    set %~1=en-JM
+    goto :eof
+:lang\1409
+    set %~1=en-NZ
+    goto :eof
+:lang\3409
+    set %~1=en-PH
+    goto :eof
+:lang\1C09
+    set %~1=en-ZA
+    goto :eof
+:lang\2C09
+    set %~1=en-TT
+    goto :eof
+:lang\0809
+    set %~1=en-GB
+    goto :eof
+:lang\0409
+    set %~1=en-US
+    goto :eof
+:lang\3009
+    set %~1=en-ZW
+    goto :eof
+:lang\0425
+    set %~1=et-EE
+    goto :eof
+:lang\0438
+    set %~1=fo-FO
+    goto :eof
+:lang\0429
+    set %~1=fa-IR
+    goto :eof
+:lang\040B
+    set %~1=fi-FI
+    goto :eof
+:lang\080C
+    set %~1=fr-BE
+    goto :eof
+:lang\0C0C
+    set %~1=fr-CA
+    goto :eof
+:lang\040C
+    set %~1=fr-FR
+    goto :eof
+:lang\140C
+    set %~1=fr-LU
+    goto :eof
+:lang\180C
+    set %~1=fr-MC
+    goto :eof
+:lang\100C
+    set %~1=fr-CH
+    goto :eof
+:lang\0456
+    set %~1=gl-ES
+    goto :eof
+:lang\0437
+    set %~1=ka-GE
+    goto :eof
+:lang\0C07
+    set %~1=de-AT
+    goto :eof
+:lang\0407
+    set %~1=de-DE
+    goto :eof
+:lang\1407
+    set %~1=de-LI
+    goto :eof
+:lang\1007
+    set %~1=de-LU
+    goto :eof
+:lang\0807
+    set %~1=de-CH
+    goto :eof
+:lang\0408
+    set %~1=el-GR
+    goto :eof
+:lang\0447
+    set %~1=gu-IN
+    goto :eof
+:lang\040D
+    set %~1=he-IL
+    goto :eof
+:lang\0439
+    set %~1=hi-IN
+    goto :eof
+:lang\040E
+    set %~1=hu-HU
+    goto :eof
+:lang\040F
+    set %~1=is-IS
+    goto :eof
+:lang\0421
+    set %~1=id-ID
+    goto :eof
+:lang\0410
+    set %~1=it-IT
+    goto :eof
+:lang\0810
+    set %~1=it-CH
+    goto :eof
+:lang\0411
+    set %~1=ja-JP
+    goto :eof
+:lang\044B
+    set %~1=kn-IN
+    goto :eof
+:lang\043F
+    set %~1=kk-KZ
+    goto :eof
+:lang\0457
+    set %~1=kok-IN
+    goto :eof
+:lang\0412
+    set %~1=ko-KR
+    goto :eof
+:lang\0440
+    set %~1=ky-KZ
+    goto :eof
+:lang\0426
+    set %~1=lv-LV
+    goto :eof
+:lang\0427
+    set %~1=lt-LT
+    goto :eof
+:lang\042F
+    set %~1=mk-MK
+    goto :eof
+:lang\083E
+    set %~1=ms-BN
+    goto :eof
+:lang\043E
+    set %~1=ms-MY
+    goto :eof
+:lang\044E
+    set %~1=mr-IN
+    goto :eof
+:lang\0450
+    set %~1=mn-MN
+    goto :eof
+:lang\0414
+    set %~1=nb-NO
+    goto :eof
+:lang\0814
+    set %~1=nn-NO
+    goto :eof
+:lang\0415
+    set %~1=pl-PL
+    goto :eof
+:lang\0416
+    set %~1=pt-BR
+    goto :eof
+:lang\0816
+    set %~1=pt-PT
+    goto :eof
+:lang\0446
+    set %~1=pa-IN
+    goto :eof
+:lang\0418
+    set %~1=ro-RO
+    goto :eof
+:lang\0419
+    set %~1=ru-RU
+    goto :eof
+:lang\044F
+    set %~1=sa-IN
+    goto :eof
+:lang\0C1A
+    set %~1=Cy-sr-SP
+    goto :eof
+:lang\081A
+    set %~1=Lt-sr-SP
+    goto :eof
+:lang\041B
+    set %~1=sk-SK
+    goto :eof
+:lang\0424
+    set %~1=sl-SI
+    goto :eof
+:lang\2C0A
+    set %~1=es-AR
+    goto :eof
+:lang\400A
+    set %~1=es-BO
+    goto :eof
+:lang\340A
+    set %~1=es-CL
+    goto :eof
+:lang\240A
+    set %~1=es-CO
+    goto :eof
+:lang\140A
+    set %~1=es-CR
+    goto :eof
+:lang\1C0A
+    set %~1=es-DO
+    goto :eof
+:lang\300A
+    set %~1=es-EC
+    goto :eof
+:lang\440A
+    set %~1=es-SV
+    goto :eof
+:lang\100A
+    set %~1=es-GT
+    goto :eof
+:lang\480A
+    set %~1=es-HN
+    goto :eof
+:lang\080A
+    set %~1=es-MX
+    goto :eof
+:lang\4C0A
+    set %~1=es-NI
+    goto :eof
+:lang\180A
+    set %~1=es-PA
+    goto :eof
+:lang\3C0A
+    set %~1=es-PY
+    goto :eof
+:lang\280A
+    set %~1=es-PE
+    goto :eof
+:lang\500A
+    set %~1=es-PR
+    goto :eof
+:lang\0C0A
+    set %~1=es-ES
+    goto :eof
+:lang\380A
+    set %~1=es-UY
+    goto :eof
+:lang\200A
+    set %~1=es-VE
+    goto :eof
+:lang\0441
+    set %~1=sw-KE
+    goto :eof
+:lang\081D
+    set %~1=sv-FI
+    goto :eof
+:lang\041D
+    set %~1=sv-SE
+    goto :eof
+:lang\045A
+    set %~1=syr-SY
+    goto :eof
+:lang\0449
+    set %~1=ta-IN
+    goto :eof
+:lang\0444
+    set %~1=tt-RU
+    goto :eof
+:lang\044A
+    set %~1=te-IN
+    goto :eof
+:lang\041E
+    set %~1=th-TH
+    goto :eof
+:lang\041F
+    set %~1=tr-TR
+    goto :eof
+:lang\0422
+    set %~1=uk-UA
+    goto :eof
+:lang\0420
+    set %~1=ur-PK
+    goto :eof
+:lang\0843
+    set %~1=Cy-uz-UZ
+    goto :eof
+:lang\0443
+    set %~1=Lt-uz-UZ
+    goto :eof
+:lang\042A
+    set %~1=vi-VN
     goto :eof
 
 REM Test string if Num \* @see lib.cmd *\
