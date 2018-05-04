@@ -1502,6 +1502,12 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     odt.exe /configure %temp%\odt_install.xml || exit /b 6
     erase %temp%\odt_install.xml
 
+    call :this\oset\--vergeq 10.0 && (
+        title compression
+        >&3 echo compress '%ProgramFiles%\Microsoft Office'
+        >nul compact.exe /c /exe /a /i /q /s:"%ProgramFiles%\Microsoft Office"
+    )
+
     REM get ospp path
     for /r "%ProgramFiles%\Microsoft Office" %%a in (
         ospp.vb?
@@ -1513,18 +1519,11 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
         ProPlus*KMS*.xrm-ms
         ProjectPro*kms*.xrm-ms
         VisioPro*KMS*.xrm-ms
-    ) do >nul cscript.exe //nologo %windir%\System32\slmgr.vbs /ilc "%%~a"&& call :odt\inslic "%%~a" || exit /b 5
+    ) do >&3 set /p=.<nul& >nul cscript.exe //nologo %windir%\System32\slmgr.vbs /ilc "%%~a"&& >nul cscript.exe //nologo "%_ospp%" /inslic:"%%~a" || exit /b 5
+
+    >&3 echo.
     >&3 echo install complete.
     goto :eof
-
-:odt\inslic
-    for /f "usebackq tokens=1-3*" %%a in (
-        `cscript.exe //nologo "%_ospp%" /inslic:"%~1"`
-    ) do (
-        if /i "%%a%%b%%c"=="InstallingOfficelicense:" >&3 echo install license: '%%~nxd'
-        if /i "%%d"=="successfully." exit /b 0
-    )
-    exit /b 1
 
 :odt\pkg\simple
     call :odt\install\var word excel onenote visio
