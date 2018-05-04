@@ -1510,7 +1510,9 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 
     >&3 echo convert to volume license
     for /r "%ProgramFiles%\Microsoft Office" %%a in (
-        *pro*vl_kms*.xrm-ms
+        ProPlus*KMS*.xrm-ms
+        ProjectPro*kms*.xrm-ms
+        VisioPro*KMS*.xrm-ms
     ) do >nul cscript.exe //nologo %windir%\System32\slmgr.vbs /ilc "%%~a"&& call :odt\inslic "%%~a" || exit /b 5
     >&3 echo install complete.
     goto :eof
