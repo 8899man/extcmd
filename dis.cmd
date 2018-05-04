@@ -1383,7 +1383,7 @@ REM for Office Deployment Tool only
     REM Active
     for /f "usebackq tokens=1* delims==" %%a in (
         `set _gvlk\ 2^>nul`
-    ) do echo.&& for %%c in (
+    ) do echo.& echo =======================================& for %%c in (
         "/inpkey:%%~na"
         "/sethst:%_host%"
         /act ::?"active"
