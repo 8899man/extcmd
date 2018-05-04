@@ -577,12 +577,14 @@ REM from Window 10 aik, will download oscdimg.exe at script path
     ) else call :this\getCab %%~na 0/A/A/0AA382BA-48B4-40F6-8DD0-BEBB48B6AC18/adk 5d984200acbde182fd99cbfbe9bad133 fil720cc132fbb53f3bed2e525eb77bdbc1
     exit /b 0
 
-REM for :init\?
+REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
 :this\getCab [file_name] [uri_sub] [cab] [file]
-    call :dis\download http://download.microsoft.com/download/%~2/Installers/%~3.cab %temp%\%~1.cab
-    expand.exe %temp%\%~1.cab -f:%~4 %temp%
-    erase %temp%\%~1.cab
-    move %temp%\%~4 %~dp0%~1.exe
+    2>nul mkdir %temp%\16ecfd64-586e-c6c1-ab21-2762c2c38a90
+    call :dis\download http://download.microsoft.com/download/%~2/Installers/%~3.cab %temp%\16ecfd64-586e-c6c1-ab21-2762c2c38a90\%~1.cab
+    expand.exe %temp%\16ecfd64-586e-c6c1-ab21-2762c2c38a90\%~1.cab -f:%~4 %temp%\16ecfd64-586e-c6c1-ab21-2762c2c38a90
+    erase %temp%\16ecfd64-586e-c6c1-ab21-2762c2c38a90\%~1.cab
+    rename %temp%\16ecfd64-586e-c6c1-ab21-2762c2c38a90\%~4 %~1.exe
+    for %%a in (%~1.exe) do if "%%~$path:a"=="" set PATH=%PATH%;%temp%\16ecfd64-586e-c6c1-ab21-2762c2c38a90
     exit /b 0
 
 ::: "Change file/directory owner !username!" "" "usage: %~n0 own [path]"
@@ -1478,8 +1480,8 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     call :odt\pkg\full
     >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt 1400
 
-    title download...
-    echo download...
+    title setup...
+    echo setup...
     odt.exe /download %temp%\odt_download.xml || exit /b 6
     erase %temp%\odt_download.xml
 
