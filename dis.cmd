@@ -1383,7 +1383,7 @@ REM for Office Deployment Tool only
     REM Active
     for /f "usebackq tokens=1* delims==" %%a in (
         `set _gvlk\ 2^>nul`
-    ) do for %%c in (
+    ) do echo.&& for %%c in (
         "/inpkey:%%~na"
         "/sethst:%_host%"
         /act ::?"active"
@@ -1450,7 +1450,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     ) do if /i "%%~a"=="InstallPath" if exist "%%~c" set "%~1=%%~c"&& exit /b 0
     exit /b 1
 
-::: "Office Deployment Tool" "" "usage: %~n0 odt [option]" "    --deploy,  -d  [[path]]              Deployment Office Deployment Tool data" "    --install, -i  [[path]] [[names]]    Install office by names, default simple" "" "      names:" "          simple full" "          word excel powerpoint" "          access onenote outlook" "          project visio publisher" "" "      simple:" "          word excel onenote visio" "" "      full:" "          word excel powerpoint onenote project visio"
+::: "Office Deployment Tool" "" "usage: %~n0 odt [option]" "    --deploy,  -d  [[path]]              Deployment Office Deployment Tool data" "    --install, -i  [[path]] [[names]]    Install office by names, default: 'simple'" "" "      names:" "          simple full" "          word excel powerpoint" "          access onenote outlook" "          project visio publisher" "" "      simple:" "          word excel onenote visio" "" "      full:" "          word excel powerpoint onenote project visio"
 :::: "invalid option" "target not found" "init fail" "must set office product ids" "install error" "setup error" "source not found"
 :dis\odt
     if "%*"=="" call :this\annotation %0 & goto :eof
@@ -1475,11 +1475,10 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     3>nul call :odt\pkg\full
     >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt 1400
 
-    title Deployed to %_odt_source_path%
-    >&3 echo Deployed to %_odt_source_path%
+    title Deployed to '%_odt_source_path%'
+    >&3 echo Deployed to '%_odt_source_path%'
     odt.exe /download %temp%\odt_download.xml || exit /b 6
     erase %temp%\odt_download.xml
-
     goto :eof
 
 :this\odt\--install
@@ -1511,11 +1510,19 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 
     >&3 echo convert to volume license
     for /r "%ProgramFiles%\Microsoft Office" %%a in (
-        *kms*.xrm-ms
-    ) do >nul cscript.exe //nologo %windir%\System32\slmgr.vbs /ilc "%%~a"&& cscript.exe //nologo "%_ospp%" /inslic:"%%~a" || exit /b 5
-
+        *pro*vl_kms*.xrm-ms
+    ) do >nul cscript.exe //nologo %windir%\System32\slmgr.vbs /ilc "%%~a"&& call :odt\inslic "%%~a" || exit /b 5
     >&3 echo install complete.
     goto :eof
+
+:odt\inslic
+    for /f "usebackq tokens=1-3*" %%a in (
+        `cscript.exe //nologo "%_ospp%" /inslic:"%~1"`
+    ) do (
+        if /i "%%a%%b%%c"=="InstallingOfficelicense:" >&3 echo install license: '%%~nxd'
+        if /i "%%d"=="successfully." exit /b 0
+    )
+    exit /b 1
 
 :odt\pkg\simple
     call :odt\install\var word excel onenote visio
@@ -1526,7 +1533,9 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     goto :eof
 
 :odt\install\var
-    >&3 echo.[%*]
+    >&3 set /p=will install: <nul
+    for %%a in (%*) do >&3 set /p='%%a' <nul
+    echo.
 
     REM ExcludeApp
     for %%a in (
