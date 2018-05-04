@@ -1142,7 +1142,7 @@ REM for wim
         if "%%~a%%~d"=="StatusRemount" if defined _m dism.exe /Remount-Wim /MountDir:"!_m!" %scratch_dir% || exit /b 6
     )
     endlocal
-    echo.complate.
+    echo.complete.
     exit /b 0
 
 ::: ""
@@ -1365,13 +1365,11 @@ REM OS
 REM for Office Deployment Tool only
 :this\kms\--odt
 :this\kms\-o
-
     call :office\ClickToRun\InstallPath _officeInstallPath || exit /b 5
 
     for /r "%_officeInstallPath%" %%a in (
         ospp.vb?
     ) do set "_ospp=%%a"
-
     if not exist "%_ospp%" exit /b 2
 
     REM set kms key
@@ -1380,8 +1378,7 @@ REM for Office Deployment Tool only
     ) do for /f "usebackq" %%b in (
         `reg.exe query HKLM\Software\Microsoft\Office\%%~nxa\ClickToRunStore\Applications 2^>nul`
     ) do if "%%~nb"=="%%~b" if /i "(Default)" neq "%%~b" 2>nul call :kms\gvlk\%%~na_%%b
-
-    2>nul set _gvlk\ || exit /b 6
+    >nul set _gvlk\ || exit /b 6
 
     REM Active
     for /f "usebackq tokens=1* delims==" %%a in (
@@ -1448,18 +1445,16 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 :office\ClickToRun\InstallPath
     if "%~1"=="" exit /b 1
     REM reg.exe query HKLM\Software\Microsoft\Office /f InstallRoot /s | reg.exe query "%%a" /v Path 2^>nul`
-    for /f "usebackq tokens=1,3" %%a in (
+    for /f "usebackq tokens=1,2*" %%a in (
         `reg.exe query HKLM\Software\Microsoft\Office\ClickToRun /v InstallPath 2^>nul`
-    ) do if /i "%%~a"=="InstallPath" if exist "%%~b" set "%~1=%%~b"& exit /b 0
+    ) do if /i "%%~a"=="InstallPath" if exist "%%~c" set "%~1=%%~c"&& exit /b 0
     exit /b 1
 
-::: "Office Deployment Tool" "" "usage: %~n0 odt [option]" "    --init,    -i  [[path]]              Download Office Deployment Tool data" "    --install, -a  [[path]] [[names]]    install office by names" "" "      names:" "          simple full" "          word excel powerpoint" "          access onenote outlook" "          project visio publisher" "" "      simple:" "          word excel onenote visio" "" "      full:" "          word excel powerpoint onenote project visio"
+::: "Office Deployment Tool" "" "usage: %~n0 odt [option]" "    --deploy,  -d  [[path]]              Deployment Office Deployment Tool data" "    --install, -i  [[path]] [[names]]    Install office by names, default simple" "" "      names:" "          simple full" "          word excel powerpoint" "          access onenote outlook" "          project visio publisher" "" "      simple:" "          word excel onenote visio" "" "      full:" "          word excel powerpoint onenote project visio"
 :::: "invalid option" "target not found" "init fail" "must set office product ids" "install error" "setup error" "source not found"
 :dis\odt
     if "%*"=="" call :this\annotation %0 & goto :eof
-
     setlocal
-
     set "_odt_source_path=%cd%"
     if "%~d0"=="\\" set "_odt_source_path=%~dp0"
     if "%~2" neq "" if "%~n2" neq "%~2" (
@@ -1475,20 +1470,20 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     endlocal
     goto :eof
 
-:this\odt\--init
-:this\odt\-i
-    call :odt\pkg\full
+:this\odt\--deploy
+:this\odt\-d
+    3>nul call :odt\pkg\full
     >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt 1400
 
-    title setup...
-    echo setup...
+    title Deployed to %_odt_source_path%
+    >&3 echo Deployed to %_odt_source_path%
     odt.exe /download %temp%\odt_download.xml || exit /b 6
     erase %temp%\odt_download.xml
 
     goto :eof
 
 :this\odt\--install
-:this\odt\-a
+:this\odt\-i
     if not exist "%_odt_source_path%" exit /b 7
 
     if exist "%~1" shift /1
@@ -1497,53 +1492,60 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
             call :odt\pkg\simple
         ) else if /i "%~1"=="full" (
             call :odt\pkg\full
-        ) else call :odt\init\var %*
+        ) else call :odt\install\var %*
     ) else call :odt\pkg\simple
 
-    2>nul set _odt_pkg_ || exit /b 4
+    >nul set _odt_pkg_ || exit /b 4
     >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt 1400
 
-    title install...
-    echo install...
+    title Installing...
+    >&3 echo Installing...
     odt.exe /configure %temp%\odt_install.xml || exit /b 6
-    REM erase %temp%\odt_install.xml
+    erase %temp%\odt_install.xml
 
     REM get ospp path
     for /r "%ProgramFiles%\Microsoft Office" %%a in (
         ospp.vb?
     ) do set "_ospp=%%a"
-
     if not defined _ospp exit /b 5
 
-    REM convert to volume license
+    >&3 echo convert to volume license
     for /r "%ProgramFiles%\Microsoft Office" %%a in (
         *kms*.xrm-ms
-    ) do cscript.exe //nologo %windir%\System32\slmgr.vbs /ilc "%%~a"&& cscript.exe //nologo "%_ospp%" /inslic:"%%~a"
+    ) do >nul cscript.exe //nologo %windir%\System32\slmgr.vbs /ilc "%%~a"&& cscript.exe //nologo "%_ospp%" /inslic:"%%~a" || exit /b 5
 
+    >&3 echo install complete.
     goto :eof
 
 :odt\pkg\simple
-    call :odt\init\var word excel onenote visio
+    call :odt\install\var word excel onenote visio
     goto :eof
 
 :odt\pkg\full
-    call :odt\init\var word excel powerpoint onenote project visio
+    call :odt\install\var word excel powerpoint onenote project visio
     goto :eof
 
-:odt\init\var
-    REM clear variable
+:odt\install\var
+    >&3 echo.[%*]
+
+    REM ExcludeApp
     for %%a in (
         access excel onenote outlook powerpoint publisher word
-        project
-        visio
-    ) do set _odt_pkg_%%a=
-
-    REM init variable
-    for %%a in (%*) do for %%b in (
+    ) do set _odt_pkg_%%a=odt
+    for %%a in (
         access excel onenote outlook powerpoint publisher word
-        project
-        visio
+    ) do for %%b in (
+        %*
+    ) do if "%%~a"=="%%~b" set _odt_pkg_%%a=
+
+    REM Product
+    for %%a in (
+        project visio
+    ) do set _odt_pkg_%%a=
+    for %%a in (%*) do for %%b in (
+        project visio
     ) do if "%%~a"=="%%~b" set _odt_pkg_%%a=odt
+
     goto :eof
 
 REM download and set in path
@@ -1633,8 +1635,8 @@ REM download and set in path
 ::odt:
 ::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
 ::!_odt_update!:
-::odt:    <Display Level="Full" AcceptEULA="TRUE" />
-::odt:    <^!--  <Display Level="None" AcceptEULA="TRUE" />  -->
+::odt:    <Display Level="None" AcceptEULA="TRUE" />
+::odt:    <^!--  <Display Level="Full" AcceptEULA="TRUE" />  -->
 ::odt:
 ::odt:    <Logging Path="%temp%" />
 ::odt:    <^!--  <Property Name="AUTOACTIVATE" Value="1" />  -->
