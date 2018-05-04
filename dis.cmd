@@ -215,7 +215,7 @@ REM https://docs.microsoft.com/en-us/previous-versions/commerce-server/ee825488(
         for /f "usebackq tokens=1,4 delims=x " %%a in (
             `reg.exe query HKLM\load-point\select`
         ) do if "%%b"=="Default" call :lang\current HKLM\load-point\ControlSet00%%b _lang
-        reg.exe load HKLM\load-point
+        reg.exe unload HKLM\load-point
     ) else call :lang\current HKLM\SYSTEM\CurrentControlSet _lang
     if "%~1"=="" echo.%_lang%
     endlocal & if "%~1" neq "" set %~1=%_lang%
@@ -1546,7 +1546,8 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 
 REM download and set in path
 :odt\ext\setup
-    for %%a in (odt.exe) do if "%%~$path:a"=="" set PATH=%temp%\%~1;%PATH%
+    for %%a in (odt.exe) do if "%%~$path:a" neq "" exit /b 0
+    set PATH=%temp%\%~1;%PATH%
     if exist %temp%\%~1\odt.exe exit /b 0
     2>nul mkdir %temp%\%~1
     call :dis\download https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_9119.3601.exe %temp%\%~1\officedeploymenttool16.exe || exit /b 1
