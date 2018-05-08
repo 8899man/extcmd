@@ -1518,7 +1518,8 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
         ) else call :odt\install\var %*
     ) else call :odt\pkg\base
 
-    >nul set _odt_pkg_ || exit /b 4
+    if errorlevel 4 exit /b 4
+
     >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt 1400
 
     title Installing...
@@ -1572,34 +1573,39 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     goto :eof
 
 :odt\install\var
-    >&3 set /p=will install: <nul
+    REM clear variable
+    for /f "usebackq delims==" %%a in (
+        `set _odt_pro_ 2^>nul`
+    ) do set %%a=
 
     REM ExcludeApp
     for %%a in (
         access excel onenote outlook powerpoint publisher word
-    ) do set _odt_pkg_%%a=odt
+    ) do set _odt_pro_%%a=odt
     for %%a in (
         access excel onenote outlook powerpoint publisher word
     ) do for %%b in (
         %*
-    ) do if "%%~a"=="%%~b" set _odt_pkg_%%a=
+    ) do if "%%~a"=="%%~b" set _odt_pro_%%a=
+
+    REM must install some thing
+    >nul 2>&1 set _odt_pro_ || exit /b 5
+
+    >&3 set /p=will install (overwrite): <nul
     for %%a in (
         access excel onenote outlook powerpoint publisher word
-    ) do if not defined _odt_pkg_%%a >&3 set /p='%%a' <nul
+    ) do if not defined _odt_pro_%%a >&3 set /p='%%a' <nul
 
     REM Product
-    for %%a in (
-        project visio
-    ) do set _odt_pkg_%%a=
     for %%a in (%*) do for %%b in (
         project visio
-    ) do if "%%~a"=="%%~b" set _odt_pkg_%%a=odt
+    ) do if "%%~a"=="%%~b" set _odt_pro_%%a=odt
     for %%a in (
         project visio
-    ) do if defined _odt_pkg_%%a >&3 set /p='%%a' <nul
+    ) do if defined _odt_pro_%%a >&3 set /p='%%a' <nul
 
     echo.
-    goto :eof
+    exit /b 0
 
 REM download and set in path
 :odt\ext\setup
@@ -1667,23 +1673,23 @@ REM download and set in path
 ::odt:        <^!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
 ::odt:        <Product ID="ProfessionalRetail">
 ::odt:            <Language ID="!_odt_lang!" />
-::!_odt_pkg_access!:            <ExcludeApp ID="Access" />
-::!_odt_pkg_excel!:            <ExcludeApp ID="Excel" />
-::!_odt_pkg_onenote!:            <ExcludeApp ID="OneNote" />
-::!_odt_pkg_outlook!:            <ExcludeApp ID="Outlook" />
-::!_odt_pkg_powerpoint!:            <ExcludeApp ID="PowerPoint" />
-::!_odt_pkg_publisher!:            <ExcludeApp ID="Publisher" />
-::!_odt_pkg_word!:            <ExcludeApp ID="Word" />
+::!_odt_pro_access!:            <ExcludeApp ID="Access" />
+::!_odt_pro_excel!:            <ExcludeApp ID="Excel" />
+::!_odt_pro_onenote!:            <ExcludeApp ID="OneNote" />
+::!_odt_pro_outlook!:            <ExcludeApp ID="Outlook" />
+::!_odt_pro_powerpoint!:            <ExcludeApp ID="PowerPoint" />
+::!_odt_pro_publisher!:            <ExcludeApp ID="Publisher" />
+::!_odt_pro_word!:            <ExcludeApp ID="Word" />
 ::odt:        </Product>
 ::odt:
-::!_odt_pkg_visio!:        <Product ID="VisioProRetail">
-::!_odt_pkg_visio!:            <Language ID="!_odt_lang!" />
-::!_odt_pkg_visio!:        </Product>
-::!_odt_pkg_visio!:
-::!_odt_pkg_project!:        <Product ID="ProjectProRetail">
-::!_odt_pkg_project!:            <Language ID="!_odt_lang!" />
-::!_odt_pkg_project!:        </Product>
-::!_odt_pkg_project!:
+::!_odt_pro_visio!:        <Product ID="VisioProRetail">
+::!_odt_pro_visio!:            <Language ID="!_odt_lang!" />
+::!_odt_pro_visio!:        </Product>
+::!_odt_pro_visio!:
+::!_odt_pro_project!:        <Product ID="ProjectProRetail">
+::!_odt_pro_project!:            <Language ID="!_odt_lang!" />
+::!_odt_pro_project!:        </Product>
+::!_odt_pro_project!:
 ::odt:    </Add>
 ::odt:
 ::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
