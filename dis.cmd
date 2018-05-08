@@ -1474,7 +1474,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     ) do if /i "%%~a"=="InstallPath" if exist "%%~c" set "%~1=%%~c"&& exit /b 0
     exit /b 1
 
-::: "Office Deployment Tool" "" "usage: %~n0 odt [option]" "    --deploy,  -d  [[path]]              Deployment Office Deployment Tool data" "    --install, -i  [[path]] [[names]]    Install office by names, default: 'base'" "" "      names:" "          base full" "          word excel powerpoint" "          access onenote outlook" "          project visio publisher" "" "      base:" "          word excel onenote visio" "" "      full:" "          word excel powerpoint onenote project visio"
+::: "Office Deployment Tool" "" "usage: %~n0 odt [option]" "    --deploy,  -d  [[path]]              Deployment Office Deployment Tool data" "    --install, -i  [[path]] [[names]]    Install office by names (overwrite), default: 'base'." "" "      names:" "          base full" "          word excel powerpoint" "          access onenote outlook" "          project visio publisher" "" "      base:" "          word excel visio" "" "      full:" "          word excel powerpoint project visio"
 :::: "invalid option" "target not found" "init fail" "must set office product ids" "install error" "setup error" "source not found"
 :dis\odt
     if "%*"=="" call :this\annotation %0 & goto :eof
