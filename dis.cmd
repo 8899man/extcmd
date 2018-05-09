@@ -624,14 +624,14 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
 ::::::::::::::::
 
 ::: "Download something" "" "usage: %~n0 download [url] [output]"
-:::: "url is empty" "output path is empty" "powershell version is too old"
+:::: "url is empty" "output path is empty" "powershell version is too old" "download error"
 :dis\download
     if "%~2"=="" exit /b 2
     REM windows 10 1803+
     for %%a in (curl.exe) do if "%%~$path:a" neq "" curl.exe -L --retry 10 -o %2 %1 && exit /b 0
     call :this\psv
     if errorlevel 3 PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "Invoke-WebRequest -uri %1 -OutFile %2 -UseBasicParsing" && exit /b 0
-    call :lib\vbs get %1 %2
+    call :lib\vbs get %1 %2 || exit /b 4
     exit /b 0
 
 ::: "Boot tools" "" "usage: %~n0 boot [option] [args...]" "    --winpe-file, -pf  [target_letter]   Copy Window PE boot file from CDROM"
@@ -1295,6 +1295,7 @@ REM from Window 10 wdk, will download devcon.exe at script path
 ::: "KMS Client" "" "usage: %~n0 kms [option] [args...]" "" "    --os,  -s [[host]]     Active OS" "    --odt, -o [[host]]     Active office, which install by Office Deployment Tool" "    e.g." "        %~n0 kms --os 192.168.1.1"
 :::: "invalid option" "ospp.vbs not found" "Need ip or host" "OS not support" "No office found" "office not support"
 :dis\kms
+    title kms
     if "%*"=="" call :this\annotation %0 & goto :eof
     setlocal
     if "%~2"=="" (
@@ -1477,6 +1478,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 ::: "Office Deployment Tool" "" "usage: %~n0 odt [option]" "    --deploy,  -d  [[path]]              Deployment Office Deployment Tool data" "    --install, -i  [[path]] [[names]]    Install office by names (overwrite), default: 'base'." "" "      names:" "          base full" "          word excel powerpoint" "          access onenote outlook" "          project visio publisher" "" "      base:" "          word excel visio" "" "      full:" "          word excel powerpoint project visio"
 :::: "invalid option" "target not found" "init fail" "must set office product ids" "install error" "setup error" "source not found"
 :dis\odt
+    title odt
     if "%*"=="" call :this\annotation %0 & goto :eof
     setlocal
     set "_odt_source_path=%cd%"
@@ -1540,8 +1542,10 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
         License*
     ) do call :odt\install\clic "%%a" || exit /b 5
     >&3 echo install complete.
+    >&3 echo.
 
     REM active
+    >&3 echo try to activate
     call :dis\kms --odt
     exit /b 0
 
