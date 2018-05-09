@@ -1538,9 +1538,18 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 :odt\install\skip_compress
 
     >&3 echo convert to volume license
+    setlocal
+    REM get ospp path
+    for /r "%ProgramFiles%\Microsoft Office" %%a in (
+        ospp.vb?
+    ) do set "_ospp=%%a"
+    if not defined _ospp exit /b 5
+
     for /r "%ProgramFiles%\Microsoft Office" /d %%a in (
         License*
     ) do call :odt\install\clic "%%a" || exit /b 5
+    endlocal
+    >&3 echo.
     >&3 echo install complete.
     >&3 echo.
 
@@ -1551,13 +1560,6 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 
 REM convert to volume license
 :odt\install\clic
-    setlocal
-    REM get ospp path
-    for /r "%ProgramFiles%\Microsoft Office" %%a in (
-        ospp.vb?
-    ) do set "_ospp=%%a"
-    if not defined _ospp exit /b 1
-
     for /r %1 %%a in (
         ProPlusVL_KMS*.xrm-ms
         ProjectProVL_KMS*.xrm-ms
@@ -1566,8 +1568,6 @@ REM convert to volume license
         pkeyconfig-office.xrm?ms
     ) do >&3 set /p=.<nul& >nul cscript.exe //nologo "%_ospp%" /inslic:"%%~a" || exit /b 1
     REM >nul cscript.exe //nologo %windir%\System32\slmgr.vbs /ilc "%%~a"
-    >&3 echo.
-    endlocal
     exit /b 0
 
 :odt\pro\base
