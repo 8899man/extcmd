@@ -469,7 +469,7 @@ REM mini uuid creater
     setlocal
     set "_output=.\%~n1"
     if "%~2" neq "" set "_output=%~2"
-    call :lib\vbs unzip "%~f1" "%_output%"
+    call :this\vbs unzip "%~f1" "%_output%"
     endlocal
     exit /b 0
 
@@ -519,7 +519,7 @@ REM "Uncompress msi file"
     setlocal
     set "_output=.\%~n1"
     if "%~2" neq "" set "_output=%~2"
-    if /i "%~x1" neq ".zip" call :lib\vbs zip "%~f1" "%_output%.zip"
+    if /i "%~x1" neq ".zip" call :this\vbs zip "%~f1" "%_output%.zip"
     endlocal
     REM >.\zip.ZFSendToTarget (
     REM     echo [Shell]
@@ -631,7 +631,7 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
     for %%a in (curl.exe) do if "%%~$path:a" neq "" curl.exe -L --retry 10 -o %2 %1 && exit /b 0
     call :this\psv
     if errorlevel 3 PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "Invoke-WebRequest -uri %1 -OutFile %2 -UseBasicParsing" && exit /b 0
-    call :lib\vbs get %1 %2 || exit /b 4
+    call :this\vbs get %1 %2 || exit /b 4
     exit /b 0
 
 ::: "Boot tools" "" "usage: %~n0 boot [option] [args...]" "    --winpe-file, -pf  [target_letter]   Copy Window PE boot file from CDROM"
@@ -1820,13 +1820,13 @@ REM     exit /b 0
 ::     Base     ::
   :: :: :: :: ::
 
-::: "Run VBScript library from lib.vbs" "" "usage: %~n0 vbs [[command...]]"
-:::: "lib.vbs not found"
-:lib\vbs
+REM Run VBScript library from lib.vbs \* @see lib.cmd *\
+:this\vbs
     REM cscript.exe //nologo //e:vbscript.encode %*
     for %%a in (lib.vbs) do if "%%~$path:a"=="" (
+        >&3 echo lib.vbs not found
         exit /b 1
-    ) else cscript.exe //nologo "%%~$path:a" %* 2>&3 || exit /b 10
+    ) else cscript.exe //nologo "%%~$path:a" %* 2>&3
     goto :eof
 
 REM Show the subdocuments in the destination file by prefix \* @see lib.cmd *\
