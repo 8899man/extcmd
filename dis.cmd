@@ -1413,7 +1413,7 @@ REM for Office Deployment Tool only
         /act ::?"active"
         /dstatus ::?"display expires time"
         /remhst ::?"rm key"
-    ) do cscript.exe //nologo //e:vbscript "%_ospp%" %%~c
+    ) do echo.& cscript.exe //nologo //e:vbscript "%_ospp%" %%~c
 
     exit /b 0
 
@@ -1496,7 +1496,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 
 :this\odt\--deploy
 :this\odt\-d
-    3>nul call :odt\pkg\full
+    3>nul call :odt\pro\full
     >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt 1400
 
     title Deployed to '%_odt_source_path%'
@@ -1512,11 +1512,11 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
     if exist "%~1" shift /1
     if "%~1" neq "" (
         if /i "%~1"=="base" (
-            call :odt\pkg\%*
+            call :odt\pro\%*
         ) else if /i "%~1"=="full" (
-            call :odt\pkg\%*
+            call :odt\pro\%*
         ) else call :odt\install\var %*
-    ) else call :odt\pkg\base
+    ) else call :odt\pro\base
 
     if errorlevel 4 exit /b 4
 
@@ -1535,25 +1535,25 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 
 :odt\install\skip_compress
 
+    >&3 echo convert to volume license
+    for /r "%ProgramFiles%\Microsoft Office" /d %%a in (
+        License*
+    ) do call :odt\install\clic "%%a" || exit /b 5
+    >&3 echo install complete.
+
+    REM active
+    call :dis\kms --odt
+    exit /b 0
+
+REM convert to volume license
+:odt\install\clic
+    setlocal
     REM get ospp path
     for /r "%ProgramFiles%\Microsoft Office" %%a in (
         ospp.vb?
     ) do set "_ospp=%%a"
-    if not defined _ospp exit /b 5
+    if not defined _ospp exit /b 1
 
-    >&3 echo convert to volume license
-
-    for /r "%ProgramFiles%\Microsoft Office" /d %%a in (
-        License*
-    ) do call :odt\install\lic "%%a" || exit /b 5
-    >&3 echo.
-    >&3 echo install complete.
-
-    REM active
-    2>nul call :dis\kms --odt
-    exit /b 0
-
-:odt\install\lic
     for /r %1 %%a in (
         ProPlusVL_KMS*.xrm-ms
         ProjectProVL_KMS*.xrm-ms
@@ -1562,13 +1562,15 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
         pkeyconfig-office.xrm?ms
     ) do >&3 set /p=.<nul& >nul cscript.exe //nologo "%_ospp%" /inslic:"%%~a" || exit /b 1
     REM >nul cscript.exe //nologo %windir%\System32\slmgr.vbs /ilc "%%~a"
+    >&3 echo.
+    endlocal
     exit /b 0
 
-:odt\pkg\base
+:odt\pro\base
     call :odt\install\var word excel visio %*
     goto :eof
 
-:odt\pkg\full
+:odt\pro\full
     call :odt\install\var word excel powerpoint project visio %*
     goto :eof
 
