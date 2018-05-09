@@ -80,7 +80,7 @@ exit /b 0
 REM  "    --search,  -s  [file_name]         Search file in $env:path, and print path" "                                       support wildcards: * ?" "                                  e.g. " "                                       %~n0 path --search *ja?a" "    --which,   -w  [file_full_name]    Locate a program file in the user's path"
 :::: "invalid option" "first args is empty" "variable name is empty" "variable name not defined"
 :lib\path
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\path\%*
     goto :eof
 
@@ -163,7 +163,7 @@ REM for :this\path\--trim, delete path if not exist
 ::: "Variable tool" "" "usage: %~n0 var [option] [...]" "" "    --unset, -u   [[var_name]]      Unset variable, where variable name left contains" "    --env,   -e   [key] [value]     Set environment variable" "    --errlv, -el  [num]             Set errorlevel variable"
 :::: "invalid option" "key is empty" "value is empty" "The parameter is empty"
 :lib\var
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\var\%*
     goto :eof
 
@@ -193,7 +193,7 @@ REM for :this\path\--trim, delete path if not exist
 ::: "Run by ..." "" "usage: %~n0 run [option]" "" "    --admin,  -a  [...]    Run As Administrator" "    --vbhide, -q  [...]    Run some command at background"
 :::: "invalid option" "The first parameter is empty"
 :lib\run
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\run\%*
     goto :eof
 
@@ -269,7 +269,7 @@ REM for :this\path\--trim, delete path if not exist
 ::: "Process tools" ""  "usage: %~n0 ps [option] [...]" "" "    --kill, -k [process_name...]  kill process" "    --test, -t [exec_name]        Test exe if live"
 :::: "invalid option" "first parameter is empty"
 :lib\ps
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\ps\%*
     goto :eof
 
@@ -377,7 +377,7 @@ REM for :this\path\--trim, delete path if not exist
 ::: "Ipv4 tools" "" "usage: %~n0 ip [option]" "" "    --test, -t [str]      Test string if ipv4" "    --list, -l            Show this ipv4" "    --find, -f [MAC] ...  Search IPv4 by MAC or Host name"
 :::: "invalid option" "host name is empty" "args not mac addr"
 :lib\ip
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\ip\%* 2>nul
     goto :eof
 
@@ -531,7 +531,7 @@ REM Get router ip
 ::: "Create string" "" "usage: %~n0 str [option] ..." "" "    --now,  -n [var_name] [[head_str]] [[tail_str]]    Display Time at [YYYYMMDDhhmmss]" "    --uuid, -u [[var_name]]                            Get UUID string"
 :::: "invalid option" "variable name is empty"
 :lib\str
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\str\%*
     goto :eof
 
@@ -572,7 +572,7 @@ REM Get router ip
 ::: "Print text to standard output." "" "usage: %~n0 txt [option] [...]" "" "    --head,  -e  [-[count]]          Print the first some lines of FILE to standard output." "    --tail,  -t  [-[count]]          Print the last some lines of FILE to standard output." "    --skip,  -j  [source_file_path] [skip_line_num] [target_flie_path]" "                                     Print text skip some line" "" "    --subtxt, -o [source_path] [tag] [skip]" "                                     Show the subdocuments in the destination file by prefix" "                        subdocuments:" "                                     ::prefix: line 1" "                                     ::prefix: line 2" "                                     ::^^^!_var^^^!: line 3" "                                     ..." ""
 :::: "invalid option" "source file not found" "skip number error" "target file not found" "skip line is empty" "file not found" "powershell version is too old" "args error" "prefix is empty"
 :lib\txt
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\txt\%*
     goto :eof
 

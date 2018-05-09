@@ -68,7 +68,7 @@ exit /b 0
 ::: "Directory tools" "" "usage: %~n0 dir [option] [...]" "" "    --isdir,  -id  [path]       Test path is directory" "    --islink, -il  [file_path]  Test path is Symbolic Link" "    --trim,   -t   [letter:]    Trim SSD, HDD will return false" "    --isfree, -if  [dir_path]   Test directory is empty" "    --clean,  -c   [dir_path]   Delete empty directory"
 :::: "invalid option" "Not directory" "target not found" "target not a directory"
 :dis\dir
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\dir\%*
     goto :eof
 
@@ -142,7 +142,7 @@ REM for :this\dir\--clean
 ::: "Operating system settings" "" "usage: %~n0 oset [option] [...]" "" "    --vergeq,  -vg [version]                  Test this system version" "    --cleanup, -c  [[path]]                   Component Cleanup" "    --version, -v  [os_path] [[var_name]]     Get OS version" "    --bit,     -b  [os_path] [[var_name]]     Get OS bit" "    --install-lang,   -il  [os_path] [[var_name]]    Get OS install language" "    --current-lang,   -cl  [var_name] [[os_path]]    Get OS current language," "                                                     if not set path, will get online info" "    --feature-info,   -fi                            Get Feature list" "    --feature-enable, -fe  [name ...]                Enable Feature" "    --set-power,      -sp                            Set power config as server type"
 :::: "invalid option" "Parameter is empty or Not a float" "not a directory" "Not OS path or Low OS version" "parameter is empty" "System version is too old" "not operating system directory" "not support"
 :dis\oset
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\oset\%*
     goto :eof
 
@@ -313,7 +313,7 @@ REM for :this\oset\--current-lang
 ::: "Letter info" "" "usage: %~n0 letter [option] [...]" "" "    --free,   -u [[var_name]]           Get Unused Device Id" "    --change, -x [letter1:] [letter2:]  [DANGER^^^!] Change or exchange letters, need reboot system" "    --remove, -r [letter:]              [DANGER^^^!] Remove letter, need reboot system" "    --list,   -l [var_name] [[l/r/n]]   Get Device IDs" "    --tisl,   -- [var_name] [[l/r/n]]   Get Device IDs DESC" "                            no param view all" "                            l: Local Fixed Disk" "                            r: CD-ROM Disc" "                            n: Network Connection" "" "    --firstpath, -fp  [path_name] [[var_name]]" "                                        Get first path foreach Partiton" ""
 :::: "invalid option" "variable name is empty" "type command not support" "The first parameter is empty" "Target path not found" "target not a letter or not support" "reg error" "letter not found"
 :dis\letter
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\letter\%*
     goto :eof
 
@@ -510,7 +510,7 @@ REM "Uncompress msi file"
 ::: "Compresses the specified files." "" "usage: %~n0 pkg [option]" "" "    --zip, -z  [source_path] [[target_path]]  make zip" "    --cab, -c  [targe_path]                   make cab" "    --udf, -u  [dir_path]                     Create iso file from directory" "    --exe, -e  [source_path]                  Use compression optimized for executable files " "                                              which are read frequently and not modified."
 :::: "invalid option" "target not directory" "not support driver" "need etfsboot.com or efisys.bin"
 :dis\pkg
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\pkg\%*
     goto :eof
 
@@ -637,7 +637,7 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
 ::: "Boot tools" "" "usage: %~n0 boot [option] [args...]" "    --winpe-file, -pf  [target_letter]   Copy Window PE boot file from CDROM"
 :::: "invalid option" "target_letter not exist" "Window PE CDROM not found" "target not found"
 :dis\boot
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\boot\%*
     goto :eof
 
@@ -699,7 +699,7 @@ REM TODO
 ::: "Add or Remove Web Credential" "" "usage: %~n0 crede [option] [args...]" "" "    --add,    -a [user]@[ip or host] [[password]]" "    --remove, -r [ip or host]"
 :::: "invalid option" "parameter not enough" "Command error" "ho ip or host"
 :dis\crede
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\crede\%*
     goto :eof
 
@@ -736,7 +736,7 @@ REM TODO
 ::: "Mount / Umount samba" "" "usage: %~n0 smb [option] [args...]" "" "    --mount,     -m  [ip or hosts] [path...]   Mount samba" "    --umount,    -u  [ip or --all]             Umount samba" "    --umountall, -ua                           Umount all samba"
 :::: "invalid option" "parameter not enough" "Command error"
 :dis\smb
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\smb\%*
     goto :eof
 
@@ -760,7 +760,7 @@ REM TODO
 ::: "Mount / Umount NFS" "" "usage: %~n0 nfs [option] [args...]" "    --mount,  -m [ip]    Mount NFS" "    --umount, -u         Umount all NFS"
 :::: "invalid option" "parameter is empty" "{UNUSE}" "parameter not a ip" "can not connect remote host"
 :dis\nfs
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\nfs\%*
     exit /b 0
 
@@ -795,7 +795,7 @@ REM Enable ServicesForNFS
 ::: "Lock / Unlock partition with BitLocker" "" "usage: %~n0 block [option] [args...]" "" "    --lock,   -l   [[passwd]]" "    --unlock, -u   [[passwd]]"
 :::: "invalid option" "Partition not found"
 :dis\block
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     if not exist "%~1" exit /b 2
     call :this\bit\%*
     goto :eof
@@ -817,7 +817,7 @@ REM Enable ServicesForNFS
 ::: "Virtual Hard Disk manager" "" "usage: %~n0 vhd [option] [args...]" "" "    --new,    -n  [new_vhd_path] [size[GB]] [[mount letter or path]]    Creates a virtual disk file." "    --mount,  -m  [vhd_path] [[letter]]                Mount vhd file" "    --umount, -u  [vhd_path]                           Unmount vhd file" "    --expand, -e  [vhd_path] [GB_size]                 Expands the maximum size available on a virtual disk." "    --differ, -d  [new_vhd_path] [source_vhd_path]     Create differencing vhd file by an existing virtual disk file" "    --merge,  -me  [chile_vhd_path] [[merge_depth]]    Merges a child disk with its parents" "    --rec,    -r                                       Recovery child vhd if have parent" "e.g." "    %~n0 vhd -n E:\nano.vhdx 30 V:"
 :::: "invalid option" "file suffix not vhd/vhdx" "file not found" "no volume find" "vhd size is empty" "letter already use" "diskpart error:" "not a letter or path" "{UNUSE}" "size not num" "parent vhd not found" "new file allready exist"
 :dis\vhd
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\vhd\%*
     goto :eof
 
@@ -984,7 +984,7 @@ REM Enable ServicesForNFS
 ::: "Wim manager" "" "usage: %~n0 wim [option] [args ...]" "" "    --info,   -i [image_path]                                Displays information about images in a WIM file." "    --new,    -n [[compress level]] [target_dir_path] [[image_name]]            Capture file/directory to wim" "    --apply,  -a [wim_path] [[output_path] [image_index]]    Apply WIM file" "    --mount,  -m [wim_path] [mount_path] [[image_index]]     Mount wim" "    --umount, -u [mount_path]                                Unmount wim" "    --commit, -c [mount_path]                                Unmount wim with commit" "    --export, -e [source_wim_path] [target_wim_path] [image_index] [[compress_level]]    Export wim image" "                                   compress level: 0:none, 1:WIMBoot, 2:fast, 3:max, 4:recovery(esd)" "" "    --umountall, -ua                                         Unmount all wim" "    --rmountall, -ra                                         Recovers mount all orphaned wim"
 :::: "invalid option" "SCRATCH_DIR variable not set" "dism version is too old" "target not found" "need input image name" "dism error" "wim file not found" "not wim file" "output path allready use" "output path not found" "Not a path" "Target wim index not select" "compress level error"
 :dis\wim
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     if /i "%username%"=="System" if not defined SCRATCH_DIR exit /b 2
     setlocal
     if /i "%username%" neq "System" set scratch_dir=
@@ -1201,7 +1201,7 @@ REM for wim
 ::: "Drivers manager" "" "usage: %~n0 drv [option] [args...]" "" "    --add,    -a  [os_path] [drv_path ...]     Add drivers offline" "    --list,   -l  [[os_path]]                  Show OS drivers list" "    --remove, -r  [os_path] [[name].inf]       remove drivers, 3rd party drivers like oem1.inf" "    --get,    -g                               display hardware ids" "    --filter, -f [devinf_path] [drivers_path]  search device inf" "                                           e.g." "                                               %~n0 drv --get" "                                               %~n0 drv --filter D:\d.log D:\drv"
 :::: "invalid option" "OS path not found" "Not drivers name" "dism error" "drivers info file not found" "drivers path error" "SCRATCH_DIR variable not set"
 :dis\drv
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     if /i "%username%"=="System" if not defined SCRATCH_DIR exit /b 7
     setlocal
     if /i "%username%" neq "System" set scratch_dir=
@@ -1296,7 +1296,7 @@ REM from Window 10 wdk, will download devcon.exe at script path
 :::: "invalid option" "ospp.vbs not found" "Need ip or host" "OS not support" "No office found" "office not support"
 :dis\kms
     title kms
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     setlocal
     if "%~2"=="" (
         if "%~d0" neq "\\" exit /b 3
@@ -1479,7 +1479,7 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 :::: "invalid option" "target not found" "init fail" "must set office product ids" "install error" "setup error" "source not found"
 :dis\odt
     title odt
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     setlocal
     set "_odt_source_path=%cd%"
     if "%~d0"=="\\" set "_odt_source_path=%~dp0"
@@ -1748,7 +1748,7 @@ REM download and set in path
 ::: "Edit the Registry" "" "usage: %~n0 reg [option]" "" "    --intel-amd, -ia                         Run this before Chang CPU" "    --copy,      -p    [key] [file_path]     Copy reg to a reg file"
 :::: "invalid option" "OS version is too low" "Not windows directory" "Reg key not exist" "Reg file not exist or Not reg format"
 :dis\reg
-    if "%*"=="" call :this\annotation %0 & goto :eof
+    if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\reg\%*
     goto :eof
 
