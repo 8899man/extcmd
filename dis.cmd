@@ -1854,32 +1854,15 @@ REM for :this\reg\--intel-amd
             for /f "tokens=1,2* delims=`" %%b in (
                 "!_line:%_src%=%_tag%!"
             ) do if "%%c" neq "" if "%%b" neq "%_ve%" (
-                reg.exe add "!_key!" /v "%%b" /t %%c /v "%%d" /f
+                reg.exe add "!_key!" /v "%%b" /t %%c /d "%%d" /f || exit /b 5
                 for /f "delims=`" %%e in (
                     "!_line!"
-                ) do if "%%b" neq "%%e" reg.exe delete "!_key!" /v "%%e" /f
-            ) else reg.exe add "!_key!" /ve /t %%c /v "%%d" /f
+                ) do if "%%b" neq "%%e" reg.exe delete "!_key!" /v "%%e" /f || exit /b 5
+            ) else reg.exe add "!_key!" /ve /t %%c /d "%%d" /f || exit /b 5
         ) else set _key=!_line:HKEY_LOCAL_MACHINE=HKLM!
     )
     endlocal
     goto :eof
-
-    REM for /f "usebackq delims=" %%a in (
-    REM     `reg.exe query %1 /s`
-    REM ) do for /f "tokens=1,2* delims=\" %%b in (
-    REM     "%%a"
-    REM ) do if "%%b" neq "HKEY_LOCAL_MACHINE" (
-    REM     set "_tmp=%%a"
-    REM     rem set "_tmp=!_tmp:$Windows.~bt\=!"
-    REM     rem set "_tmp=!_tmp:\=\\!"
-    REM     rem set "_tmp=!_tmp:"=\"!"
-    REM     for /f "tokens=1,2* delims=`" %%e in (
-    REM         "!_tmp:    =`!"
-    REM     ) do if "%%e"=="%_reg\ve%" (
-    REM         reg.exe add "HKLM\tmp\!_temp!" /ve /t %%f /d "%%g" /f
-    REM     ) else reg.exe add "HKLM\tmp\!_temp!" /v "%%e" /t %%f /d "%%g" /f
-    REM ) else set "_temp=%%d"
-
 
 REM REM from Window 10 aik, will download imagex.exe at script path
 REM :init\imagex
