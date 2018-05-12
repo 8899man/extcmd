@@ -1779,7 +1779,7 @@ REM download and set in path
 :: regedit ::
 :::::::::::::
 
-::: "Edit the Registry" "" "usage: %~n0 reg [option]" "" "    --intel-amd, -ia                         Run this before Chang CPU" "    --replace,   -x   [file_path] [src_str] [tag_str]      Replace reg string"
+::: "Edit the Registry" "" "usage: %~n0 reg [option]" "" "    --intel-amd, -ia                   Run this before Chang CPU" "    --replace,   -x   [file_path] [src_str] [tag_str]" "                                       Replace reg string"
 :::: "invalid option" "OS version is too low" "Not windows directory" "source string empty" "reg.exe error"
 :dis\reg
     if "%~1"=="" call :this\annotation %0 & goto :eof
@@ -1816,7 +1816,7 @@ REM for :this\reg\--intel-amd
 :this\reg\-x
     if "%~2"=="" exit /b 4
     setlocal
-    set _load_point=HKLM\load-point-%random%
+    set _load_point=HKLM\load-point%random%
     if exist "%~1" (
         reg.exe load %_load_point% "%~1" || exit /b 5
         call :reg\replace %_load_point% %2 %3
@@ -1827,35 +1827,40 @@ REM for :this\reg\--intel-amd
 
 :reg\replace
     setlocal enabledelayedexpansion
+    set _src=%~2
+    set _src=%_src:\=\\%
+    set _src=%_src:"=\"%
+    set _tag=
+    if "%~3" neq "" (
+        set _tag=%~3
+        set _tag=!_tag:\=\\!
+        set _tag=!_tag:"=\"!
+    )
+
     REM Default -> \ve
     for /f "usebackq" %%a in (
         `reg.exe query HKLM /ve`
     ) do set "_ve=%%a"
 
+    REM replace
     for /f "usebackq delims=" %%a in (
-        `reg.exe query %1 /s`
+        `reg.exe query %1 /f %2 /s`
     ) do (
         set _line=%%a
         if "!_line:\%~n1=!"=="!_line!" (
-            set _line=!_line:%~2=%~3!
+            set _line=!_line:    =`!
             set _line=!_line:\=\\!
             set _line=!_line:"=\"!
             for /f "tokens=1,2* delims=`" %%b in (
-                "!_line:    =`!"
-            ) do if "%%c" neq "" if "%%b"=="%_ve%" (
-                echo reg.exe add "!_key!" /ve /t %%c /v "%%d" /f
-            ) else (
-                echo reg.exe add "!_key!" /v "%%b" /t %%c /v "%%d" /f
-                set _cache=%%a
-                set _cache=!_cache:\=\\!
-                set _cache=!_cache:"=\"!
+                "!_line:%_src%=%_tag%!"
+            ) do if "%%c" neq "" if "%%b" neq "%_ve%" (
+                reg.exe add "!_key!" /v "%%b" /t %%c /v "%%d" /f
                 for /f "delims=`" %%e in (
-                    "!_cache:    =`!"
-                ) do if "%%b" neq "%%e" echo reg.exe delete "!_key!" /v "%%e" /f
-            )
+                    "!_line!"
+                ) do if "%%b" neq "%%e" reg.exe delete "!_key!" /v "%%e" /f
+            ) else reg.exe add "!_key!" /ve /t %%c /v "%%d" /f
         ) else set _key=!_line:HKEY_LOCAL_MACHINE=HKLM!
     )
-
     endlocal
     goto :eof
 
