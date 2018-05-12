@@ -1292,7 +1292,7 @@ REM from Window 10 wdk, will download devcon.exe at script path
 :: KMS ::
 :::::::::
 
-::: "KMS Client" "" "usage: %~n0 kms [option] [args...]" "" "    --os,  -s [[host]]     Active OS" "    --odt, -o [[host]]     Active office, which install by Office Deployment Tool" "    e.g." "        %~n0 kms --os 192.168.1.1"
+::: "KMS Client" "" "usage: %~n0 kms [option] [args...]" "" "    --os,  -s [[host]]     Active operating system" "    --odt, -o [[host]]     Active office, which install by Office Deployment Tool" "    e.g." "        %~n0 kms --os 192.168.1.1" "" "    --all, -a [[host]]     Active operating system and office"
 :::: "invalid option" "ospp.vbs not found" "Need ip or host" "OS not support" "No office found" "office not support"
 :dis\kms
     title kms
@@ -1308,6 +1308,12 @@ REM from Window 10 wdk, will download devcon.exe at script path
     call :this\kms\%*
     endlocal
     goto :eof
+
+:this\kms\--all
+:this\kms\-a
+    call :this\kms\--os %*
+    call :this\kms\--odt %*
+    exit /b 0
 
 REM OS
 :this\kms\--os
@@ -1408,7 +1414,7 @@ REM for Office Deployment Tool only
     REM Active
     for /f "usebackq tokens=1* delims==" %%a in (
         `set _gvlk\ 2^>nul`
-    ) do echo.& echo =======================================& for %%c in (
+    ) do echo.& echo =======================================& echo.    %%bVolume& for %%c in (
         "/inpkey:%%~na"
         "/sethst:%_host%"
         /act ::?"active"
@@ -1418,7 +1424,10 @@ REM for Office Deployment Tool only
 
     exit /b 0
 
-REM https://docs.microsoft.com/en-us/deployoffice/office2016/gvlks-for-office-2016
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::: https://docs.microsoft.com/en-us/deployoffice/office2016/gvlks-for-office-2016 :::
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+REM Office Professional Plus 2016
 :kms\gvlk\16_Word
 :kms\gvlk\16_Excel
 :kms\gvlk\16_PowerPoint
@@ -1426,26 +1435,28 @@ REM https://docs.microsoft.com/en-us/deployoffice/office2016/gvlks-for-office-20
 :kms\gvlk\16_Outlook
 :kms\gvlk\16_Access
 :kms\gvlk\16_Publisher
-    REM Office Professional Plus 2016
-    set _gvlk\XQNVK-8JYDB-WJ9W3-YJ8YR-WFG99=1
+    set _gvlk\XQNVK-8JYDB-WJ9W3-YJ8YR-WFG99=Professional2016
     goto :eof
 
+REM Visio Professional 2016
 :kms\gvlk\16_Visio
-    REM Visio Professional 2016
-    set _gvlk\PD3PC-RHNGV-FXJ29-8JK7D-RJRJK=1
+    set _gvlk\PD3PC-RHNGV-FXJ29-8JK7D-RJRJK=VisioPro2016
     goto :eof
 
+REM Project Professional 2016
 :kms\gvlk\16_Project
-    REM Project Professional 2016
-    set _gvlk\YG9NW-3K39V-2T3HJ-93F3Q-G83KT=1
+    set _gvlk\YG9NW-3K39V-2T3HJ-93F3Q-G83KT=ProjectPro2016
     goto :eof
 
+REM Skype for Business 2016
 :kms\gvlk\16_Skype
-    REM Skype for Business 2016
-    set _gvlk\869NQ-FJ69K-466HW-QYCP2-DDBV6=1
+    set _gvlk\869NQ-FJ69K-466HW-QYCP2-DDBV6=SkypeforBusiness2016
     goto :eof
 
-REM https://technet.microsoft.com/en-us/library/dn385360.aspx
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::: https://technet.microsoft.com/en-us/library/dn385360.aspx :::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+REM Office 2013 Professional Plus
 :kms\gvlk\15_Word
 :kms\gvlk\15_Excel
 :kms\gvlk\15_PowerPoint
@@ -1453,18 +1464,41 @@ REM https://technet.microsoft.com/en-us/library/dn385360.aspx
 :kms\gvlk\15_Outlook
 :kms\gvlk\15_Access
 :kms\gvlk\15_Publisher
-    REM Office 2013 Professional Plus
-    set _gvlk\YC7DK-G2NP3-2QQC3-J6H88-GVGXT=1
+    set _gvlk\YC7DK-G2NP3-2QQC3-J6H88-GVGXT=Professional2013
     goto :eof
 
+REM Visio 2013 Professional
 :kms\gvlk\15_Visio
-    REM Visio 2013 Professional
-    set _gvlk\C2FG9-N6J68-H8BTJ-BW3QX-RM3B3=1
+    set _gvlk\C2FG9-N6J68-H8BTJ-BW3QX-RM3B3=VisioPro2013
     goto :eof
 
+REM Project 2013 Professional
 :kms\gvlk\15_Project
-    REM Project 2013 Professional
-    set _gvlk\FN8TT-7WMH6-2D4X9-M337T-2342K=1
+    set _gvlk\FN8TT-7WMH6-2D4X9-M337T-2342K=ProjectPro2013
+    goto :eof
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::: http://technet.microsoft.com/en-us/library/ee624355(office.14).aspx :::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+REM Office 2010 Professional Plus
+:kms\gvlk\14_Word
+:kms\gvlk\14_Excel
+:kms\gvlk\14_PowerPoint
+:kms\gvlk\14_OneNote
+:kms\gvlk\14_Outlook
+:kms\gvlk\14_Access
+:kms\gvlk\14_Publisher
+    set _gvlk\VYBBJ-TRJPB-QFQRF-QFT4D-H3GVB=Professional2010
+    goto :eof
+
+REM Visio 2010 Professional
+:kms\gvlk\14_Visio
+    set _gvlk\7MCW8-VRQVK-G677T-PDJCM-Q8TCP=VisioPro2010
+    goto :eof
+
+REM Project 2010 Professional
+:kms\gvlk\14_Project
+    set _gvlk\YGX6F-PGV49-PGW3J-9BTGG-VHKC6=ProjectPro2010
     goto :eof
 
 :office\ClickToRun\InstallPath
@@ -1610,7 +1644,7 @@ REM convert to volume license
         project visio
     ) do if defined _odt_pro_%%a >&3 set /p='%%a' <nul
 
-    echo , will remove previous installation
+    >&3 echo , will remove previous installation
     exit /b 0
 
 REM download and set in path
@@ -1745,8 +1779,8 @@ REM download and set in path
 :: regedit ::
 :::::::::::::
 
-::: "Edit the Registry" "" "usage: %~n0 reg [option]" "" "    --intel-amd, -ia                         Run this before Chang CPU" "    --copy,      -p    [key] [file_path]     Copy reg to a reg file"
-:::: "invalid option" "OS version is too low" "Not windows directory" "Reg key not exist" "Reg file not exist or Not reg format"
+::: "Edit the Registry" "" "usage: %~n0 reg [option]" "" "    --intel-amd, -ia                         Run this before Chang CPU" "    --replace,   -x   [file_path] [src_str] [tag_str]      Replace reg string"
+:::: "invalid option" "OS version is too low" "Not windows directory" "source string empty" "reg.exe error"
 :dis\reg
     if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\reg\%*
@@ -1778,33 +1812,69 @@ REM for :this\reg\--intel-amd
 	) do if /i "%%a"=="Default" reg.exe delete HKLM\%1\ControlSet00%%b\Services\intelppm /f 2>nul
     exit /b 0
 
-:this\reg\--copy
-:this\reg\-p
-    reg.exe query %1 >nul 2>nul || exit /b 4
-    reg.exe load HKLM\tmp %2 || exit /b 5
+:this\reg\--replace
+:this\reg\-x
+    if "%~2"=="" exit /b 4
     setlocal
-    if not defined _reg\ve for /f %%a in (
-        'reg.exe query HKLM /ve'
-    ) do set "_reg\ve=%%a"
+    set _load_point=HKLM\load-point-%random%
+    if exist "%~1" (
+        reg.exe load %_load_point% "%~1" || exit /b 5
+        call :reg\replace %_load_point% %2 %3
+        reg.exe unload %_load_point% || exit /b 5
+    ) else call :reg\replace %1 %2 %3
+    endlocal
+    goto :eof
+
+:reg\replace
+    setlocal enabledelayedexpansion
+    REM Default -> \ve
+    for /f "usebackq" %%a in (
+        `reg.exe query HKLM /ve`
+    ) do set "_ve=%%a"
 
     for /f "usebackq delims=" %%a in (
         `reg.exe query %1 /s`
-    ) do for /f "tokens=1,2* delims=\" %%b in (
-        "%%a"
-    ) do if "%%b" neq "HKEY_LOCAL_MACHINE" (
-        set "_tmp=%%a"
-        rem set "_tmp=!_tmp:$Windows.~bt\=!"
-        rem set "_tmp=!_tmp:\=\\!"
-        rem set "_tmp=!_tmp:"=\"!"
-        for /f "tokens=1,2* delims=`" %%e in (
-            "!_tmp:    =`!"
-        ) do if "%%e"=="%_reg\ve%" (
-            reg.exe add "HKLM\tmp\!_temp!" /ve /t %%f /d "%%g" /f
-        ) else reg.exe add "HKLM\tmp\!_temp!" /v "%%e" /t %%f /d "%%g" /f
-    ) else set "_temp=%%d"
+    ) do (
+        set _line=%%a
+        if "!_line:\%~n1=!"=="!_line!" (
+            set _line=!_line:%~2=%~3!
+            set _line=!_line:\=\\!
+            set _line=!_line:"=\"!
+            for /f "tokens=1,2* delims=`" %%b in (
+                "!_line:    =`!"
+            ) do if "%%c" neq "" if "%%b"=="%_ve%" (
+                echo reg.exe add "!_key!" /ve /t %%c /v "%%d" /f
+            ) else (
+                echo reg.exe add "!_key!" /v "%%b" /t %%c /v "%%d" /f
+                set _cache=%%a
+                set _cache=!_cache:\=\\!
+                set _cache=!_cache:"=\"!
+                for /f "delims=`" %%e in (
+                    "!_cache:    =`!"
+                ) do if "%%b" neq "%%e" echo reg.exe delete "!_key!" /v "%%e" /f
+            )
+        ) else set _key=!_line:HKEY_LOCAL_MACHINE=HKLM!
+    )
+
     endlocal
-    reg.exe unload HKLM\tmp
-    exit /b 0
+    goto :eof
+
+    REM for /f "usebackq delims=" %%a in (
+    REM     `reg.exe query %1 /s`
+    REM ) do for /f "tokens=1,2* delims=\" %%b in (
+    REM     "%%a"
+    REM ) do if "%%b" neq "HKEY_LOCAL_MACHINE" (
+    REM     set "_tmp=%%a"
+    REM     rem set "_tmp=!_tmp:$Windows.~bt\=!"
+    REM     rem set "_tmp=!_tmp:\=\\!"
+    REM     rem set "_tmp=!_tmp:"=\"!"
+    REM     for /f "tokens=1,2* delims=`" %%e in (
+    REM         "!_tmp:    =`!"
+    REM     ) do if "%%e"=="%_reg\ve%" (
+    REM         reg.exe add "HKLM\tmp\!_temp!" /ve /t %%f /d "%%g" /f
+    REM     ) else reg.exe add "HKLM\tmp\!_temp!" /v "%%e" /t %%f /d "%%g" /f
+    REM ) else set "_temp=%%d"
+
 
 REM REM from Window 10 aik, will download imagex.exe at script path
 REM :init\imagex
