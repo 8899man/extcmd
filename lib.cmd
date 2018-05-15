@@ -747,19 +747,12 @@ REM if /i "%~x1"==".vbs" screnc.exe %1 ./%~n1.vbe
     call :lib\vbs log %*
     goto :eof
 
-;:: set /a 0x7FFFFFFF
-;:: 2147483647 ~ -2147483647
-;:: PowerShell : hyper-v install-windowsfeature server-gui-shell
-;:: data:application/cab;base64,
-
-REM :lib\sexport
-REM     SecEdit.exe /export /cfg .\hisecws.inf
-REM     exit /b 0
-REM     SecEdit.exe /configure /db c:\Windows\Temp\hisecws.sdb /cfg c:\Windows\Temp\hisecws.inf /log c:\Windows\Temp\hisecws.log /quiet
-
 ::::::::::::::::::
 ::     Base     ::
   :: :: :: :: ::
+
+REM set /a 0x7FFFFFFF
+REM -2147483647 ~ 2147483647
 
 REM start /b [command...]
 :thread

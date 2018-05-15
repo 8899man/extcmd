@@ -75,10 +75,10 @@ exit /b 0
 :this\dir\--isdir
 :this\dir\-id
     setlocal
-    set _path=%~a1-
+    set _attribute=%~a1-
     REM quick return
     set _code=10
-    if %_path:~0,1%==d set _code=0
+    if %_attribute:~0,1%==d set _code=0
     endlocal & exit /b %_code%
 
 :this\dir\--islink
@@ -103,8 +103,9 @@ exit /b 0
 :this\dir\--isfree
 :this\dir\-if
     call :this\dir\--isdir %1 || exit /b 2
-    for /d %%a in ("%~1\*") do exit /b 10
-    for /r %1 %%a in (*.*) do exit /b 10
+    for /f usebackq"" %%a in (
+        `dir /a /b "%~1"`
+    ) do exit /b 10
     exit /b 0
 
 :this\dir\--clean
@@ -154,7 +155,7 @@ REM for :this\dir\--clean
         `ver`
     ) do for %%b in (%%a) do if "%%~xb" neq "" for /f "usebackq tokens=1-4 delims=." %%c in (
         '%~1.%%b'
-    ) do set /a _tmp=%%e*10+%%f-%%c*10-%%d
+    ) do set /a _tmp=%%e * 10 + %%f - %%c * 10 - %%d
     endlocal & if %_tmp% geq 0 exit /b 0
     exit /b 10
 
@@ -168,9 +169,17 @@ REM for :this\dir\--clean
 REM OS version
 :this\oset\-v
 :this\oset\--version
-    if "%~1"=="" exit /b 5
+    if not exist "%~1" exit /b 3
+    if "%~1"=="%~d1" (
+        call :oset\version %~1\
+    ) else if "%~dp1"=="%~f1" (
+        call :oset\version "%~f1"
+    ) else call :oset\version "%~f1\"
+    goto :eof
+
+:oset\version
     for /f "usebackq" %%a in (
-        `dir /ad /b %~1\Windows\servicing\Version\*.* 2^>nul`
+        `dir /ad /b %~1Windows\servicing\Version\*.* 2^>nul`
     ) do if "%~2"=="" (
         echo %%a& exit /b 0
     ) else set %~2=%%a& exit /b 0
@@ -178,9 +187,18 @@ REM OS version
 
 :this\oset\--bit
 :this\oset\-b
-    if not exist %~1\Windows\servicing\Version exit /b 4
+    if not exist "%~1" exit /b 3
+    if "%~1"=="%~d1" (
+        call :oset\bit %~1\
+    ) else if "%~dp1"=="%~f1" (
+        call :oset\bit "%~f1"
+    ) else call :oset\bit "%~f1\"
+    goto :eof
+
+:oset\bit
+    if not exist %~1Windows\servicing\Version exit /b 4
     for /d %%a in (
-        %~1\Windows\servicing\Version\*.*
+        %~1Windows\servicing\Version\*.*
     ) do if exist %%a\amd64_installed (
         if "%~2"=="" (
             echo amd64
@@ -198,8 +216,17 @@ REM OS version
 REM OS language
 :this\oset\--install-lang
 :this\oset\-il
+    if not exist "%~1" exit /b 3
+    if "%~1"=="%~d1" (
+        call :oset\install\lang %~1\
+    ) else if "%~dp1"=="%~f1" (
+        call :oset\install\lang "%~f1"
+    ) else call :oset\install\lang "%~f1\"
+    goto :eof
+
+:oset\install\lang
     for /d %%a in (
-        %~1\Windows\servicing\??-??
+        %~1Windows\servicing\??-??
     ) do if "%~2"=="" (
         echo %%~na
     ) else set %~2=%%~na
@@ -317,8 +344,8 @@ REM for :this\oset\--current-lang
     call :this\letter\%*
     goto :eof
 
-:this\letter\-u
 :this\letter\--free
+:this\letter\-u
     setlocal enabledelayedexpansion
     set _di=zyxwvutsrqponmlkjihgfedcba
     for /f "usebackq skip=1 delims=:" %%a in (
@@ -329,8 +356,8 @@ REM for :this\oset\--current-lang
     ) else set %~1=%_di:~0,1%:
     exit /b 0
 
-:this\letter\-x
 :this\letter\--change
+:this\letter\-x
     if "%~2"=="" exit /b 6
     if /i "%~1" neq "%~d1" exit /b 6
     if /i "%~2" neq "%~d2" exit /b 6
@@ -359,8 +386,8 @@ REM for :this\oset\--current-lang
     endlocal
     exit /b 0
 
-:this\letter\-r
 :this\letter\--remove
+:this\letter\-r
     if /i "%~1"=="" exit /b 6
     if /i "%~1" neq "%~d1" exit /b 6
     if /i "%~d1"=="%SystemDrive%" exit /b 6
@@ -393,10 +420,10 @@ REM mini uuid creater
     endlocal & set "%~1=%_str%"
     goto :eof
 
-:this\letter\-l
 :this\letter\--list
-:this\letter\--
+:this\letter\-l
 :this\letter\--tisl
+:this\letter\--
     :::::::::::::::::::::::::::::::::::::::
     :: [WARNING] Not support nano server ::
     :::::::::::::::::::::::::::::::::::::::
@@ -425,8 +452,8 @@ REM mini uuid creater
     endlocal & set %~1=%_var%
     exit /b 0
 
-:this\letter\-fp
 :this\letter\--firstpath
+:this\letter\-fp
     if "%~1"=="" exit /b 4
     for /f "usebackq skip=1 tokens=1,2" %%a in (
         `wmic.exe logicaldisk get Caption`
@@ -686,7 +713,7 @@ REM TODO
         "{%%a} ramdisksdidevice partition=%~d3"
         "{%%a} ramdisksdipath %~pnx2"
         "{%%b} device ramdisk=[%~d3]%~pnx3,{%%a}"
-        ::"{%%b} path \Windows\system32\winload.efi"?
+        ::?"{%%b} path \Windows\system32\winload.efi"
         "{%%b} path \Windows\system32\winload.exe"
         "{%%b} osdevice ramdisk=[%~d3]%~pnx3,{%%a}"
         "{%%b} systemroot \Windows"
@@ -894,7 +921,7 @@ REM Enable ServicesForNFS
     REM unmount vhd
     call :dis\vumount %1 > nul
     setlocal
-    set /a _size=%~2*1024+8
+    set /a _size=%~2 * 1024 + 8
     >%tmp%\.diskpart (
         echo select vdisk file="%~f1"
         echo expand vdisk maximum=%_size%
@@ -1021,17 +1048,31 @@ REM Enable ServicesForNFS
     REM New or Append
     if exist ".\%_name%.wim" (set _create=Append) else set _create=Capture
 
-    REM Create exclusion list
     call :this\str\--now _conf "%tmp%\" .log
     set _args=
-    call :wim\ConfigFile "%_input%" > %_conf% && set _args=/ConfigFile:"%_conf%"
+    set _description=
+    REM Create exclusion list
 
-    REM input args
-    for %%a in ("%_input%") do set "_input=%%~dpa"
-    set "_input=%_input:~0,-1%"
+    if exist "%_input%\Windows\servicing\Version\*.*" (
+        >%_conf% call :this\txt\--subtxt "%~f0" wim 2000
+        set _args=/ConfigFile:"%_conf%"
+        REM /Description:Description
+
+        for /f "usebackq skip=1 tokens=2*" %%a in (
+            `reg.exe query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ProductName`
+        ) do if "%%a"=="REG_SZ" for /f "usebackq skip=1 tokens=2*" %%c in (
+            `reg.exe query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId`
+        ) do if "%%c"=="REG_SZ" set _description=/Description:"%%b %%d"
+
+    ) else (
+        >%_conf% call :wim\ConfigFile "%_input%" && set _args=/ConfigFile:"%_conf%"
+        REM input args
+        for %%a in ("%_input%") do set "_input=%%~dpa"
+        set "_input=%_input:~0,-1%"
+    )
 
     REM Do capture
-    dism.exe /%_create%-Image /ImageFile:".\%_name%.wim" /CaptureDir:"%_input%" /Name:"%_name%" %_compress% /Verify %_args% %scratch_dir% || exit /b 6
+    dism.exe /%_create%-Image /ImageFile:".\%_name%.wim" /CaptureDir:"%_input%" /Name:"%_name%" %_description% %_compress% /Verify %_args% %scratch_dir% || exit /b 6
     if exist "%_conf%" erase "%_conf%"
 
     call :getWimLastIndex ".\%_name%.wim" _index
@@ -1048,9 +1089,11 @@ REM create exclusion list
     if not exist "%~1" exit /b 1
     if "%~pnx1"=="\" exit /b 2
     echo [ExclusionList]
+    REM parent directory
     for /f "usebackq delims=" %%a in (
         `dir /a /b "%~dp1"`
     ) do if "%%a" neq "%~nx1" echo \%%a
+    echo.
     exit /b 0
 
 :this\wim\--apply
@@ -1386,9 +1429,12 @@ REM OS
     for %%a in (
         "/ipk %_key%"
         "/skms %_host%"
-        /ato ::?"active"
-        /xpr ::?"display expires time"
-        /ckms ::?"rm key"
+        ::?"active"
+        /ato
+        ::?"display expires time"
+        /xpr
+        ::?"rm key"
+        /ckms
     ) do cscript.exe //nologo //e:vbscript %windir%\System32\slmgr.vbs %%~a
 
     exit /b 0
@@ -1533,7 +1579,7 @@ REM Project 2010 Professional
 :this\odt\--deploy
 :this\odt\-d
     3>nul call :odt\pro\full
-    >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt 1400
+    >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt 2000
 
     title Deployed to '%_odt_source_path%'
     >&3 echo Deployed to '%_odt_source_path%'
@@ -1556,7 +1602,7 @@ REM Project 2010 Professional
 
     if errorlevel 4 exit /b 4
 
-    >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt 1400
+    >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt 2000
 
     title Installing...
     >&3 echo Installing...
@@ -1659,89 +1705,6 @@ REM download and set in path
     erase %temp%\%~1\officedeploymenttool16.exe %temp%\%~1\*.xml
     exit /b 0
 
-::odt:<^!-- Office 365 client configuration file sample. To be used for Office 365 ProPlus 2016 apps,
-::odt:     Office 365 Business 2016 apps, Project Pro for Office 365 and Visio Pro for Office 365.
-::odt:
-::odt:     For detailed information regarding configuration options visit: http://aka.ms/ODT.
-::odt:     To use the configuration file be sure to remove the comments
-::odt:
-::odt:     For Office 365 client apps (verion 2013) you will need to use the 2013 version of the
-::odt:     Office Deployment Tool which can be downloaded from http://aka.ms/ODT2013
-::odt:
-::odt:     The following sample allows you to download and install Office 365 ProPlus 2016 apps
-::odt:     and Visio Pro for Office 365 directly from the Office CDN using the Current Channel
-::odt:     settings  -->
-::odt:
-::odt:<Configuration>
-::odt:
-::odt:    <^!--
-::odt:    <Remove All="TRUE">
-::odt:        <Product ID="AccessRetail" />
-::odt:        <Product ID="AccessRuntimeRetail" />
-::odt:        <Product ID="ExcelRetail" />
-::odt:        <Product ID="HomeBusinessRetail" />
-::odt:        <Product ID="HomeStudentRetail" />
-::odt:        <Product ID="InfoPathRetail" />
-::odt:        <Product ID="LyncEntryRetail" />
-::odt:        <Product ID="LyncRetail" />
-::odt:        <Product ID="O365BusinessRetail" />
-::odt:        <Product ID="O365HomePremRetail" />
-::odt:        <Product ID="O365ProPlusRetail" />
-::odt:        <Product ID="O365SmallBusPremRetail" />
-::odt:        <Product ID="OneNoteRetail" />
-::odt:        <Product ID="OutlookRetail" />
-::odt:        <Product ID="PowerPointRetail" />
-::odt:        <Product ID="ProfessionalRetail" />
-::odt:        <Product ID="ProjectProRetail" />
-::odt:        <Product ID="ProjectProXVolume" />
-::odt:        <Product ID="ProjectStdRetail" />
-::odt:        <Product ID="ProjectStdXVolume" />
-::odt:        <Product ID="PublisherRetail" />
-::odt:        <Product ID="SkypeforBusinessEntryRetail" />
-::odt:        <Product ID="SkypeforBusinessRetail" />
-::odt:        <Product ID="SPDRetail" />
-::odt:        <Product ID="VisioProRetail" />
-::odt:        <Product ID="VisioProXVolume" />
-::odt:        <Product ID="VisioStdRetail" />
-::odt:        <Product ID="VisioStdXVolume" />
-::odt:        <Product ID="WordRetail" />
-::odt:    </Remove>
-::odt:    -->
-::odt:
-::odt:    <Add SourcePath="!_odt_source_path!" OfficeClientEdition="64" Channel="Broad">
-::odt:
-::odt:        <^!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
-::odt:        <Product ID="ProfessionalRetail">
-::odt:            <Language ID="!_odt_lang!" />
-::!_odt_pro_access!:            <ExcludeApp ID="Access" />
-::!_odt_pro_excel!:            <ExcludeApp ID="Excel" />
-::!_odt_pro_onenote!:            <ExcludeApp ID="OneNote" />
-::!_odt_pro_outlook!:            <ExcludeApp ID="Outlook" />
-::!_odt_pro_powerpoint!:            <ExcludeApp ID="PowerPoint" />
-::!_odt_pro_publisher!:            <ExcludeApp ID="Publisher" />
-::!_odt_pro_word!:            <ExcludeApp ID="Word" />
-::odt:        </Product>
-::odt:
-::!_odt_pro_visio!:        <Product ID="VisioProRetail">
-::!_odt_pro_visio!:            <Language ID="!_odt_lang!" />
-::!_odt_pro_visio!:        </Product>
-::!_odt_pro_visio!:
-::!_odt_pro_project!:        <Product ID="ProjectProRetail">
-::!_odt_pro_project!:            <Language ID="!_odt_lang!" />
-::!_odt_pro_project!:        </Product>
-::!_odt_pro_project!:
-::odt:    </Add>
-::odt:
-::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
-::!_odt_update!:
-::odt:    <Display Level="None" AcceptEULA="TRUE" />
-::odt:    <^!--  <Display Level="Full" AcceptEULA="TRUE" />  -->
-::odt:
-::odt:    <Logging Path="%temp%" />
-::odt:    <^!--  <Property Name="AUTOACTIVATE" Value="1" />  -->
-::odt:
-::odt:</Configuration>
-
 
 :::::::::::
 :: other ::
@@ -1799,10 +1762,14 @@ REM download and set in path
         exit /b 0
     )
 
-    if not exist "%~f1"\Windows\System32\config\SYSTEM exit /b 3
-    reg.exe load HKLM\tmp "%~f1"\Windows\System32\config\SYSTEM
+    setlocal
+    set _target=%~f1
+    if "%_target:~-1%"=="\" set _target=%_target:~0,-1%
+    if not exist "%_target%\Windows\System32\config\SYSTEM" exit /b 3
+    reg.exe load HKLM\tmp "%_target%\Windows\System32\config\SYSTEM"
     call :this\reg\delInteltag tmp
     reg.exe unload HKLM\tmp
+    endlocal
     exit /b 0
 
 REM for :this\reg\--intel-amd
@@ -1812,6 +1779,7 @@ REM for :this\reg\--intel-amd
 	) do if /i "%%a"=="Default" reg.exe delete HKLM\%1\ControlSet00%%b\Services\intelppm /f 2>nul
     exit /b 0
 
+REM winpe \$windows.~bt -> ""
 :this\reg\--replace
 :this\reg\-x
     if "%~2"=="" exit /b 4
@@ -1830,9 +1798,8 @@ REM for :this\reg\--intel-amd
     set _src=%~2
     set _src=%_src:\=\\%
     set _src=%_src:"=\"%
-    set _tag=
-    if "%~3" neq "" (
-        set _tag=%~3
+    set _tag=%~3
+    if defined _tag (
         set _tag=!_tag:\=\\!
         set _tag=!_tag:"=\"!
     )
@@ -1877,6 +1844,9 @@ REM     exit /b 0
 ::::::::::::::::::
 ::     Base     ::
   :: :: :: :: ::
+
+REM set /a 0x7FFFFFFF
+REM -2147483647 ~ 2147483647
 
 REM Run VBScript library from lib.vbs \* @see lib.cmd *\
 :this\vbs
@@ -2094,3 +2064,146 @@ REM Set errorlevel variable \* @see lib.cmd *\
    :: :: :: :: :: :: :: :: :: :: :: :: :: ::
 ::                 Framework                 ::
 :::::::::::::::::::::::::::::::::::::::::::::::
+
+REM for :dis\odt
+::odt:<^!-- Office 365 client configuration file sample. To be used for Office 365 ProPlus 2016 apps,
+::odt:     Office 365 Business 2016 apps, Project Pro for Office 365 and Visio Pro for Office 365.
+::odt:
+::odt:     For detailed information regarding configuration options visit: http://aka.ms/ODT.
+::odt:     To use the configuration file be sure to remove the comments
+::odt:
+::odt:     For Office 365 client apps (verion 2013) you will need to use the 2013 version of the
+::odt:     Office Deployment Tool which can be downloaded from http://aka.ms/ODT2013
+::odt:
+::odt:     The following sample allows you to download and install Office 365 ProPlus 2016 apps
+::odt:     and Visio Pro for Office 365 directly from the Office CDN using the Current Channel
+::odt:     settings  -->
+::odt:
+::odt:<Configuration>
+::odt:
+::odt:    <^!--
+::odt:    <Remove All="TRUE">
+::odt:        <Product ID="AccessRetail" />
+::odt:        <Product ID="AccessRuntimeRetail" />
+::odt:        <Product ID="ExcelRetail" />
+::odt:        <Product ID="HomeBusinessRetail" />
+::odt:        <Product ID="HomeStudentRetail" />
+::odt:        <Product ID="InfoPathRetail" />
+::odt:        <Product ID="LyncEntryRetail" />
+::odt:        <Product ID="LyncRetail" />
+::odt:        <Product ID="O365BusinessRetail" />
+::odt:        <Product ID="O365HomePremRetail" />
+::odt:        <Product ID="O365ProPlusRetail" />
+::odt:        <Product ID="O365SmallBusPremRetail" />
+::odt:        <Product ID="OneNoteRetail" />
+::odt:        <Product ID="OutlookRetail" />
+::odt:        <Product ID="PowerPointRetail" />
+::odt:        <Product ID="ProfessionalRetail" />
+::odt:        <Product ID="ProjectProRetail" />
+::odt:        <Product ID="ProjectProXVolume" />
+::odt:        <Product ID="ProjectStdRetail" />
+::odt:        <Product ID="ProjectStdXVolume" />
+::odt:        <Product ID="PublisherRetail" />
+::odt:        <Product ID="SkypeforBusinessEntryRetail" />
+::odt:        <Product ID="SkypeforBusinessRetail" />
+::odt:        <Product ID="SPDRetail" />
+::odt:        <Product ID="VisioProRetail" />
+::odt:        <Product ID="VisioProXVolume" />
+::odt:        <Product ID="VisioStdRetail" />
+::odt:        <Product ID="VisioStdXVolume" />
+::odt:        <Product ID="WordRetail" />
+::odt:    </Remove>
+::odt:    -->
+::odt:
+::odt:    <Add SourcePath="!_odt_source_path!" OfficeClientEdition="64" Channel="Broad">
+::odt:
+::odt:        <^!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
+::odt:        <Product ID="ProfessionalRetail">
+::odt:            <Language ID="!_odt_lang!" />
+::!_odt_pro_access!:            <ExcludeApp ID="Access" />
+::!_odt_pro_excel!:            <ExcludeApp ID="Excel" />
+::!_odt_pro_onenote!:            <ExcludeApp ID="OneNote" />
+::!_odt_pro_outlook!:            <ExcludeApp ID="Outlook" />
+::!_odt_pro_powerpoint!:            <ExcludeApp ID="PowerPoint" />
+::!_odt_pro_publisher!:            <ExcludeApp ID="Publisher" />
+::!_odt_pro_word!:            <ExcludeApp ID="Word" />
+::odt:        </Product>
+::odt:
+::!_odt_pro_visio!:        <Product ID="VisioProRetail">
+::!_odt_pro_visio!:            <Language ID="!_odt_lang!" />
+::!_odt_pro_visio!:        </Product>
+::!_odt_pro_visio!:
+::!_odt_pro_project!:        <Product ID="ProjectProRetail">
+::!_odt_pro_project!:            <Language ID="!_odt_lang!" />
+::!_odt_pro_project!:        </Product>
+::!_odt_pro_project!:
+::odt:    </Add>
+::odt:
+::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
+::!_odt_update!:
+::odt:    <Display Level="None" AcceptEULA="TRUE" />
+::odt:    <^!--  <Display Level="Full" AcceptEULA="TRUE" />  -->
+::odt:
+::odt:    <Logging Path="%temp%" />
+::odt:    <^!--  <Property Name="AUTOACTIVATE" Value="1" />  -->
+::odt:
+::odt:</Configuration>
+
+REM for :this\wim\--new
+::wim:[ExclusionList]
+::wim:\$bootdrive$
+::wim:\$dwnlvldrive$
+::wim:\$lsdrive$
+::wim:\$installdrive$
+::wim:\$Recycle.Bin\*
+::wim:\bootsect.bak
+::wim:\hiberfil.sys
+::wim:\pagefile.sys
+::wim:\ProgramData\Microsoft\Windows\SQM
+::wim:\System Volume Information
+::wim:\Users\*\AppData\Local\GDIPFONTCACHEV1.DAT
+::wim:\Users\*\AppData\Local\Temp\*
+::wim:\Users\*\NTUSER.DAT*.TM.blf
+::wim:\Users\*\NTUSER.DAT*.regtrans-ms
+::wim:\Users\*\NTUSER.DAT*.log*
+::wim:\Windows\AppCompat\Programs\Amcache.hve*.TM.blf
+::wim:\Windows\AppCompat\Programs\Amcache.hve*.regtrans-ms
+::wim:\Windows\AppCompat\Programs\Amcache.hve*.log*
+::wim:\Windows\CSC
+::wim:\Windows\Debug\*
+::wim:\Windows\Logs\*
+::wim:\Windows\Panther\*.etl
+::wim:\Windows\Panther\*.log
+::wim:\Windows\Panther\FastCleanup
+::wim:\Windows\Panther\img
+::wim:\Windows\Panther\Licenses
+::wim:\Windows\Panther\MigLog*.xml
+::wim:\Windows\Panther\Resources
+::wim:\Windows\Panther\Rollback
+::wim:\Windows\Panther\Setup*
+::wim:\Windows\Panther\UnattendGC
+::wim:\Windows\Panther\upgradematrix
+::wim:\Windows\Prefetch\*
+::wim:\Windows\ServiceProfiles\LocalService\NTUSER.DAT*.TM.blf
+::wim:\Windows\ServiceProfiles\LocalService\NTUSER.DAT*.regtrans-ms
+::wim:\Windows\ServiceProfiles\LocalService\NTUSER.DAT*.log*
+::wim:\Windows\ServiceProfiles\NetworkService\NTUSER.DAT*.TM.blf
+::wim:\Windows\ServiceProfiles\NetworkService\NTUSER.DAT*.regtrans-ms
+::wim:\Windows\ServiceProfiles\NetworkService\NTUSER.DAT*.log*
+::wim:\Windows\System32\config\RegBack\*
+::wim:\Windows\System32\config\*.TM.blf
+::wim:\Windows\System32\config\*.regtrans-ms
+::wim:\Windows\System32\config\*.log*
+::wim:\Windows\System32\SMI\Store\Machine\SCHEMA.DAT*.TM.blf
+::wim:\Windows\System32\SMI\Store\Machine\SCHEMA.DAT*.regtrans-ms
+::wim:\Windows\System32\SMI\Store\Machine\SCHEMA.DAT*.log*
+::wim:\Windows\System32\sysprep\Panther
+::wim:\Windows\System32\winevt\Logs\*
+::wim:\Windows\System32\winevt\TraceFormat\*
+::wim:\Windows\Temp\*
+::wim:\Windows\TSSysprep.log
+::wim:\Windows\winsxs\poqexec.log
+::wim:\Windows\winsxs\ManifestCache\*
+::wim:\Windows\servicing\Sessions\*_*.xml
+::wim:\Windows\servicing\Sessions\Sessions.back.xml
+::wim:
