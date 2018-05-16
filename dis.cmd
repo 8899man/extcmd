@@ -171,10 +171,10 @@ REM OS version
 :this\oset\--version
     if not exist "%~1" exit /b 3
     if "%~1"=="%~d1" (
-        call :oset\version %~1\
+        call :oset\version %~1\ %2
     ) else if "%~dp1"=="%~f1" (
-        call :oset\version "%~f1"
-    ) else call :oset\version "%~f1\"
+        call :oset\version "%~f1" %2
+    ) else call :oset\version "%~f1\" %2
     goto :eof
 
 :oset\version
@@ -189,10 +189,10 @@ REM OS version
 :this\oset\-b
     if not exist "%~1" exit /b 3
     if "%~1"=="%~d1" (
-        call :oset\bit %~1\
+        call :oset\bit %~1\ %2
     ) else if "%~dp1"=="%~f1" (
-        call :oset\bit "%~f1"
-    ) else call :oset\bit "%~f1\"
+        call :oset\bit "%~f1" %2
+    ) else call :oset\bit "%~f1\" %2
     goto :eof
 
 :oset\bit
@@ -218,10 +218,10 @@ REM OS language
 :this\oset\-il
     if not exist "%~1" exit /b 3
     if "%~1"=="%~d1" (
-        call :oset\install\lang %~1\
+        call :oset\install\lang %~1\ %2
     ) else if "%~dp1"=="%~f1" (
-        call :oset\install\lang "%~f1"
-    ) else call :oset\install\lang "%~f1\"
+        call :oset\install\lang "%~f1" %2
+    ) else call :oset\install\lang "%~f1\" %2
     goto :eof
 
 :oset\install\lang
