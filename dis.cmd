@@ -1059,7 +1059,7 @@ REM Enable ServicesForNFS
     REM Create exclusion list
 
     if exist "%_input%\Windows\servicing\Version\*.*" (
-        >%_conf% call :this\txt\--subtxt "%~f0" wim 2000
+        >%_conf% call :this\txt\--subtxt "%~f0" wim.ini 2000
         set _args=/ConfigFile:"%_conf%"
         REM /Description:Description
 
@@ -1584,7 +1584,7 @@ REM Project 2010 Professional
 :this\odt\--deploy
 :this\odt\-d
     3>nul call :odt\pro\full
-    >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt 2000
+    >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt.xml 2000
 
     title Deployed to '%_odt_source_path%'
     >&3 echo Deployed to '%_odt_source_path%'
@@ -1607,7 +1607,7 @@ REM Project 2010 Professional
 
     if errorlevel 4 exit /b 4
 
-    >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt 2000
+    >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt.xml 2000
 
     title Installing...
     >&3 echo Installing...
@@ -1666,34 +1666,34 @@ REM convert to volume license
 :odt\install\var
     REM clear variable
     for /f "usebackq delims==" %%a in (
-        `set _odt_pro_ 2^>nul`
+        `set _odt__ 2^>nul`
     ) do set %%a=
 
     REM ExcludeApp
     for %%a in (
         access excel onenote outlook powerpoint publisher word
-    ) do set _odt_pro_%%a=odt
+    ) do set _odt__%%a=odt.xml
     for %%a in (
         access excel onenote outlook powerpoint publisher word
     ) do for %%b in (
         %*
-    ) do if "%%~a"=="%%~b" set _odt_pro_%%a=
+    ) do if "%%~a"=="%%~b" set _odt__%%a=
 
     REM must install some thing
-    >nul 2>&1 set _odt_pro_ || exit /b 5
+    >nul 2>&1 set _odt__ || exit /b 5
 
     >&3 set /p=will install: <nul
     for %%a in (
         access excel onenote outlook powerpoint publisher word
-    ) do if not defined _odt_pro_%%a >&3 set /p='%%a' <nul
+    ) do if not defined _odt__%%a >&3 set /p='%%a' <nul
 
     REM Product
     for %%a in (%*) do for %%b in (
         project visio
-    ) do if "%%~a"=="%%~b" set _odt_pro_%%a=odt
+    ) do if "%%~a"=="%%~b" set _odt__%%a=odt.xml
     for %%a in (
         project visio
-    ) do if defined _odt_pro_%%a >&3 set /p='%%a' <nul
+    ) do if defined _odt__%%a >&3 set /p='%%a' <nul
 
     >&3 echo , will remove previous installation
     exit /b 0
@@ -1790,7 +1790,7 @@ REM winpe \$windows.~bt -> ""
     if "%~2"=="" exit /b 4
     setlocal
 
-    REM Default -> \ve
+    REM valueName: (Default) -> /ve
     for /f "usebackq" %%a in (
         `reg.exe query HKLM /ve`
     ) do set "_ve=%%a"
@@ -1819,8 +1819,9 @@ REM winpe \$windows.~bt -> ""
         set _line=%%a
         if "!_line:\%~n1=!"=="!_line!" (
             set _line=!_line:    =`!
-            REM fix: "X:\" -> "X:\\"
+            REM /d "X:\" /f -> /d "X:\\" /f
             set _line=!_line:\`=\\`!
+            REM /v "X:\" /t -> /v "X:\\" /t
             if "!_line:~-1!"=="\" set _line=!_line!\
             set _line=!_line:"=\"!
             for /f "tokens=1,2* delims=`" %%b in (
@@ -1873,7 +1874,7 @@ REM Show the subdocuments in the destination file by prefix \* @see lib.cmd *\
     if not defined _skip set _skip=10
     if %_skip% leq 0 set _skip=10
 
-    for /f "usebackq skip=%_skip% tokens=1* delims=:" %%a in (
+    for /f "usebackq skip=%_skip% tokens=2* delims=:" %%a in (
         "%~f1"
     ) do if "%%a"=="%~2" echo.%%b
 
@@ -2071,144 +2072,280 @@ REM Set errorlevel variable \* @see lib.cmd *\
 :::::::::::::::::::::::::::::::::::::::::::::::
 
 REM for :dis\odt
-::odt:<^!-- Office 365 client configuration file sample. To be used for Office 365 ProPlus 2016 apps,
-::odt:     Office 365 Business 2016 apps, Project Pro for Office 365 and Visio Pro for Office 365.
-::odt:
-::odt:     For detailed information regarding configuration options visit: http://aka.ms/ODT.
-::odt:     To use the configuration file be sure to remove the comments
-::odt:
-::odt:     For Office 365 client apps (verion 2013) you will need to use the 2013 version of the
-::odt:     Office Deployment Tool which can be downloaded from http://aka.ms/ODT2013
-::odt:
-::odt:     The following sample allows you to download and install Office 365 ProPlus 2016 apps
-::odt:     and Visio Pro for Office 365 directly from the Office CDN using the Current Channel
-::odt:     settings  -->
-::odt:
-::odt:<Configuration>
-::odt:
-::odt:    <^!--
-::odt:    <Remove All="TRUE">
-::odt:        <Product ID="AccessRetail" />
-::odt:        <Product ID="AccessRuntimeRetail" />
-::odt:        <Product ID="ExcelRetail" />
-::odt:        <Product ID="HomeBusinessRetail" />
-::odt:        <Product ID="HomeStudentRetail" />
-::odt:        <Product ID="InfoPathRetail" />
-::odt:        <Product ID="LyncEntryRetail" />
-::odt:        <Product ID="LyncRetail" />
-::odt:        <Product ID="O365BusinessRetail" />
-::odt:        <Product ID="O365HomePremRetail" />
-::odt:        <Product ID="O365ProPlusRetail" />
-::odt:        <Product ID="O365SmallBusPremRetail" />
-::odt:        <Product ID="OneNoteRetail" />
-::odt:        <Product ID="OutlookRetail" />
-::odt:        <Product ID="PowerPointRetail" />
-::odt:        <Product ID="ProfessionalRetail" />
-::odt:        <Product ID="ProjectProRetail" />
-::odt:        <Product ID="ProjectProXVolume" />
-::odt:        <Product ID="ProjectStdRetail" />
-::odt:        <Product ID="ProjectStdXVolume" />
-::odt:        <Product ID="PublisherRetail" />
-::odt:        <Product ID="SkypeforBusinessEntryRetail" />
-::odt:        <Product ID="SkypeforBusinessRetail" />
-::odt:        <Product ID="SPDRetail" />
-::odt:        <Product ID="VisioProRetail" />
-::odt:        <Product ID="VisioProXVolume" />
-::odt:        <Product ID="VisioStdRetail" />
-::odt:        <Product ID="VisioStdXVolume" />
-::odt:        <Product ID="WordRetail" />
-::odt:    </Remove>
-::odt:    -->
-::odt:
-::odt:    <Add SourcePath="!_odt_source_path!" OfficeClientEdition="64" Channel="Broad">
-::odt:
-::odt:        <^!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
-::odt:        <Product ID="ProfessionalRetail">
-::odt:            <Language ID="!_odt_lang!" />
-::!_odt_pro_access!:            <ExcludeApp ID="Access" />
-::!_odt_pro_excel!:            <ExcludeApp ID="Excel" />
-::!_odt_pro_onenote!:            <ExcludeApp ID="OneNote" />
-::!_odt_pro_outlook!:            <ExcludeApp ID="Outlook" />
-::!_odt_pro_powerpoint!:            <ExcludeApp ID="PowerPoint" />
-::!_odt_pro_publisher!:            <ExcludeApp ID="Publisher" />
-::!_odt_pro_word!:            <ExcludeApp ID="Word" />
-::odt:        </Product>
-::odt:
-::!_odt_pro_visio!:        <Product ID="VisioProRetail">
-::!_odt_pro_visio!:            <Language ID="!_odt_lang!" />
-::!_odt_pro_visio!:        </Product>
-::!_odt_pro_visio!:
-::!_odt_pro_project!:        <Product ID="ProjectProRetail">
-::!_odt_pro_project!:            <Language ID="!_odt_lang!" />
-::!_odt_pro_project!:        </Product>
-::!_odt_pro_project!:
-::odt:    </Add>
-::odt:
-::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
-::!_odt_update!:
-::odt:    <Display Level="None" AcceptEULA="TRUE" />
-::odt:    <^!--  <Display Level="Full" AcceptEULA="TRUE" />  -->
-::odt:
-::odt:    <Logging Path="%temp%" />
-::odt:    <^!--  <Property Name="AUTOACTIVATE" Value="1" />  -->
-::odt:
-::odt:</Configuration>
+               ::odt.xml:<^!-- Office 365 client configuration file sample. To be used for Office 365 ProPlus 2016 apps,
+               ::odt.xml:     Office 365 Business 2016 apps, Project Pro for Office 365 and Visio Pro for Office 365.
+               ::odt.xml:
+               ::odt.xml:     For detailed information regarding configuration options visit: http://aka.ms/ODT.
+               ::odt.xml:     To use the configuration file be sure to remove the comments
+               ::odt.xml:
+               ::odt.xml:     For Office 365 client apps (verion 2013) you will need to use the 2013 version of the
+               ::odt.xml:     Office Deployment Tool which can be downloaded from http://aka.ms/ODT2013
+               ::odt.xml:
+               ::odt.xml:     The following sample allows you to download and install Office 365 ProPlus 2016 apps
+               ::odt.xml:     and Visio Pro for Office 365 directly from the Office CDN using the Current Channel
+               ::odt.xml:     settings  -->
+               ::odt.xml:
+               ::odt.xml:<Configuration>
+               ::odt.xml:
+               ::odt.xml:    <^!--
+               ::odt.xml:    <Remove All="TRUE">
+               ::odt.xml:        <Product ID="AccessRetail" />
+               ::odt.xml:        <Product ID="AccessRuntimeRetail" />
+               ::odt.xml:        <Product ID="ExcelRetail" />
+               ::odt.xml:        <Product ID="HomeBusinessRetail" />
+               ::odt.xml:        <Product ID="HomeStudentRetail" />
+               ::odt.xml:        <Product ID="InfoPathRetail" />
+               ::odt.xml:        <Product ID="LyncEntryRetail" />
+               ::odt.xml:        <Product ID="LyncRetail" />
+               ::odt.xml:        <Product ID="O365BusinessRetail" />
+               ::odt.xml:        <Product ID="O365HomePremRetail" />
+               ::odt.xml:        <Product ID="O365ProPlusRetail" />
+               ::odt.xml:        <Product ID="O365SmallBusPremRetail" />
+               ::odt.xml:        <Product ID="OneNoteRetail" />
+               ::odt.xml:        <Product ID="OutlookRetail" />
+               ::odt.xml:        <Product ID="PowerPointRetail" />
+               ::odt.xml:        <Product ID="ProfessionalRetail" />
+               ::odt.xml:        <Product ID="ProjectProRetail" />
+               ::odt.xml:        <Product ID="ProjectProXVolume" />
+               ::odt.xml:        <Product ID="ProjectStdRetail" />
+               ::odt.xml:        <Product ID="ProjectStdXVolume" />
+               ::odt.xml:        <Product ID="PublisherRetail" />
+               ::odt.xml:        <Product ID="SkypeforBusinessEntryRetail" />
+               ::odt.xml:        <Product ID="SkypeforBusinessRetail" />
+               ::odt.xml:        <Product ID="SPDRetail" />
+               ::odt.xml:        <Product ID="VisioProRetail" />
+               ::odt.xml:        <Product ID="VisioProXVolume" />
+               ::odt.xml:        <Product ID="VisioStdRetail" />
+               ::odt.xml:        <Product ID="VisioStdXVolume" />
+               ::odt.xml:        <Product ID="WordRetail" />
+               ::odt.xml:    </Remove>
+               ::odt.xml:    -->
+               ::odt.xml:
+               ::odt.xml:    <Add SourcePath="!_odt_source_path!" OfficeClientEdition="64" Channel="Broad">
+               ::odt.xml:
+               ::odt.xml:        <^!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
+               ::odt.xml:        <Product ID="ProfessionalRetail">
+               ::odt.xml:            <Language ID="!_odt_lang!" />
+        ::!_odt__access!:            <ExcludeApp ID="Access" />
+         ::!_odt__excel!:            <ExcludeApp ID="Excel" />
+       ::!_odt__onenote!:            <ExcludeApp ID="OneNote" />
+       ::!_odt__outlook!:            <ExcludeApp ID="Outlook" />
+    ::!_odt__powerpoint!:            <ExcludeApp ID="PowerPoint" />
+     ::!_odt__publisher!:            <ExcludeApp ID="Publisher" />
+          ::!_odt__word!:            <ExcludeApp ID="Word" />
+               ::odt.xml:        </Product>
+               ::odt.xml:
+         ::!_odt__visio!:        <Product ID="VisioProRetail">
+         ::!_odt__visio!:            <Language ID="!_odt_lang!" />
+         ::!_odt__visio!:        </Product>
+         ::!_odt__visio!:
+       ::!_odt__project!:        <Product ID="ProjectProRetail">
+       ::!_odt__project!:            <Language ID="!_odt_lang!" />
+       ::!_odt__project!:        </Product>
+       ::!_odt__project!:
+               ::odt.xml:    </Add>
+               ::odt.xml:
+            ::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
+            ::!_odt_update!:
+               ::odt.xml:    <Display Level="None" AcceptEULA="TRUE" />
+               ::odt.xml:    <^!--  <Display Level="Full" AcceptEULA="TRUE" />  -->
+               ::odt.xml:
+               ::odt.xml:    <Logging Path="%temp%" />
+               ::odt.xml:    <^!--  <Property Name="AUTOACTIVATE" Value="1" />  -->
+               ::odt.xml:
+               ::odt.xml:</Configuration>
 
 REM for :this\wim\--new
-::wim:[ExclusionList]
-::wim:\$bootdrive$
-::wim:\$dwnlvldrive$
-::wim:\$lsdrive$
-::wim:\$installdrive$
-::wim:\$Recycle.Bin\*
-::wim:\bootsect.bak
-::wim:\hiberfil.sys
-::wim:\pagefile.sys
-::wim:\ProgramData\Microsoft\Windows\SQM
-::wim:\System Volume Information
-::wim:\Users\*\AppData\Local\GDIPFONTCACHEV1.DAT
-::wim:\Users\*\AppData\Local\Temp\*
-::wim:\Users\*\NTUSER.DAT*.TM.blf
-::wim:\Users\*\NTUSER.DAT*.regtrans-ms
-::wim:\Users\*\NTUSER.DAT*.log*
-::wim:\Windows\AppCompat\Programs\Amcache.hve*.TM.blf
-::wim:\Windows\AppCompat\Programs\Amcache.hve*.regtrans-ms
-::wim:\Windows\AppCompat\Programs\Amcache.hve*.log*
-::wim:\Windows\CSC
-::wim:\Windows\Debug\*
-::wim:\Windows\Logs\*
-::wim:\Windows\Panther\*.etl
-::wim:\Windows\Panther\*.log
-::wim:\Windows\Panther\FastCleanup
-::wim:\Windows\Panther\img
-::wim:\Windows\Panther\Licenses
-::wim:\Windows\Panther\MigLog*.xml
-::wim:\Windows\Panther\Resources
-::wim:\Windows\Panther\Rollback
-::wim:\Windows\Panther\Setup*
-::wim:\Windows\Panther\UnattendGC
-::wim:\Windows\Panther\upgradematrix
-::wim:\Windows\Prefetch\*
-::wim:\Windows\ServiceProfiles\LocalService\NTUSER.DAT*.TM.blf
-::wim:\Windows\ServiceProfiles\LocalService\NTUSER.DAT*.regtrans-ms
-::wim:\Windows\ServiceProfiles\LocalService\NTUSER.DAT*.log*
-::wim:\Windows\ServiceProfiles\NetworkService\NTUSER.DAT*.TM.blf
-::wim:\Windows\ServiceProfiles\NetworkService\NTUSER.DAT*.regtrans-ms
-::wim:\Windows\ServiceProfiles\NetworkService\NTUSER.DAT*.log*
-::wim:\Windows\System32\config\RegBack\*
-::wim:\Windows\System32\config\*.TM.blf
-::wim:\Windows\System32\config\*.regtrans-ms
-::wim:\Windows\System32\config\*.log*
-::wim:\Windows\System32\SMI\Store\Machine\SCHEMA.DAT*.TM.blf
-::wim:\Windows\System32\SMI\Store\Machine\SCHEMA.DAT*.regtrans-ms
-::wim:\Windows\System32\SMI\Store\Machine\SCHEMA.DAT*.log*
-::wim:\Windows\System32\sysprep\Panther
-::wim:\Windows\System32\winevt\Logs\*
-::wim:\Windows\System32\winevt\TraceFormat\*
-::wim:\Windows\Temp\*
-::wim:\Windows\TSSysprep.log
-::wim:\Windows\winsxs\poqexec.log
-::wim:\Windows\winsxs\ManifestCache\*
-::wim:\Windows\servicing\Sessions\*_*.xml
-::wim:\Windows\servicing\Sessions\Sessions.back.xml
-::wim:
+    ::wim.ini:[ExclusionList]
+    ::wim.ini:\$bootdrive$
+    ::wim.ini:\$dwnlvldrive$
+    ::wim.ini:\$lsdrive$
+    ::wim.ini:\$installdrive$
+    ::wim.ini:\$Recycle.Bin\*
+    ::wim.ini:\bootsect.bak
+    ::wim.ini:\hiberfil.sys
+    ::wim.ini:\pagefile.sys
+    ::wim.ini:\ProgramData\Microsoft\Windows\SQM
+    ::wim.ini:\System Volume Information
+    ::wim.ini:\Users\*\AppData\Local\GDIPFONTCACHEV1.DAT
+    ::wim.ini:\Users\*\AppData\Local\Temp\*
+    ::wim.ini:\Users\*\NTUSER.DAT*.TM.blf
+    ::wim.ini:\Users\*\NTUSER.DAT*.regtrans-ms
+    ::wim.ini:\Users\*\NTUSER.DAT*.log*
+    ::wim.ini:\Windows\AppCompat\Programs\Amcache.hve*.TM.blf
+    ::wim.ini:\Windows\AppCompat\Programs\Amcache.hve*.regtrans-ms
+    ::wim.ini:\Windows\AppCompat\Programs\Amcache.hve*.log*
+    ::wim.ini:\Windows\CSC
+    ::wim.ini:\Windows\Debug\*
+    ::wim.ini:\Windows\Logs\*
+    ::wim.ini:\Windows\Panther\*.etl
+    ::wim.ini:\Windows\Panther\*.log
+    ::wim.ini:\Windows\Panther\FastCleanup
+    ::wim.ini:\Windows\Panther\img
+    ::wim.ini:\Windows\Panther\Licenses
+    ::wim.ini:\Windows\Panther\MigLog*.xml
+    ::wim.ini:\Windows\Panther\Resources
+    ::wim.ini:\Windows\Panther\Rollback
+    ::wim.ini:\Windows\Panther\Setup*
+    ::wim.ini:\Windows\Panther\UnattendGC
+    ::wim.ini:\Windows\Panther\upgradematrix
+    ::wim.ini:\Windows\Prefetch\*
+    ::wim.ini:\Windows\ServiceProfiles\LocalService\NTUSER.DAT*.TM.blf
+    ::wim.ini:\Windows\ServiceProfiles\LocalService\NTUSER.DAT*.regtrans-ms
+    ::wim.ini:\Windows\ServiceProfiles\LocalService\NTUSER.DAT*.log*
+    ::wim.ini:\Windows\ServiceProfiles\NetworkService\NTUSER.DAT*.TM.blf
+    ::wim.ini:\Windows\ServiceProfiles\NetworkService\NTUSER.DAT*.regtrans-ms
+    ::wim.ini:\Windows\ServiceProfiles\NetworkService\NTUSER.DAT*.log*
+    ::wim.ini:\Windows\System32\config\RegBack\*
+    ::wim.ini:\Windows\System32\config\*.TM.blf
+    ::wim.ini:\Windows\System32\config\*.regtrans-ms
+    ::wim.ini:\Windows\System32\config\*.log*
+    ::wim.ini:\Windows\System32\SMI\Store\Machine\SCHEMA.DAT*.TM.blf
+    ::wim.ini:\Windows\System32\SMI\Store\Machine\SCHEMA.DAT*.regtrans-ms
+    ::wim.ini:\Windows\System32\SMI\Store\Machine\SCHEMA.DAT*.log*
+    ::wim.ini:\Windows\System32\sysprep\Panther
+    ::wim.ini:\Windows\System32\winevt\Logs\*
+    ::wim.ini:\Windows\System32\winevt\TraceFormat\*
+    ::wim.ini:\Windows\Temp\*
+    ::wim.ini:\Windows\TSSysprep.log
+    ::wim.ini:\Windows\winsxs\poqexec.log
+    ::wim.ini:\Windows\winsxs\ManifestCache\*
+    ::wim.ini:\Windows\servicing\Sessions\*_*.xml
+    ::wim.ini:\Windows\servicing\Sessions\Sessions.back.xml
+    ::wim.ini:
+
+REM for current hotfix
+    ::chot.xml:<xsl:transform version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+    ::chot.xml:    <xsl:output method="text"/><xsl:template match="/">
+    ::chot.xml:        <xsl:for-each select="//References"><xsl:sort select="DownloadURL"/>
+     ::!_chot!:            <xsl:if test="not(contains(DownloadURL, 'kb!_chot_kb!'))">
+    ::chot.xml:            <xsl:value-of select="DownloadURL"/><xsl:text>&#10;</xsl:text>
+     ::!_chot!:            </xsl:if>
+    ::chot.xml:        </xsl:for-each>
+    ::chot.xml:    </xsl:template>
+    ::chot.xml:</xsl:transform>
+
+REM for unattend.xml
+        ::unattend.xml:<?xml version="1.0" encoding="utf-8"?>
+        ::unattend.xml:<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+        ::unattend.xml:    <settings pass="oobeSystem">
+    ::!_unattend_lang!:        <component name="Microsoft-Windows-International-Core" processorArchitecture="!_bit!" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+    ::!_unattend_lang!:            <InputLocale>!_lang!</InputLocale>
+    ::!_unattend_lang!:            <SystemLocale>!_lang!</SystemLocale>
+    ::!_unattend_lang!:            <UILanguage>!_lang!</UILanguage>
+    ::!_unattend_lang!:            <UILanguageFallback>!_lang!</UILanguageFallback>
+    ::!_unattend_lang!:            <UserLocale>!_lang!</UserLocale>
+    ::!_unattend_lang!:        </component>
+        ::unattend.xml:        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="!_bit!" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+        ::unattend.xml:            <AutoLogon>
+        ::unattend.xml:                <Enabled>true</Enabled>
+        ::unattend.xml:                <LogonCount>1</LogonCount>
+        ::unattend.xml:                <Username>!_user!</Username>
+        ::unattend.xml:            </AutoLogon>
+        ::unattend.xml:            <OOBE>
+        ::unattend.xml:                <SkipMachineOOBE>true</SkipMachineOOBE>
+        ::unattend.xml:            </OOBE>
+    ::!_unattend_user!:            <UserAccounts>
+    ::!_unattend_user!:                <LocalAccounts>
+    ::!_unattend_user!:                    <LocalAccount wcm:action="add">
+    ::!_unattend_user!:                        <Password>
+    ::!_unattend_user!:                            <Value></Value>
+    ::!_unattend_user!:                            <PlainText>true</PlainText>
+    ::!_unattend_user!:                        </Password>
+    ::!_unattend_user!:                        <Group>administrators;!_user!</Group>
+    ::!_unattend_user!:                        <Name>!_user!</Name>
+    ::!_unattend_user!:                    </LocalAccount>
+    ::!_unattend_user!:                </LocalAccounts>
+    ::!_unattend_user!:            </UserAccounts>
+    ::!_unattend_lang!:            <TimeZone>!_standard_time!</TimeZone>
+        ::unattend.xml:        </component>
+        ::unattend.xml:    </settings>
+        ::unattend.xml:</unattend>
+
+    ::hisecws.inf:[Unicode]
+    ::hisecws.inf:Unicode=yes
+    ::hisecws.inf:
+    ::hisecws.inf:[System Access]
+    ::hisecws.inf:MaximumPasswordAge = -1
+    ::hisecws.inf:PasswordComplexity = 0
+    ::hisecws.inf:
+    ::hisecws.inf:[Registry Values]
+    ::hisecws.inf:MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\System\DisableCAD=4,1
+    ::hisecws.inf:MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoDriveTypeAutoRun=4,255
+    ::hisecws.inf:MACHINE\Software\Policies\Microsoft\Windows NT\Reliability\**del.ShutdownReasonUI=1,""
+    ::hisecws.inf:MACHINE\Software\Policies\Microsoft\Windows NT\Reliability\ShutdownReasonOn=4,0
+    ::hisecws.inf:;User\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoThumbnailCache=4,1
+    ::hisecws.inf:;User\Software\Policies\Microsoft\Windows\Explorer\DisableThumbsDBOnNetworkFolders=4,1
+    ::hisecws.inf:
+    ::hisecws.inf:[Version]
+    ::hisecws.inf:signature="$CHICAGO$"
+    ::hisecws.inf:Revision=1
+    ::hisecws.inf:
+
+    ::DefaultLayouts.xml:<?xml version="1.0" encoding="utf-8"?>
+    ::DefaultLayouts.xml:<FullDefaultLayoutTemplate
+    ::DefaultLayouts.xml:    xmlns="http://schemas.microsoft.com/Start/2014/FullDefaultLayout"
+    ::DefaultLayouts.xml:    xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout"
+    ::DefaultLayouts.xml:    Version="1">
+    ::DefaultLayouts.xml:    <StartLayoutCollection>
+    ::DefaultLayouts.xml:        <StartLayout
+    ::DefaultLayouts.xml:            GroupCellWidth="6"
+    ::DefaultLayouts.xml:            PreInstalledAppsEnabled="false">
+    ::DefaultLayouts.xml:            <start:Group Name="">
+    ::DefaultLayouts.xml:                <start:Tile
+    ::DefaultLayouts.xml:                    AppUserModelID="Microsoft.MicrosoftEdge_8wekyb3d8bbwe!MicrosoftEdge"
+    ::DefaultLayouts.xml:                    Size="4x2"
+    ::DefaultLayouts.xml:                    Row="0"
+    ::DefaultLayouts.xml:                    Column="0"/>
+    ::DefaultLayouts.xml:                <start:DesktopApplicationTile
+    ::DefaultLayouts.xml:                    DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Administrative Tools\services.lnk"
+    ::DefaultLayouts.xml:                    Size="2x2"
+    ::DefaultLayouts.xml:                    Row="0"
+    ::DefaultLayouts.xml:                    Column="4"/>
+    ::DefaultLayouts.xml:                <start:DesktopApplicationTile
+    ::DefaultLayouts.xml:                    DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Accessories\Notepad.lnk"
+    ::DefaultLayouts.xml:                    Size="1x1"
+    ::DefaultLayouts.xml:                    Row="2"
+    ::DefaultLayouts.xml:                    Column="0"/>
+    ::DefaultLayouts.xml:                <start:DesktopApplicationTile
+    ::DefaultLayouts.xml:                    DesktopApplicationID="Microsoft.Windows.ControlPanel"
+    ::DefaultLayouts.xml:                    Size="1x1"
+    ::DefaultLayouts.xml:                    Row="2"
+    ::DefaultLayouts.xml:                    Column="1"/>
+    ::DefaultLayouts.xml:                <start:Tile
+    ::DefaultLayouts.xml:                    AppUserModelID="Microsoft.WindowsStore_8wekyb3d8bbwe!App"
+    ::DefaultLayouts.xml:                    Size="4x2"
+    ::DefaultLayouts.xml:                    Row="2"
+    ::DefaultLayouts.xml:                    Column="2"/>
+    ::DefaultLayouts.xml:                <start:DesktopApplicationTile
+    ::DefaultLayouts.xml:                    DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\Command Prompt.lnk"
+    ::DefaultLayouts.xml:                    Size="1x1"
+    ::DefaultLayouts.xml:                    Row="3"
+    ::DefaultLayouts.xml:                    Column="1"/>
+    ::DefaultLayouts.xml:            </start:Group>
+    ::DefaultLayouts.xml:        </StartLayout>
+    ::DefaultLayouts.xml:
+    ::DefaultLayouts.xml:        <StartLayout
+    ::DefaultLayouts.xml:            GroupCellWidth="6"
+    ::DefaultLayouts.xml:            SKU="Server|ServerSolution">
+    ::DefaultLayouts.xml:            <start:Group>
+    ::DefaultLayouts.xml:                <start:DesktopApplicationTile
+    ::DefaultLayouts.xml:                    DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Server Manager.lnk"
+    ::DefaultLayouts.xml:                    Size="2x2"
+    ::DefaultLayouts.xml:                    Row="0"
+    ::DefaultLayouts.xml:                    Column="0"/>
+    ::DefaultLayouts.xml:                <start:DesktopApplicationTile
+    ::DefaultLayouts.xml:                    DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\Command Prompt.lnk"
+    ::DefaultLayouts.xml:                    Size="2x2"
+    ::DefaultLayouts.xml:                    Row="0"
+    ::DefaultLayouts.xml:                    Column="2"/>
+    ::DefaultLayouts.xml:                <start:DesktopApplicationTile
+    ::DefaultLayouts.xml:                    DesktopApplicationID="Microsoft.Windows.ControlPanel"
+    ::DefaultLayouts.xml:                    Size="2x2"
+    ::DefaultLayouts.xml:                    Row="0"
+    ::DefaultLayouts.xml:                    Column="4"/>
+    ::DefaultLayouts.xml:            </start:Group>
+    ::DefaultLayouts.xml:        </StartLayout>
+    ::DefaultLayouts.xml:    </StartLayoutCollection>
+    ::DefaultLayouts.xml:</FullDefaultLayoutTemplate>
+    ::DefaultLayouts.xml:
