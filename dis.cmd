@@ -140,15 +140,15 @@ REM for :this\dir\--clean
     exit /b 0
 
 
-::: "Operating system settings" "" "usage: %~n0 oset [option] [...]" "" "    --vergeq,  -vg [version]                  Test this system version" "    --cleanup, -c  [[path]]                   Component Cleanup" "    --version, -v  [os_path] [[var_name]]     Get OS version" "    --bit,     -b  [os_path] [[var_name]]     Get OS bit" "    --install-lang,   -il  [os_path] [[var_name]]    Get OS install language" "    --current-lang,   -cl  [var_name] [[os_path]]    Get OS current language," "                                                     if not set path, will get online info" "    --feature-info,   -fi                            Get Feature list" "    --feature-enable, -fe  [name ...]                Enable Feature" "    --set-power,      -sp                            Set power config as server type"
+::: "Operating system ge[t] / se[t] / [t]ool" "" "usage: %~n0 ost [option] [...]" "" "    --vergeq,  -vg [version]                  Test this system version" "    --cleanup, -c  [[path]]                   Component Cleanup" "    --version, -v  [os_path] [[var_name]]     Get OS version" "    --bit,     -b  [os_path] [[var_name]]     Get OS bit" "    --install-lang,   -il  [os_path] [[var_name]]    Get OS install language" "    --current-lang,   -cl  [var_name] [[os_path]]    Get OS current language," "                                                     if not set path, will get online info" "    --feature-info,   -fi                            Get Feature list" "    --feature-enable, -fe  [name ...]                Enable Feature" "    --set-power,      -sp                            Set power config as server type"
 :::: "invalid option" "Parameter is empty or Not a float" "not a directory" "Not OS path or Low OS version" "parameter is empty" "System version is too old" "not operating system directory" "not support"
-:dis\oset
+:dis\ost
     if "%~1"=="" call :this\annotation %0 & goto :eof
-    call :this\oset\%*
+    call :this\ost\%*
     goto :eof
 
-:this\oset\-vg
-:this\oset\--vergeq
+:this\ost\-vg
+:this\ost\--vergeq
     if "%~x1"=="" exit /b 2
     setlocal
     for /f "usebackq delims=" %%a in (
@@ -159,25 +159,25 @@ REM for :this\dir\--clean
     endlocal & if %_tmp% geq 0 exit /b 0
     exit /b 10
 
-:this\oset\--cleanup
-:this\oset\-c
+:this\ost\--cleanup
+:this\ost\-c
     if "%~1"=="" dism.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase & exit /b 0
     call :this\dir\--isdir "%~1" || exit /b 3
     dism.exe /Image:%1 /Cleanup-Image /StartComponentCleanup /ResetBase
     exit /b 0
 
 REM OS version
-:this\oset\-v
-:this\oset\--version
+:this\ost\-v
+:this\ost\--version
     if not exist "%~1" exit /b 3
     if "%~1"=="%~d1" (
-        call :oset\version %~1\ %2
+        call :ost\version %~1\ %2
     ) else if "%~dp1"=="%~f1" (
-        call :oset\version "%~f1" %2
-    ) else call :oset\version "%~f1\" %2
+        call :ost\version "%~f1" %2
+    ) else call :ost\version "%~f1\" %2
     goto :eof
 
-:oset\version
+:ost\version
     for /f "usebackq" %%a in (
         `dir /ad /b %~1Windows\servicing\Version\*.* 2^>nul`
     ) do if "%~2"=="" (
@@ -185,17 +185,17 @@ REM OS version
     ) else set %~2=%%a& exit /b 0
     exit /b 4
 
-:this\oset\--bit
-:this\oset\-b
+:this\ost\--bit
+:this\ost\-b
     if not exist "%~1" exit /b 3
     if "%~1"=="%~d1" (
-        call :oset\bit %~1\ %2
+        call :ost\bit %~1\ %2
     ) else if "%~dp1"=="%~f1" (
-        call :oset\bit "%~f1" %2
-    ) else call :oset\bit "%~f1\" %2
+        call :ost\bit "%~f1" %2
+    ) else call :ost\bit "%~f1\" %2
     goto :eof
 
-:oset\bit
+:ost\bit
     if not exist %~1Windows\servicing\Version exit /b 4
     for /d %%a in (
         %~1Windows\servicing\Version\*.*
@@ -214,17 +214,17 @@ REM OS version
 
 
 REM OS language
-:this\oset\--install-lang
-:this\oset\-il
+:this\ost\--install-lang
+:this\ost\-il
     if not exist "%~1" exit /b 3
     if "%~1"=="%~d1" (
-        call :oset\install\lang %~1\ %2
+        call :ost\install\lang %~1\ %2
     ) else if "%~dp1"=="%~f1" (
-        call :oset\install\lang "%~f1" %2
-    ) else call :oset\install\lang "%~f1\" %2
+        call :ost\install\lang "%~f1" %2
+    ) else call :ost\install\lang "%~f1\" %2
     goto :eof
 
-:oset\install\lang
+:ost\install\lang
     for /d %%a in (
         %~1Windows\servicing\??-??
     ) do if "%~2"=="" (
@@ -234,8 +234,8 @@ REM OS language
 
 REM https://technet.microsoft.com/en-us/library/cc287874(v=office.12).aspx
 REM https://docs.microsoft.com/en-us/previous-versions/commerce-server/ee825488(v=cs.20)
-:this\oset\--current-lang
-:this\oset\-cl
+:this\ost\--current-lang
+:this\ost\-cl
     setlocal
     if "%~2" neq "" (
         reg.exe load HKLM\load-point %~2\Windows\System32\config\DRIVERS || exit /b 7
@@ -248,7 +248,7 @@ REM https://docs.microsoft.com/en-us/previous-versions/commerce-server/ee825488(
     endlocal & if "%~1" neq "" set %~1=%_lang%
     goto :eof
 
-REM for :this\oset\--current-lang
+REM for :this\ost\--current-lang
 :lang\current
     for /f "usebackq tokens=1,3" %%a in (
         `reg query %~1\Control\Nls\Language /v Default`
@@ -278,8 +278,8 @@ REM for :this\oset\--current-lang
     ) do if /i ".%%~b"=="%%~xc" set "%~2=%%~nc"& exit /b 0
     exit /b 1
 
-:this\oset\--feature-info
-:this\oset\-fi
+:this\ost\--feature-info
+:this\ost\-fi
     for /f "usebackq tokens=1-4" %%a in (
         `dism.exe /English /Online /Get-Features`
     ) do (
@@ -289,17 +289,17 @@ REM for :this\oset\--current-lang
     call :this\lals 0 0
     exit /b 0
 
-:this\oset\--feature-enable
-:this\oset\-fe
+:this\ost\--feature-enable
+:this\ost\-fe
     if "%~1"=="" exit /b 5
     for %%a in (
         %*
     ) do dism.exe /Online /Enable-Feature /FeatureName:%%a /NoRestart
     exit /b 0
 
-:this\oset\--set-power
-:this\oset\-sp
-    call :this\oset\--vergeq 6.0 || exit /b 6
+:this\ost\--set-power
+:this\ost\-sp
+    call :this\ost\--vergeq 6.0 || exit /b 6
 
     REM powercfg
     powercfg.exe /h off
@@ -336,6 +336,11 @@ REM for :this\oset\--current-lang
         '%%c'
     ) do powercfg.exe /set%%bvalueindex %%a %%d %%e %%f
     exit /b 0
+
+
+:this\ost\--current-hotfix
+:this\ost\-ch
+    goto :eof
 
 ::: "Letter info" "" "usage: %~n0 letter [option] [...]" "" "    --free,   -u [[var_name]]           Get Unused Device Id" "    --change, -x [letter1:] [letter2:]  [DANGER^^^!] Change or exchange letters, need reboot system" "    --remove, -r [letter:]              [DANGER^^^!] Remove letter, need reboot system" "    --list,   -l [var_name] [[l/r/n]]   Get Device IDs" "    --tisl,   -- [var_name] [[l/r/n]]   Get Device IDs DESC" "                            no param view all" "                            l: Local Fixed Disk" "                            r: CD-ROM Disc" "                            n: Network Connection" "" "    --firstpath, -fp  [path_name] [[var_name]]" "                                        Get first path foreach Partiton" ""
 :::: "invalid option" "variable name is empty" "type command not support" "The first parameter is empty" "Target path not found" "target not a letter or not support" "reg error" "letter not found"
@@ -469,7 +474,7 @@ REM mini uuid creater
 ::: "Encode password to base64 string for unattend.xml" "" "usage: %~n0 cpwd [string] [[var_name]]"
 :::: "System version is too old" "Args is empty"
 :dis\cpwd
-    call :this\oset\--vergeq 6.1 || exit /b 1
+    call :this\ost\--vergeq 6.1 || exit /b 1
     if "%~1"=="" exit /b 2
     for /f "usebackq" %%a in (
         `PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes(\"%1OfflineAdministratorPassword\"))"`
@@ -502,7 +507,7 @@ REM mini uuid creater
 
 :this\un\.exe
     if not exist "%~1" exit /b 2
-    call :this\oset\--vergeq 10.0 || exit /b 3
+    call :this\ost\--vergeq 10.0 || exit /b 3
     compact.exe /u /exe /a /i /q /s:"%~f1"
     exit /b 0
 
@@ -841,7 +846,7 @@ REM Enable ServicesForNFS
 :: vhd ::
 :::::::::
 
-::: "Virtual Hard Disk manager" "" "usage: %~n0 vhd [option] [args...]" "" "    --new,    -n  [new_vhd_path] [size[GB]] [[mount letter or path]]    Creates a virtual disk file." "    --mount,  -m  [vhd_path] [[letter]]                Mount vhd file" "    --umount, -u  [vhd_path]                           Unmount vhd file" "    --expand, -e  [vhd_path] [GB_size]                 Expands the maximum size available on a virtual disk." "    --differ, -d  [new_vhd_path] [source_vhd_path]     Create differencing vhd file by an existing virtual disk file" "    --merge,  -me  [chile_vhd_path] [[merge_depth]]    Merges a child disk with its parents" "    --rec,    -r                                       Recovery child vhd if have parent" "e.g." "    %~n0 vhd -n E:\nano.vhdx 30 V:"
+::: "Virtual Hard Disk manager" "" "usage: %~n0 vhd [option] [args...]" "" "    --new,    -n  [new_vhd_path] [size[GB]] [[mount letter or path]]" "                                                       Creates a virtual disk file." "" "    --mount,  -m  [vhd_path] [[letter]]                Mount vhd file" "    --umount, -u  [vhd_path]                           Unmount vhd file" "    --expand, -e  [vhd_path] [GB_size]                 Expands the maximum size available on a virtual disk." "    --differ, -d  [new_vhd_path] [source_vhd_path]     Create differencing vhd file by an existing virtual disk file" "    --merge,  -me [chile_vhd_path] [[merge_depth]]     Merges a child disk with its parents" "    --rec,    -r                                       Recovery child vhd if have parent" "" "e.g." "    %~n0 vhd -n E:\nano.vhdx 30 V:"
 :::: "invalid option" "file suffix not vhd/vhdx" "file not found" "no volume find" "vhd size is empty" "letter already use" "diskpart error:" "not a letter or path" "{UNUSE}" "size not num" "parent vhd not found" "new file allready exist"
 :dis\vhd
     if "%~1"=="" call :this\annotation %0 & goto :eof
@@ -1022,7 +1027,7 @@ REM Enable ServicesForNFS
 
 :this\wim\--new
 :this\wim\-n
-    call :this\oset\--vergeq 6.3 || exit /b 3
+    call :this\ost\--vergeq 6.3 || exit /b 3
 
     setlocal
     call :this\inum %~1 && call :wim\setCompress %~1 && shift
@@ -1098,7 +1103,7 @@ REM create exclusion list
 
 :this\wim\--apply
 :this\wim\-a
-    call :this\oset\--vergeq 6.3 || exit /b 3
+    call :this\ost\--vergeq 6.3 || exit /b 3
     if not exist "%~1" exit /b 7
     if /i "%~x1" neq ".wim" if /i "%~x1" neq ".esd" exit /b 8
     REM if "%~2"=="" mkdir ".\%~n1" 2>nul || exit /b 9
@@ -1363,7 +1368,7 @@ REM OS
 :this\kms\-s
 
     REM Get this OS version
-    call :this\oset\--version %SystemDrive% _ver
+    call :this\ost\--version %SystemDrive% _ver
     for /f "tokens=1,2 delims=." %%b in (
         "%_ver%"
     ) do set /a _ver=%%b * 10 + %%c
@@ -1570,7 +1575,7 @@ REM Project 2010 Professional
 
     call :odt\ext\setup 27af1be6-dd20-4cb4-b154-ebab8a7d4a7e || exit /b 3
     set _odt_update=
-    call :this\oset\--current-lang _odt_lang || exit /b 2
+    call :this\ost\--current-lang _odt_lang || exit /b 2
 
     call :this\odt\%*
     endlocal
@@ -1609,7 +1614,7 @@ REM Project 2010 Professional
     odt.exe /configure %temp%\odt_install.xml || exit /b 6
     erase %temp%\odt_install.xml
 
-    call :this\oset\--vergeq 10.0 || goto odt\install\skip_compress
+    call :this\ost\--vergeq 10.0 || goto odt\install\skip_compress
 
     title compression
     >&3 echo compress '%ProgramFiles%\Microsoft Office'
@@ -1751,7 +1756,7 @@ REM download and set in path
 
 :this\reg\--intel-amd
 :this\reg\-ia
-    call :this\oset\--vergeq 6.0 || exit /b 2
+    call :this\ost\--vergeq 6.0 || exit /b 2
 
     if "%~1"=="" (
         setlocal
@@ -1784,6 +1789,12 @@ REM winpe \$windows.~bt -> ""
 :this\reg\-x
     if "%~2"=="" exit /b 4
     setlocal
+
+    REM Default -> \ve
+    for /f "usebackq" %%a in (
+        `reg.exe query HKLM /ve`
+    ) do set "_ve=%%a"
+
     set _load_point=HKLM\load-point%random%
     if exist "%~1" (
         reg.exe load %_load_point% "%~1" || exit /b 5
@@ -1796,18 +1807,10 @@ REM winpe \$windows.~bt -> ""
 :reg\replace
     setlocal enabledelayedexpansion
     set _src=%~2
-    set _src=%_src:\=\\%
     set _src=%_src:"=\"%
-    set _tag=%~3
-    if defined _tag (
-        set _tag=!_tag:\=\\!
-        set _tag=!_tag:"=\"!
-    )
 
-    REM Default -> \ve
-    for /f "usebackq" %%a in (
-        `reg.exe query HKLM /ve`
-    ) do set "_ve=%%a"
+    set _tag=%~3
+    if defined _tag set _tag=!_tag:"=\"!
 
     REM replace
     for /f "usebackq delims=" %%a in (
@@ -1816,7 +1819,9 @@ REM winpe \$windows.~bt -> ""
         set _line=%%a
         if "!_line:\%~n1=!"=="!_line!" (
             set _line=!_line:    =`!
-            set _line=!_line:\=\\!
+            REM fix: "X:\" -> "X:\\"
+            set _line=!_line:\`=\\`!
+            if "!_line:~-1!"=="\" set _line=!_line!\
             set _line=!_line:"=\"!
             for /f "tokens=1,2* delims=`" %%b in (
                 "!_line:%_src%=%_tag%!"

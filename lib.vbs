@@ -230,6 +230,7 @@ End Function
 '   Template   '
 ''''''''''''''''
 
+''' - '-
 Function lib_unattend(tag, ix86)
     Dim xml, bit, rn
     rn = vbNewLine
