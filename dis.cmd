@@ -337,10 +337,31 @@ REM for :this\ost\--current-lang
     ) do powercfg.exe /set%%bvalueindex %%a %%d %%e %%f
     exit /b 0
 
-
+REM https://technet.microsoft.com/en-us/security/cc184924.aspx
 :this\ost\--current-hotfix
 :this\ost\-ch
+    call :odt\ost\setup 8e16a4c7-dd28-4368-a83a-282c82fc212a
+
+
     goto :eof
+
+REM download and set in path
+:odt\ost\setup
+    for %%a in (mbsacli.exe) do if "%%~$path:a" neq "" exit /b 0
+    set PATH=%temp%\%~1;%PATH%
+    if exist %temp%\%~1\mbsacli.exe exit /b 0
+    2>nul mkdir %temp%\%~1
+    REM call :dis\download http://download.microsoft.com/download/A/1/0/A1052D8B-DA8D-431B-8831-4E95C00D63ED/MBSASetup-x%processor_architecture:~-2%-EN.msi %temp%\%~1\MBSASetup.msi || exit /b 1
+    call :dis\download http://download.microsoft.com/download/8/E/1/8E16A4C7-DD28-4368-A83A-282C82FC212A/MBSASetup-x%processor_architecture:~-2%-EN.msi %temp%\%~1\MBSASetup.msi || exit /b 1
+    pushd %cd%
+        cd /d %temp%\%~1
+        call :this\un\.msi %temp%\%~1\MBSASetup.msi
+    popd
+    move /y "%temp%\%~1\MBSASetup\ProgramF\Microsoft Baseline Security Analyzer 2\??s?c??.???" %temp%\%~1
+    rmdir /s /q %temp%\%~1\MBSASetup
+    REM http://go.microsoft.com/fwlink/?LinkId=76054
+    if not exist %temp%\%~1\wsusscn2.cab call :dis\download http://download.windowsupdate.com/microsoftupdate/v6/wsusscan/wsusscn2.cab %temp%\%~1\wsusscn2.cab || exit /b 2
+    exit /b 0
 
 ::: "Letter info" "" "usage: %~n0 letter [option] [...]" "" "    --free,   -u [[var_name]]           Get Unused Device Id" "    --change, -x [letter1:] [letter2:]  [DANGER^^^!] Change or exchange letters, need reboot system" "    --remove, -r [letter:]              [DANGER^^^!] Remove letter, need reboot system" "    --list,   -l [var_name] [[l/r/n]]   Get Device IDs" "    --tisl,   -- [var_name] [[l/r/n]]   Get Device IDs DESC" "                            no param view all" "                            l: Local Fixed Disk" "                            r: CD-ROM Disc" "                            n: Network Connection" "" "    --firstpath, -fp  [path_name] [[var_name]]" "                                        Get first path foreach Partiton" ""
 :::: "invalid option" "variable name is empty" "type command not support" "The first parameter is empty" "Target path not found" "target not a letter or not support" "reg error" "letter not found"
@@ -1053,7 +1074,7 @@ REM Enable ServicesForNFS
     REM New or Append
     if exist ".\%_name%.wim" (set _create=Append) else set _create=Capture
 
-    call :this\str\--now _conf "%tmp%\" .log
+    call :this\str\--now _conf "%tmp%\" .ini
     set _args=
     set _description=
     REM Create exclusion list
@@ -2157,14 +2178,12 @@ REM for :dis\odt
 
 REM for :this\wim\--new
     ::wim.ini:[ExclusionList]
-    ::wim.ini:\$bootdrive$
-    ::wim.ini:\$dwnlvldrive$
-    ::wim.ini:\$lsdrive$
-    ::wim.ini:\$installdrive$
-    ::wim.ini:\$Recycle.Bin\*
-    ::wim.ini:\bootsect.bak
+    ::wim.ini:\$*
+    ::wim.ini:\boot*
+; REM fix: \*.sys == *.sys
     ::wim.ini:\hiberfil.sys
     ::wim.ini:\pagefile.sys
+    ::wim.ini:\swapfile.sys
     ::wim.ini:\ProgramData\Microsoft\Windows\SQM
     ::wim.ini:\System Volume Information
     ::wim.ini:\Users\*\AppData\Local\GDIPFONTCACHEV1.DAT
@@ -2208,10 +2227,6 @@ REM for :this\wim\--new
     ::wim.ini:\Windows\System32\winevt\TraceFormat\*
     ::wim.ini:\Windows\Temp\*
     ::wim.ini:\Windows\TSSysprep.log
-    ::wim.ini:\Windows\winsxs\poqexec.log
-    ::wim.ini:\Windows\winsxs\ManifestCache\*
-    ::wim.ini:\Windows\servicing\Sessions\*_*.xml
-    ::wim.ini:\Windows\servicing\Sessions\Sessions.back.xml
     ::wim.ini:
 
 REM for current hotfix
