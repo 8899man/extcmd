@@ -2145,8 +2145,8 @@ REM for :dis\odt
        ::!_odt__project!:
                ::odt.xml:    </Add>
                ::odt.xml:
-            ::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
-            ::!_odt_update!:
+         ::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
+         ::!_odt_update!:
                ::odt.xml:    <Display Level="None" AcceptEULA="TRUE" />
                ::odt.xml:    <^!--  <Display Level="Full" AcceptEULA="TRUE" />  -->
                ::odt.xml:
