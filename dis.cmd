@@ -1094,7 +1094,7 @@ REM Enable ServicesForNFS
         >%_conf% call :wim\ConfigFile "%_input%" && set _args=/ConfigFile:"%_conf%"
         REM input args
         for %%a in ("%_input%") do set "_input=%%~dpa"
-        set "_input=%_input:~0,-1%"
+        set "_input=!_input:~0,-1!"
     )
 
     REM Do capture
