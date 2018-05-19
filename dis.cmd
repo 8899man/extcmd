@@ -1926,10 +1926,11 @@ REM winpe \$windows.~bt -> ""
     set _tag=%~3
     if defined _tag set _tag=!_tag:"=\"!
 
+    set _count=0
     REM replace
     for /f "usebackq delims=" %%a in (
         `reg.exe query %1 /f %2 /s`
-    ) do (
+    ) do >nul (
         set _line=%%a
         if "!_line:\%~n1=!"=="!_line!" (
             set _line=!_line:    =`!
@@ -1940,14 +1941,23 @@ REM winpe \$windows.~bt -> ""
             set _line=!_line:"=\"!
             for /f "tokens=1,2* delims=`" %%b in (
                 "!_line:%_src%=%_tag%!"
-            ) do if "%%c" neq "" if "%%b" neq "%_ve%" (
-                reg.exe add "!_key!" /v "%%b" /t %%c /d "%%d" /f || exit /b 5
-                for /f "delims=`" %%e in (
-                    "!_line!"
-                ) do if "%%b" neq "%%e" reg.exe delete "!_key!" /v "%%e" /f || exit /b 5
-            ) else reg.exe add "!_key!" /ve /t %%c /d "%%d" /f || exit /b 5
+            ) do if "%%c" neq "" (
+
+                if "%%b" neq "%_ve%" (
+                    reg.exe add "!_key!" /v "%%b" /t %%c /d "%%d" /f || exit /b 5
+
+                    REM delete
+                    for /f "delims=`" %%e in (
+                        "!_line!"
+                    ) do if "%%b" neq "%%e" reg.exe delete "!_key!" /v "%%e" /f || exit /b 5
+
+                ) else reg.exe add "!_key!" /ve /t %%c /d "%%d" /f || exit /b 5
+
+                set /a _count+=1
+            )
         ) else set _key=!_line:HKEY_LOCAL_MACHINE=HKLM!
     )
+    echo all '%_count%' change.
     endlocal
     goto :eof
 
