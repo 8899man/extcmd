@@ -140,7 +140,7 @@ REM for :this\dir\--clean
     exit /b 0
 
 
-::: "Operating system ge[t] / se[t] / [t]ool" "" "usage: %~n0 ost [option] [...]" "" "    --vergeq,  -vg [version]                  Test this system version" "    --cleanup, -c  [[path]]                   Component Cleanup" "    --version, -v  [os_path] [[var_name]]     Get OS version" "    --bit,     -b  [os_path] [[var_name]]     Get OS bit" "    --install-lang,   -il  [os_path] [[var_name]]    Get OS install language" "    --current-lang,   -cl  [var_name] [[os_path]]    Get OS current language," "                                                     if not set path, will get online info" "    --feature-info,   -fi                            Get Feature list" "    --feature-enable, -fe  [name ...]                Enable Feature" "    --set-power,      -sp                            Set power config as server type"
+::: "Operating system ge[t] / se[t] / [t]ool" "" "usage: %~n0 ost [option] [...]" "" "    --vergeq,  -vg [version]                  Test current version is greater than the given value" "    --cleanup, -c  [[path]]                   Component Cleanup" "    --version, -v  [os_path] [[var_name]]     Get OS version" "    --bit,     -b  [os_path] [[var_name]]     Get OS bit" "    --install-lang,   -il  [os_path] [[var_name]]    Get OS install language" "    --current-lang,   -cl  [var_name] [[os_path]]    Get OS current language," "                                                     if not set path, will get online info" "    --feature-info,   -fi                            Get Feature list" "    --feature-enable, -fe  [name ...]                Enable Feature" "    --set-power,      -sp                            Set power config as server type"
 :::: "invalid option" "Parameter is empty or Not a float" "not a directory" "Not OS path or Low OS version" "parameter is empty" "System version is too old" "not operating system directory" "not support"
 :dis\ost
     if "%~1"=="" call :this\annotation %0 & goto :eof
@@ -151,13 +151,21 @@ REM for :this\dir\--clean
 :this\ost\--vergeq
     if "%~x1"=="" exit /b 2
     setlocal
+    call :ost\this_version_x_10 _this_ver
+    for /f "usebackq tokens=1,2 delims=." %%a in (
+        '%~1'
+    ) do set /a _ver=%_this_ver% - %%a * 10 - %%b
+    endlocal & if %_ver% geq 0 exit /b 0
+    exit /b 10
+
+:ost\this_version_x_10 [variable_name]
+    if "%~1"=="" exit /b 1
     for /f "usebackq delims=" %%a in (
         `ver`
-    ) do for %%b in (%%a) do if "%%~xb" neq "" for /f "usebackq tokens=1-4 delims=." %%c in (
-        '%~1.%%b'
-    ) do set /a _tmp=%%e * 10 + %%f - %%c * 10 - %%d
-    endlocal & if %_tmp% geq 0 exit /b 0
-    exit /b 10
+    ) do for %%b in (%%a) do if "%%~xb" neq "" for /f "usebackq tokens=1,2 delims=." %%c in (
+        '%%b'
+    ) do set /a %~1=%%c * 10 + %%d
+    exit /b 0
 
 :this\ost\--cleanup
 :this\ost\-c
@@ -340,27 +348,112 @@ REM for :this\ost\--current-lang
 REM https://technet.microsoft.com/en-us/security/cc184924.aspx
 :this\ost\--current-hotfix
 :this\ost\-ch
-    call :odt\ost\setup 8e16a4c7-dd28-4368-a83a-282c82fc212a
+    setlocal enabledelayedexpansion
+    set _ost_uuid=8e16a4c7-dd28-4368-a83a-282c82fc212a
 
+    call :ost\hot\setup %_ost_uuid%
 
+    REM http://go.microsoft.com/fwlink/?LinkId=76054
+    call :this\str\--now _odt_now
+
+    if exist %temp%\%_ost_uuid%\wsusscn2.cab (
+        for %%a in (
+            %temp%\%_ost_uuid%\wsusscn2.cab
+        ) do set _file_time=%%~ta
+        set _file_time=!_file_time:/=!
+        set _file_time=!_file_time::=!
+        set _file_time=!_file_time: =!
+
+        set /a _file_time=!_odt_now:~0,8! - !_file_time:~0,8!
+
+        if !_file_time! gtr 7 erase %temp%\%_ost_uuid%\wsusscn2.cab
+    )
+
+    if not exist %temp%\%_ost_uuid%\wsusscn2.cab call :dis\download http://download.windowsupdate.com/microsoftupdate/v6/wsusscan/wsusscn2.cab %temp%\%_ost_uuid%\wsusscn2.cab || exit /b 2
+
+    REM create results
+    2>nul >"%temp%\results_%_odt_now%.xml" mbsacli.exe /xmlout /catalog "%temp%\%_ost_uuid%\wsusscn2.cab" /unicode /nvc
+
+    2>nul erase "%temp%\%_ost_uuid%\wsusscn2.cab.dat"
+
+    set _chot_kb=
+    set _op=
+    set _chot=chot.xml
+    call :ost\this_version_x_10 _hot_ver
+    if %_hot_ver%==51 (
+        set _op=xp
+        set _chot_kb=936929
+    ) else if %_hot_ver%==52 (
+        set _op=server2003
+        set _chot_kb=914961
+        if %processor_architecture:~-2%==64 set _op=server2003.windowsxp
+    ) else if %_hot_ver%==60 (
+        set _chot_kb=936330
+    ) else if %_hot_ver%==61 (
+        set _chot_kb=976932
+    ) else set _chot=
+
+    >%temp%\%_ost_uuid%\chot.xsl call :this\txt\--subtxt "%~f0" chot.xml 2000
+
+    REM split xml -> log
+    call :this\vbs doxsl "%temp%\results_%_odt_now%.xml" %temp%\%_ost_uuid%\chot.xsl %temp%\hotlist_%_odt_now%.log || exit /b 1
+
+    REM install lang
+    set _lang=
+    if %_hot_ver% lss 60 for /f "usebackq skip=1 tokens=1" %%a in (
+		`wmic.exe os get OSLanguage`
+	) do for %%b in (
+        cht.1028
+        enu.1033
+        jpn.1041
+        kor.1042
+        chs.2052
+    ) do if ".%%a"=="%%~xb" set _lang=%%~nb
+
+    REM support exfat
+    if defined _lang for %%a in (
+        A/6/E/A6EFFC03-F035-4604-9FB0-3B8169ED6BB6/WindowsXP-KB955704-x86-ENU
+        E/8/A/E8AE6D10-0187-4B9C-AC00-AAB60A404E12/WindowsXP-KB955704-x86-CHS
+        B/4/5/B4510A9E-00C5-4D99-8133-9B3172143B8C/WindowsXP-KB955704-x86-CHT
+        F/4/2/F420EB1B-9C04-4B40-9424-5C4593628479/WindowsXP-KB955704-x86-JPN
+        A/E/0/AE04BF31-41C3-4B70-847F-1ACF21E75898/WindowsXP-KB955704-x86-KOR
+        3/5/1/3512CC64-57BD-4C97-AC83-6D5C6B2B0524/WindowsServer2003-KB955704-x86-ENU
+        3/9/1/3917805C-FF96-4D6B-9F49-D4943B0A6AE5/WindowsServer2003-KB955704-x86-CHS
+        3/8/3/38331E36-D3CD-4E14-A7F7-C746F6285975/WindowsServer2003-KB955704-x86-CHT
+        9/C/D/9CD14BBA-B7EA-4EE0-9600-B1D136B1FC77/WindowsServer2003-KB955704-x86-JPN
+        3/8/6/38697B60-193D-495C-882F-794AB8D86019/WindowsServer2003-KB955704-x86-KOR
+        C/0/5/C0526146-E09A-41F7-B417-73BA1E561E40/WindowsServer2003.WindowsXP-KB955704-x64-ENU
+        A/9/3/A9376498-CC5C-4566-8540-8B718025940C/WindowsServer2003.WindowsXP-KB955704-x64-CHS
+        0/C/4/0C47C96D-F0D6-4142-B720-723D76B3E5B3/WindowsServer2003.WindowsXP-KB955704-x64-CHT
+        7/B/C/7BC77A57-9310-41E4-9974-E75C8CC6E0C3/WindowsServer2003.WindowsXP-KB955704-x64-JPN
+        E/3/2/E3237925-C9FF-4901-8A46-AFFAAC3AF602/WindowsServer2003.WindowsXP-KB955704-x64-KOR
+    ) do if "%%~na"=="Windows%_op%-KB955704-x%processor_architecture:~-2%-%_lang%" >>%temp%\hotlist_%_odt_now%.log echo http://download.microsoft.com/download/%%a.exe
+
+    sort.exe /+67 %temp%\hotlist_%_odt_now%.log
+
+    erase %temp%\hotlist_%_odt_now%.log
+
+    endlocal
     goto :eof
 
 REM download and set in path
-:odt\ost\setup
+:ost\hot\setup
     for %%a in (mbsacli.exe) do if "%%~$path:a" neq "" exit /b 0
+
     set PATH=%temp%\%~1;%PATH%
-    if exist %temp%\%~1\mbsacli.exe exit /b 0
-    2>nul mkdir %temp%\%~1
-    REM call :dis\download http://download.microsoft.com/download/A/1/0/A1052D8B-DA8D-431B-8831-4E95C00D63ED/MBSASetup-x%processor_architecture:~-2%-EN.msi %temp%\%~1\MBSASetup.msi || exit /b 1
-    call :dis\download http://download.microsoft.com/download/8/E/1/8E16A4C7-DD28-4368-A83A-282C82FC212A/MBSASetup-x%processor_architecture:~-2%-EN.msi %temp%\%~1\MBSASetup.msi || exit /b 1
-    pushd %cd%
-        cd /d %temp%\%~1
-        call :this\un\.msi %temp%\%~1\MBSASetup.msi
-    popd
-    move /y "%temp%\%~1\MBSASetup\ProgramF\Microsoft Baseline Security Analyzer 2\??s?c??.???" %temp%\%~1
-    rmdir /s /q %temp%\%~1\MBSASetup
-    REM http://go.microsoft.com/fwlink/?LinkId=76054
-    if not exist %temp%\%~1\wsusscn2.cab call :dis\download http://download.windowsupdate.com/microsoftupdate/v6/wsusscan/wsusscn2.cab %temp%\%~1\wsusscn2.cab || exit /b 2
+    if not exist %temp%\%~1\mbsacli.exe (
+        2>nul mkdir %temp%\%~1
+        REM call :dis\download http://download.microsoft.com/download/A/1/0/A1052D8B-DA8D-431B-8831-4E95C00D63ED/MBSASetup-x%processor_architecture:~-2%-EN.msi %temp%\%~1\MBSASetup.msi || exit /b 1
+        call :dis\download http://download.microsoft.com/download/8/E/1/8E16A4C7-DD28-4368-A83A-282C82FC212A/MBSASetup-x%processor_architecture:~-2%-EN.msi %temp%\%~1\MBSASetup.msi || exit /b 1
+        pushd %cd%
+            cd /d %temp%\%~1
+            call :this\un\.msi %temp%\%~1\MBSASetup.msi
+        popd
+        REM mbsacli.exe wusscan.dll
+        move /y "%temp%\%~1\MBSASetup\ProgramF\Microsoft Baseline Security Analyzer 2\??s?c??.???" %temp%\%~1
+        rmdir /s /q %temp%\%~1\MBSASetup
+    )
+
     exit /b 0
 
 ::: "Letter info" "" "usage: %~n0 letter [option] [...]" "" "    --free,   -u [[var_name]]           Get Unused Device Id" "    --change, -x [letter1:] [letter2:]  [DANGER^^^!] Change or exchange letters, need reboot system" "    --remove, -r [letter:]              [DANGER^^^!] Remove letter, need reboot system" "    --list,   -l [var_name] [[l/r/n]]   Get Device IDs" "    --tisl,   -- [var_name] [[l/r/n]]   Get Device IDs DESC" "                            no param view all" "                            l: Local Fixed Disk" "                            r: CD-ROM Disc" "                            n: Network Connection" "" "    --firstpath, -fp  [path_name] [[var_name]]" "                                        Get first path foreach Partiton" ""
