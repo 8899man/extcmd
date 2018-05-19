@@ -154,10 +154,8 @@ REM for :this\path\--trim, delete path if not exist
 :this\path\-r
 :this\path\--reset
     for /f "usebackq tokens=2 delims==" %%a in (
-        `wmic.exe ENVIRONMENT where "name='path'" get VariableValue /format:list`
-    ) do set path=%%a
-    REM Trim unprint char
-    set path=%path%
+        `wmic.exe ENVIRONMENT where "Caption='<SYSTEM>\\Path'" get VariableValue /format:list`
+    ) do call set path=%%a
     exit /b 0
 
 ::: "Variable tool" "" "usage: %~n0 var [option] [...]" "" "    --unset, -u   [[var_name]]      Unset variable, where variable name left contains" "    --env,   -e   [key] [value]     Set environment variable" "    --errlv, -el  [num]             Set errorlevel variable"
