@@ -345,6 +345,7 @@ REM for :this\ost\--current-lang
     ) do powercfg.exe /set%%bvalueindex %%a %%d %%e %%f
     exit /b 0
 
+REM TODO
 REM https://technet.microsoft.com/en-us/security/cc184924.aspx
 :this\ost\--current-hotfix
 :this\ost\-ch
@@ -780,14 +781,15 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
     call :this\vbs get %1 %2 || exit /b 4
     exit /b 0
 
-::: "Boot tools" "" "usage: %~n0 boot [option] [args...]" "    --winpe-file, -pf  [target_letter]   Copy Window PE boot file from CDROM"
-:::: "invalid option" "target_letter not exist" "Window PE CDROM not found" "target not found"
+::: "Boot tools" "" "usage: %~n0 boot [option] [args...]" "" "    --file,    -f  [letter:]     Copy Window PE boot file from CDROM" "    --legacy,  -g  [[letter:]]   Set the old boot menu style" "    --winre,   -r  [file_path]   Setting Up recovery startup mirrors" "    --winpe,   -p  [file_path]   Create WinPE boot Menu" "    --rebuild, -rb [[letter:]]   Rebuilding the System boot Menu"
+:::: "invalid option" "target_letter not exist" "Window PE CDROM not found" "target not found" "not wim file" "wim file must put in some directory"
 :dis\boot
     if "%~1"=="" call :this\annotation %0 & goto :eof
     call :this\boot\%*
     goto :eof
 
 :this\boot\--legacy
+:this\boot\-g
     if "%~1"=="" (
         bcdedit.exe /set {default} bootmenupolicy legacy
     ) else (
@@ -797,50 +799,66 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
     )
     goto :eof
 
-:this\boot\--winpe-file
-:this\boot\-pf
+:this\boot\--file
+:this\boot\-f
     if not exist "%~d1" exit /b 2
     for /l %%a in (0,1,9) do if exist \\?\CDROM%%a\boot\boot.sdi (
+        REM for macOS
+        >%~d1\.metadata_never_index type nul
+        attrib.exe +s +h %~d1\.metadata_never_index
         for %%b in (
             \bootmgr
             \boot\bcd
             \boot\boot.sdi
             \efi\boot\bootx64.efi
             \efi\microsoft\boot\bcd
-            \sources\boot.wim
         ) do (
             if not exist %~d1%%~pb mkdir %~d1%%~pb
             copy /y \\?\CDROM%%a%%b %~d1%%b
         )
         mkdir %~d1\support %~d1\sources\sxs
-        copy /y \\?\CDROM%%a\sources\sxs\* %~d1\sources\sxs
+        REM copy /y \\?\CDROM%%a\sources\sxs\* %~d1\sources\sxs
         exit /b 0
     )
     exit /b 3
 
-REM TODO
-:this\boot\--wimboot [bcd] [sdi] [wim]
-:this\boot\-wb
+
+:this\boot\--winre
+:this\boot\-r
     if not exist "%~1" exit /b 4
-    if not exist "%~3" exit /b 4
-    copy /y %windir%\Boot\DVD\PCAT\boot.sdi "%~2"
+    if /i "%~x1" neq ".wim" exit /b 5
+    if "%~p1"=="\" exit /b 6
+    reagentc.exe /disable
+    reagentc.exe /setreimage /path "%~dp1"
+    reagentc.exe /enable
+    attrib.exe +s +h +r "%~dp1" /d /s
+    bcdedit.exe /set {default} bootmenupolicy legacy
+    goto :eof
+
+:this\boot\--winpe [wim]
+:this\boot\-p
+    if not exist "%~2" exit /b 4
+    copy /y %windir%\Boot\DVD\PCAT\boot.sdi "%~dp1"
     for /f "tokens=2 delims={}" %%a in (
-        `bcdedit.exe /store "%~f1" /create /d "winpe or winre" /device`
+        `bcdedit.exe /store "%~d1\boot\bcd" /create /d "winpe" /device`
     ) do for /f "tokens=2 delims={}" %%b in (
-        `bcdedit.exe /store "%~f1" /create /d "Windows Preinstallation or Recovery Environment" /application osloader`
+        `bcdedit.exe /store "%~d1\boot\bcd" /create /d "Windows Preinstallation or Recovery Environment" /application osloader`
     ) do for %%c in (
-        "{%%a} ramdisksdidevice partition=%~d3"
-        "{%%a} ramdisksdipath %~pnx2"
-        "{%%b} device ramdisk=[%~d3]%~pnx3,{%%a}"
+        "{%%a} ramdisksdidevice partition=%~d1"
+        "{%%a} ramdisksdipath %~d1\boot\boot.sdi"
+        "{%%b} device ramdisk=[%~d1]%~pnx1,{%%a}"
         ::?"{%%b} path \Windows\system32\winload.efi"
         "{%%b} path \Windows\system32\winload.exe"
-        "{%%b} osdevice ramdisk=[%~d3]%~pnx3,{%%a}"
+        "{%%b} osdevice ramdisk=[%~d1]%~pnx1,{%%a}"
         "{%%b} systemroot \Windows"
         "{%%b} nx OptIn"
         "{%%b} winpe Yes"
     ) do bcdedit.exe /store "%~f1" /set %%~c
     goto :eof
 
+:this\boot\--rebuild
+:this\boot\-rb
+    goto :eof
 
 ::: "Add or Remove Web Credential" "" "usage: %~n0 crede [option] [args...]" "" "    --add,    -a [user]@[ip or host] [[password]]" "    --remove, -r [ip or host]"
 :::: "invalid option" "parameter not enough" "Command error" "ho ip or host"
