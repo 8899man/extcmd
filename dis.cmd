@@ -839,6 +839,7 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
 :this\boot\-p
     if not exist "%~2" exit /b 4
     copy /y %windir%\Boot\DVD\PCAT\boot.sdi "%~dp1"
+    2>nul mkdir %~d1\boot
     for /f "tokens=2 delims={}" %%a in (
         `bcdedit.exe /store "%~d1\boot\bcd" /create /d "winpe" /device`
     ) do for /f "tokens=2 delims={}" %%b in (
@@ -855,6 +856,18 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
         "{%%b} winpe Yes"
     ) do bcdedit.exe /store "%~f1" /set %%~c
     goto :eof
+
+:this\boot\--is-vhd-os
+    >nul chcp 437
+    for /f "usebackq tokens=1*" %%a in (
+		`bcdedit.exe /v /enum {current}`
+	) do if .%%a==.osdevice for /f "tokens=2,3 delims=[,=]" %%c in (
+		"%%b"
+	) do if %%d. neq . if exist "%%c%%d" (
+		if /i .%%~xd neq ..vhd exit /b 0
+        if /i .%%~xd neq ..vhdx exit /b 0
+	)
+    exit /b 10
 
 :this\boot\--rebuild
 :this\boot\-rb
