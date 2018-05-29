@@ -812,11 +812,16 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
             \boot\boot.sdi
             \efi\boot\bootx64.efi
             \efi\microsoft\boot\bcd
+            \sources\sxs\
+            ::?\sources\acpi_hal\
+            ::?\sources\pci\cc_01\
+            ::?\sources\pci\cc_02\
+            \support\
         ) do (
             if not exist %~d1%%~pb mkdir %~d1%%~pb
-            copy /y \\?\CDROM%%a%%b %~d1%%b
+            if exist \\?\CDROM%%a%%b copy /y \\?\CDROM%%a%%b %~d1%%b
         )
-        mkdir %~d1\support %~d1\sources\sxs
+
         REM copy /y \\?\CDROM%%a\sources\sxs\* %~d1\sources\sxs
         exit /b 0
     )
@@ -840,6 +845,24 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
     if not exist "%~2" exit /b 4
     copy /y %windir%\Boot\DVD\PCAT\boot.sdi "%~dp1"
     2>nul mkdir %~d1\boot
+
+    REM REM winpe boot from disk
+    REM bcdedit.exe /createstore %~d1\boot\bcd
+    REM bcdedit.exe /store %~d1\boot\bcd /create {bootmgr} /d "Boot Manager"
+    REM bcdedit.exe /store %~d1\boot\bcd /set {bootmgr} device boot
+    REM for /f "tokens=2 delims={}" %%a in (
+    REM     'bcdedit.exe /store %~d1\boot\BCD /create /d "WINPE" /application osloader'
+    REM ) do set GUID=%%a
+    REM set GUID=%GUID:~0,-7%
+    REM for %%c in (
+    REM     "/set {%GUID%} osdevice boot"
+    REM     "/set {%GUID%} device boot"
+    REM     "/set {%GUID%} path \windows\system32\boot\winload.exe"
+    REM     "/set {%GUID%} systemroot \windows"
+    REM     "/set {%GUID%} winpe yes"
+    REM     "/displayorder {%GUID%} /addlast"
+    REM ) do bcdedit.exe /store %~d1\boot\bcd %%~c
+
     for /f "tokens=2 delims={}" %%a in (
         `bcdedit.exe /store "%~d1\boot\bcd" /create /d "winpe" /device`
     ) do for /f "tokens=2 delims={}" %%b in (
@@ -855,7 +878,11 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
         "{%%b} nx OptIn"
         "{%%b} winpe Yes"
     ) do bcdedit.exe /store "%~f1" /set %%~c
+
     goto :eof
+
+REM new boot
+
 
 :this\boot\--is-vhd-os
     >nul chcp 437
@@ -973,7 +1000,7 @@ REM Enable ServicesForNFS
 :::: "invalid option" "Partition not found"
 :dis\block
     if "%~1"=="" call :this\annotation %0 & goto :eof
-    if not exist "%~1" exit /b 2
+    if not exist "%~2" exit /b 2
     call :this\bit\%*
     goto :eof
 
@@ -1470,6 +1497,91 @@ REM "Hardware ids manager"
     endlocal
     exit /b 0
 
+
+:this\drv\--extract--env
+:this\drv\-ee
+    REM \Users\Default
+    REM \Users\Default\NTUSER.DAT
+    REM \Windows\servicing\Version\!_ver_drv!
+    REM \Windows\servicing\Version\!_ver_drv!\amd64_installed
+    REM \Windows\servicing\Version\!_ver_drv!\x86_installed
+    REM \Windows\System32
+    REM \Windows\System32\ntdll.dll
+    REM \Windows\System32\SSShim.dll
+    REM \Windows\System32\wdscore.dll
+    REM \Windows\System32\config
+    REM \Windows\System32\config\COMPONENTS 0kb
+    REM \Windows\System32\config\DEFAULT    0kb
+    REM \Windows\System32\config\DRIVERS
+    REM \Windows\System32\config\SAM        0kb
+    REM \Windows\System32\config\SECURITY   0kb
+    REM \Windows\System32\config\SOFTWARE
+    REM \Windows\System32\config\SYSTEM
+    REM \Windows\System32\Dism
+    REM \Windows\System32\Dism\CbsProvider.dll
+    REM \Windows\System32\Dism\CompatProvider.dll
+    REM \Windows\System32\Dism\DismCore.dll
+    REM \Windows\System32\Dism\DismCorePS.dll
+    REM \Windows\System32\Dism\DismHost.exe
+    REM \Windows\System32\Dism\DismProv.dll
+    REM \Windows\System32\Dism\DmiProvider.dll
+    REM \Windows\System32\Dism\FolderProvider.dll
+    REM \Windows\System32\Dism\GenericProvider.dll
+    REM \Windows\System32\Dism\IBSProvider.dll
+    REM \Windows\System32\Dism\ImagingProvider.dll
+    REM \Windows\System32\Dism\IntlProvider.dll
+    REM \Windows\System32\Dism\LogProvider.dll
+    REM \Windows\System32\Dism\OSProvider.dll
+    REM \Windows\System32\Dism\PEProvider.dll
+    REM \Windows\System32\Dism\SmiProvider.dll
+    REM \Windows\System32\Dism\UnattendProvider.dll
+    REM \Windows\System32\Dism\VhdProvider.dll
+    REM \Windows\System32\Dism\WimProvider.dll
+    REM \Windows\System32\Dism\Wow64Provider.dll
+    REM \Windows\System32\Dism\en-US
+    REM \Windows\System32\Dism\en-US\CbsProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\CompatProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\DismCore.dll.mui
+    REM \Windows\System32\Dism\en-US\DismProv.dll.mui
+    REM \Windows\System32\Dism\en-US\DmiProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\FolderProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\GenericProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\IBSProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\ImagingProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\IntlProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\LogProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\OSProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\PEProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\SmiProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\UnattendProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\VhdProvider.dll.mui
+    REM \Windows\System32\Dism\en-US\WimProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!
+    REM \Windows\System32\Dism\!_lang_drv!\CbsProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\CompatProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\DismCore.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\DismProv.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\DmiProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\FolderProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\GenericProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\ImagingProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\IntlProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\LogProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\OSProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\PEProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\SmiProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\UnattendProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\VhdProvider.dll.mui
+    REM \Windows\System32\Dism\!_lang_drv!\WimProvider.dll.mui
+    REM \Windows\System32\DriverStore\FileRepository
+    REM \Windows\WinSxS\amd64_microsoft-windows-servicingstack_31bf3856ad364e35_!_ver_drv!_none_!_hash_drv!
+    REM \Windows\WinSxS\amd64_microsoft-windows-servicingstack_31bf3856ad364e35_!_ver_drv!_none_!_hash_drv!\CbsCore.dll
+    REM \Windows\WinSxS\amd64_microsoft-windows-servicingstack_31bf3856ad364e35_!_ver_drv!_none_!_hash_drv!\DrUpdate.dll
+    REM \Windows\WinSxS\amd64_microsoft-windows-servicingstack_31bf3856ad364e35_!_ver_drv!_none_!_hash_drv!\drvstore.dll
+    REM \Windows\WinSxS\amd64_microsoft-windows-servicingstack_31bf3856ad364e35_!_ver_drv!_none_!_hash_drv!\wcp.dll
+
+    goto :eof
+
 REM from Window 10 wdk, will download devcon.exe at script path
 :init\devcon
     for %%a in (_%0) do if %processor_architecture:~-2%==64 (
@@ -1813,6 +1925,8 @@ REM convert to volume license
     for /f "usebackq delims==" %%a in (
         `set _odt__ 2^>nul`
     ) do set %%a=
+    REM Comment office professionalretail
+    set _odt_pro=odt.xml
 
     REM ExcludeApp
     for %%a in (
@@ -1822,7 +1936,7 @@ REM convert to volume license
         access excel onenote outlook powerpoint publisher word
     ) do for %%b in (
         %*
-    ) do if "%%~a"=="%%~b" set _odt__%%a=
+    ) do if "%%~a"=="%%~b" set "_odt__%%a=" & set _odt_pro=
 
     REM must install some thing
     >nul 2>&1 set _odt__ || exit /b 5
@@ -2278,6 +2392,7 @@ REM for :dis\odt
                ::odt.xml:
                ::odt.xml:    <Add SourcePath="!_odt_source_path!" OfficeClientEdition="64" Channel="Broad">
                ::odt.xml:
+            ::!_odt_pro!:    <^!--
                ::odt.xml:        <^!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
                ::odt.xml:        <Product ID="ProfessionalRetail">
                ::odt.xml:            <Language ID="!_odt_lang!" />
@@ -2289,6 +2404,7 @@ REM for :dis\odt
      ::!_odt__publisher!:            <ExcludeApp ID="Publisher" />
           ::!_odt__word!:            <ExcludeApp ID="Word" />
                ::odt.xml:        </Product>
+            ::!_odt_pro!:    -->
                ::odt.xml:
          ::!_odt__visio!:        <Product ID="VisioProRetail">
          ::!_odt__visio!:            <Language ID="!_odt_lang!" />
