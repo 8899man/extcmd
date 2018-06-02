@@ -1201,7 +1201,7 @@ REM Enable ServicesForNFS
 :this\wim\-n
     call :this\ost\--vergeq 6.3 || exit /b 3
 
-    setlocal
+    setlocal enabledelayedexpansion
     call :this\inum %~1 && call :wim\setCompress %~1 && shift
 
     if not exist "%~1" exit /b 4
@@ -1969,6 +1969,76 @@ REM download and set in path
     erase %temp%\%~1\officedeploymenttool16.exe %temp%\%~1\*.xml
     exit /b 0
 
+::: "Visual Studio Build Tools Installer (without IDE)" "" "usage: %~n0 " "    --deploy, -d" "    --install, -i"
+:::: "invalid option" "" "directory already exist"
+:dis\vsi
+    title vsi
+    if "%~1"=="" call :this\annotation %0 & goto :eof
+    setlocal
+    call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d
+    call :this\odt\%*
+    endlocal
+    goto :eof
+
+REM https://docs.microsoft.com/zh-cn/visualstudio/install/workload-component-id-vs-build-tools#visual-c-build-tools
+:this\vsi\--deploy
+:this\vsi\-d
+    if "%~1"=="" exit /b 2
+    2>nul mkdir "%~1"
+    call :this\ost\--current-lang _vsi_lang || exit /b 3
+    REM start /wait vsi.exe --wait --lang zh-CN --layout "%~1" --add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
+    start /wait vsi.exe --wait --lang %_vsi_lang% --layout "%~1" --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended || exit /b 4
+    goto :eof
+
+REM https://docs.microsoft.com/zh-cn/visualstudio/install/build-tools-container
+:this\vsi\--install
+:this\vsi\-i
+
+    set _install_args=
+    if "%~1" neq "" (
+        if "%~d1\"=="%~dp1" exit /b 5
+        2>nul mkdir "%~dp1\Kits" "%~1"
+        mklink /j "%ProgramFiles(x86)%\Windows Kits" "%~dp1\Kits" || exit /b 6
+        set _install_args=--installPath "%~1"
+    )
+
+    for /d %%a in (
+        "%~dp0*"
+    ) do if exist "%%a\vs_setup.exe" call :vsi\install-offline "%%a\vs_setup.exe"& goto :eof
+
+    REM start /wait vsi.exe --quiet --wait --norestart --nocache %_install_args% --add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
+    start /wait vsi.exe --quiet --wait --norestart --nocache %_install_args% --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended || exit /b 7
+    goto :eof
+
+    REM REM Developer Command Prompt for VS 2017 （VS 2017的开发人员命令提示符）
+    REM %comspec% /k "%~1\Common7\Tools\VsDevCmd.bat"
+
+    REM REM x86 Native Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x86 本机工具命令提示）
+    REM %comspec% /k "%~1\VC\Auxiliary\Build\vcvars32.bat"
+
+    REM REM x64 Native Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x64 本机工具命令提示）
+    REM %comspec% /k "%~1\VC\Auxiliary\Build\vcvars64.bat"
+
+    REM REM x86_x64 Cross Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x86_x64 兼容工具命令提示）
+    REM %comspec% /k "%~1\VC\Auxiliary\Build\vcvarsx86_amd64.bat"
+
+    REM REM x64_x86 Cross Tools Command Prompt for VS 2017 （VS 2017的 x64_x86 交叉工具命令提示符）
+    REM %comspec% /k "%~1\VC\Auxiliary\Build\vcvarsamd64_x86.bat"
+
+    REM REM Debuggable Package Manager （可调试包管理器）
+    REM powershell.exe -NoExit -Command "& { Import-Module Appx; Import-Module .\AppxDebug.dll; Show-AppxDebug}"
+
+:vsi\install-offline
+    start /wait "%~1" --quiet --wait --noWeb --norestart --nocache %_install_args% || exit /b 7
+    goto :eof
+
+:this\vsi\ext\setup
+    for %%a in (vsi.exe) do if "%%~$path:a" neq "" exit /b 0
+    set PATH=%temp%\%~1;%PATH%
+    if exist %temp%\%~1\vsi.exe exit /b 0
+    2>nul mkdir %temp%\%~1
+    call :dis\download https://aka.ms/vs/15/release/vs_buildtools.exe %temp%\%~1\vsi.exe || exit /b 1
+    exit /b 0
 
 :::::::::::
 :: other ::
