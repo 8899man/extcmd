@@ -1830,7 +1830,6 @@ REM Project 2010 Professional
         set "_odt_source_path=%~2"
     )
 
-    call :odt\ext\setup 27af1be6-dd20-4cb4-b154-ebab8a7d4a7e || exit /b 3
     set _odt_update=
     call :this\ost\--current-lang _odt_lang || exit /b 2
 
@@ -1845,6 +1844,7 @@ REM Project 2010 Professional
 
     title Deployed to '%_odt_source_path%'
     >&3 echo Deployed to '%_odt_source_path%'
+    call :odt\ext\setup 27af1be6-dd20-4cb4-b154-ebab8a7d4a7e || exit /b 3
     odt.exe /download %temp%\odt_download.xml || exit /b 6
     erase %temp%\odt_download.xml
     goto :eof
@@ -1868,6 +1868,7 @@ REM Project 2010 Professional
 
     title Installing...
     >&3 echo Installing...
+    call :odt\ext\setup 27af1be6-dd20-4cb4-b154-ebab8a7d4a7e || exit /b 3
     odt.exe /configure %temp%\odt_install.xml || exit /b 6
     erase %temp%\odt_install.xml
 
@@ -1969,14 +1970,17 @@ REM download and set in path
     erase %temp%\%~1\officedeploymenttool16.exe %temp%\%~1\*.xml
     exit /b 0
 
-::: "Visual Studio Build Tools Installer (without IDE)" "" "usage: %~n0 " "    --deploy, -d" "    --install, -i"
-:::: "invalid option" "" "directory already exist"
+::: "Visual Studio Build Tools Installer (without IDE)" "" "usage: %~n0 vsi [option] [args]" "    --deploy,  -d [[directory_path]]    Deployment visual studio build tools data" "    --install, -i [[directory_path]]    Install visual studio build tools online" "                                        when script in deploy path, will install offline"
+:::: "invalid option" "args is empty" "directory already exist"
 :dis\vsi
     title vsi
     if "%~1"=="" call :this\annotation %0 & goto :eof
     setlocal
-    call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d
     call :this\odt\%*
+    if exist "%ProgramData%\Microsoft\VisualStudio\Packages" rmdir /s /q "%ProgramData%\Microsoft\VisualStudio\Packages"
+    if "%~2" neq "" if exist %~d2\ProgramData\Microsoft\VisualStudio\Packages rmdir /s /q %~d2\ProgramData\Microsoft\VisualStudio\Packages
+    call :this\dir\--clean %~d2\ProgramData
+    call :this\dir\--isfree %~d2\ProgramData && rmdir /s /q %~d2\ProgramData
     endlocal
     goto :eof
 
@@ -1986,17 +1990,18 @@ REM https://docs.microsoft.com/zh-cn/visualstudio/install/workload-component-id-
     if "%~1"=="" exit /b 2
     2>nul mkdir "%~1"
     call :this\ost\--current-lang _vsi_lang || exit /b 3
+    call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d || exit /b 4
     REM start /wait vsi.exe --wait --lang zh-CN --layout "%~1" --add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
-    start /wait vsi.exe --wait --lang %_vsi_lang% --layout "%~1" --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended || exit /b 4
+    start /wait vsi.exe --wait --lang %_vsi_lang% --layout "%~1" --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended || exit /b 5
     goto :eof
 
 REM https://docs.microsoft.com/zh-cn/visualstudio/install/build-tools-container
 :this\vsi\--install
 :this\vsi\-i
-
     set _install_args=
     if "%~1" neq "" (
-        if "%~d1\"=="%~dp1" exit /b 5
+        if "%~d1\"=="%~dp1" exit /b 7
+        call :this\dir\--isfree "%~1" || exit /b 8
         2>nul mkdir "%~dp1\Kits" "%~1"
         mklink /j "%ProgramFiles(x86)%\Windows Kits" "%~dp1\Kits" || exit /b 6
         set _install_args=--installPath "%~1"
@@ -2006,8 +2011,9 @@ REM https://docs.microsoft.com/zh-cn/visualstudio/install/build-tools-container
         "%~dp0*"
     ) do if exist "%%a\vs_setup.exe" call :vsi\install-offline "%%a\vs_setup.exe"& goto :eof
 
+    call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d || exit /b 4
     REM start /wait vsi.exe --quiet --wait --norestart --nocache %_install_args% --add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
-    start /wait vsi.exe --quiet --wait --norestart --nocache %_install_args% --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended || exit /b 7
+    start /wait vsi.exe --quiet --wait --norestart --nocache %_install_args% --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended || exit /b 5
     goto :eof
 
     REM REM Developer Command Prompt for VS 2017 （VS 2017的开发人员命令提示符）
@@ -2029,7 +2035,7 @@ REM https://docs.microsoft.com/zh-cn/visualstudio/install/build-tools-container
     REM powershell.exe -NoExit -Command "& { Import-Module Appx; Import-Module .\AppxDebug.dll; Show-AppxDebug}"
 
 :vsi\install-offline
-    start /wait "%~1" --quiet --wait --noWeb --norestart --nocache %_install_args% || exit /b 7
+    start /wait "%~1" --quiet --wait --noWeb --norestart --nocache %_install_args% || exit /b 5
     goto :eof
 
 :this\vsi\ext\setup
