@@ -97,7 +97,7 @@ REM     call :lib\cols _col
 REM     set /a _i=0, _col/=16
 REM     call :lib\trimpath path
 REM     for /f "usebackq delims==" %%a in (
-REM         `dir /a-d /b "!path:;=\%~1*" "!\%~1*" 2^>nul`
+REM         `2^>nul dir /a-d /b "!path:;=\%~1*" "!\%~1*"`
 REM     ) do if "%pathext%" neq "!pathext:%%~xa=!" (
 REM         set /a _i+=1
 REM         if !_i!==1 set _tmp=%%~nxa
@@ -169,7 +169,7 @@ REM for :this\path\--trim, delete path if not exist
 :this\var\--unset
     if "%~1"=="" exit /b 4
     for /f "usebackq delims==" %%a in (
-        `set %1 2^>nul`
+        `2^>nul set %1`
     ) do set %%a=
     exit /b 0
 
@@ -276,7 +276,7 @@ REM for :this\path\--trim, delete path if not exist
     REM tasklist.exe /v /FI "imagename eq %~n1.exe"
     if "%~1"=="" exit /b 2
     for /f usebackq^ tokens^=2^ delims^=^=^" %%a in (
-        `wmic.exe process where caption^="%~n1.exe" get commandline /value 2^>nul`
+        `2^>nul wmic.exe process where caption^="%~n1.exe" get commandline /value`
     ) do for %%b in (
         %%a
     ) do if "%%~nb"=="%~n1" exit /b 0
@@ -291,7 +291,7 @@ REM for :this\path\--trim, delete path if not exist
     ) do wmic.exe process where name="%%a.exe" delete
 
     REM for /f "usebackq skip=1" %%a in (
-    REM     `wmic.exe process where "commandline like '%*'" get processid 2^>nul`
+    REM     `2^>nul wmic.exe process where "commandline like '%*'" get processid`
     REM ) do for %%b in (%%a) do >nul wmic.exe process where processid="%%b" delete
 
     REM start "" /b "%~f0" %*
@@ -712,7 +712,7 @@ REM Test PowerShell version, Return errorlevel
 :this\psv
     for %%a in (PowerShell.exe) do if "%%~$path:a"=="" exit /b 0
     for /f "usebackq" %%a in (
-        `PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "$PSVersionTable.WSManStackVersion.Major" 2^>nul`
+        `2^>nul PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "$PSVersionTable.WSManStackVersion.Major"`
     ) do exit /b %%a
     exit /b 0
 
@@ -765,7 +765,7 @@ REM usage: :this\thread_valve [count] [name] [commandline]
     :thread_valve\loop
         set _thread\count=0
         for /f "usebackq" %%a in (
-            `wmic.exe process where "name='%~2' and commandline like '%%%~3%%'" get processid 2^>nul ^| %windir%\System32\find.exe /c /v ""`
+            `2^>nul wmic.exe process where "name='%~2' and commandline like '%%%~3%%'" get processid ^| %windir%\System32\find.exe /c /v ""`
         ) do set /a _thread\count=%%a - 2
         if %_thread\count% gtr %~1 goto thread_valve\loop
     exit /b 0
@@ -801,7 +801,7 @@ REM usage: :this\thread_valve [count] [name] [commandline]
     setlocal enabledelayedexpansion
     set _keys=
     for /f "usebackq tokens=1* delims==" %%a in (
-        `set _MAP%~2\ 2^>nul`
+        `2^>nul set _MAP%~2\`
     ) do set "_keys=!_keys! "%%~nxa""
     endlocal & set %~1=%_keys%
     exit /b 0
@@ -812,7 +812,7 @@ REM usage: :this\thread_valve [count] [name] [commandline]
     setlocal enabledelayedexpansion
     set _values=
     for /f "usebackq tokens=1* delims==" %%a in (
-        `set _MAP%~2\ 2^>nul`
+        `2^>nul set _MAP%~2\`
     ) do set "_values=!_values! "%%~b""
     endlocal & set %~1=%_values%
     exit /b 0
@@ -823,7 +823,7 @@ REM usage: :this\thread_valve [count] [name] [commandline]
     setlocal enabledelayedexpansion
     set _kv=
     for /f "usebackq tokens=1* delims==" %%a in (
-        `set _MAP%~2\ 2^>nul`
+        `2^>nul set _MAP%~2\`
     ) do set "_kv=!_kv! "%%~nxa" "%%~b""
     endlocal & set %~1=%_kv%
     exit /b 0
@@ -833,7 +833,7 @@ REM usage: :this\thread_valve [count] [name] [commandline]
     setlocal
     set _count=0
     for /f "usebackq tokens=1* delims==" %%a in (
-        `set _MAP%~1\ 2^>nul`
+        `2^>nul set _MAP%~1\`
     ) do set /a _count+=1
     endlocal & exit /b %_count%
 
@@ -873,15 +873,18 @@ REM load .*.ini config
 :this\load_ini
     if "%~1"=="" exit /b 1
     set _tag=
-    for /f "usebackq delims=; 	" %%a in (
-        `type "%~dp0.*.ini" "%userprofile%\.*.ini" 2^>nul ^| findstr.exe /v "^;"`
-    ) do for /f "usebackq tokens=1,2 delims==" %%b in (
+    REM trim ';' and cut it
+    for /f "usebackq delims=" %%a in (
+        `2^>nul type "%~dp0.*.ini" "%userprofile%\.*.ini"`
+    ) do for /f "usebackq tokens=1 delims=;" %%b in (
         '%%a'
-    ) do if "%%c"=="" (
-        if "%%b"=="[%~1]" (
+    ) do for /f "usebackq tokens=1* delims==" %%c in (
+        '%%b'
+    ) do if "%%d"=="" (
+        if /i "%%c"=="[%~1]" (
             set _tag=true
         ) else set _tag=
-    ) else if defined _tag set "_MAP%~2\%%b=%%c"
+    ) else if defined _tag set _MAP%~2\%%c=%%d
     set _tag=
 
     REM REM Load
@@ -935,7 +938,7 @@ REM Show INFO or ERROR
     call :%~n0\cols _col
     set /a _i=0, _col/=16
     for /f usebackq^ tokens^=1^,2^ delims^=^=^" %%a in (
-        `set _args\%~n1 2^>nul`
+        `2^>nul set _args\%~n1`
     ) do if "%~1" neq "" (
         REM " Sort func name expansion
         set /a _i+=1

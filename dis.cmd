@@ -84,7 +84,7 @@ exit /b 0
 :this\dir\--islink
 :this\dir\-il
     for /f "usebackq delims=" %%a in (
-        `dir /al /b "%~dp1" 2^>nul`
+        `2^>nul dir /al /b "%~dp1"`
     ) do if "%%a"=="%~n1" exit /b 0
     REM quick return
     exit /b 10
@@ -187,7 +187,7 @@ REM OS version
 
 :ost\version
     for /f "usebackq" %%a in (
-        `dir /ad /b %~1Windows\servicing\Version\*.* 2^>nul`
+        `2^>nul dir /ad /b %~1Windows\servicing\Version\*.*`
     ) do if "%~2"=="" (
         echo %%a& exit /b 0
     ) else set %~2=%%a& exit /b 0
@@ -1464,7 +1464,7 @@ REM "Hardware ids manager"
     ) do if "%%b"=="" set "_$%%a=$"
     REM Print list
     for /f "usebackq tokens=2 delims==$" %%a in (
-        `set _$ 2^>nul`
+        `2^>nul set _$`
     ) do echo %%a
     endlocal
     exit /b 0
@@ -1715,13 +1715,13 @@ REM for Office Deployment Tool only
     for /f "usebackq" %%a in (
         `reg.exe query HKLM\Software\Microsoft\Office`
     ) do for /f "usebackq" %%b in (
-        `reg.exe query HKLM\Software\Microsoft\Office\%%~nxa\ClickToRunStore\Applications 2^>nul`
+        `2^>nul reg.exe query HKLM\Software\Microsoft\Office\%%~nxa\ClickToRunStore\Applications`
     ) do if "%%~nb"=="%%~b" if /i "(Default)" neq "%%~b" 2>nul call :kms\gvlk\%%~na_%%b
     >nul set _gvlk\ || exit /b 6
 
     REM Active
     for /f "usebackq tokens=1* delims==" %%a in (
-        `set _gvlk\ 2^>nul`
+        `2^>nul set _gvlk\`
     ) do echo.& echo =======================================& echo.    %%bVolume& for %%c in (
         "/inpkey:%%~na"
         "/sethst:%_host%"
@@ -1811,9 +1811,9 @@ REM Project 2010 Professional
 
 :office\ClickToRun\InstallPath
     if "%~1"=="" exit /b 1
-    REM reg.exe query HKLM\Software\Microsoft\Office /f InstallRoot /s | reg.exe query "%%a" /v Path 2^>nul`
+    REM 2^>nul reg.exe query HKLM\Software\Microsoft\Office /f InstallRoot /s | reg.exe query "%%a" /v Path`
     for /f "usebackq tokens=1,2*" %%a in (
-        `reg.exe query HKLM\Software\Microsoft\Office\ClickToRun /v InstallPath 2^>nul`
+        `2^>nul reg.exe query HKLM\Software\Microsoft\Office\ClickToRun /v InstallPath`
     ) do if /i "%%~a"=="InstallPath" if exist "%%~c" set "%~1=%%~c"&& exit /b 0
     exit /b 1
 
@@ -1924,7 +1924,7 @@ REM convert to volume license
 :odt\install\var
     REM clear variable
     for /f "usebackq delims==" %%a in (
-        `set _odt__ 2^>nul`
+        `2^>nul set _odt__`
     ) do set %%a=
     REM Comment office professionalretail
     set _odt_pro=odt.xml
@@ -2017,19 +2017,19 @@ REM https://docs.microsoft.com/zh-cn/visualstudio/install/build-tools-container
     goto :eof
 
     REM REM Developer Command Prompt for VS 2017 （VS 2017的开发人员命令提示符）
-    REM %comspec% /k "%~1\Common7\Tools\VsDevCmd.bat"
+    REM %comspec% /k "%VSINSTALLDIR%\Common7\Tools\VsDevCmd.bat"
 
     REM REM x86 Native Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x86 本机工具命令提示）
-    REM %comspec% /k "%~1\VC\Auxiliary\Build\vcvars32.bat"
+    REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvars32.bat"
 
     REM REM x64 Native Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x64 本机工具命令提示）
-    REM %comspec% /k "%~1\VC\Auxiliary\Build\vcvars64.bat"
+    REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvars64.bat"
 
     REM REM x86_x64 Cross Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x86_x64 兼容工具命令提示）
-    REM %comspec% /k "%~1\VC\Auxiliary\Build\vcvarsx86_amd64.bat"
+    REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvarsx86_amd64.bat"
 
     REM REM x64_x86 Cross Tools Command Prompt for VS 2017 （VS 2017的 x64_x86 交叉工具命令提示符）
-    REM %comspec% /k "%~1\VC\Auxiliary\Build\vcvarsamd64_x86.bat"
+    REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvarsamd64_x86.bat"
 
     REM REM Debuggable Package Manager （可调试包管理器）
     REM powershell.exe -NoExit -Command "& { Import-Module Appx; Import-Module .\AppxDebug.dll; Show-AppxDebug}"
@@ -2276,7 +2276,7 @@ REM Test PowerShell version, Return errorlevel \* @see lib.cmd *\
 :this\psv
     for %%a in (PowerShell.exe) do if "%%~$path:a"=="" exit /b 0
     for /f "usebackq" %%a in (
-        `PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "$PSVersionTable.WSManStackVersion.Major" 2^>nul`
+        `2^>nul PowerShell.exe -NoLogo -NonInteractive -ExecutionPolicy Unrestricted -Command "$PSVersionTable.WSManStackVersion.Major"`
     ) do exit /b %%a
     exit /b 0
 
@@ -2328,7 +2328,7 @@ REM Show INFO or ERROR
     call :this\cols _col
     set /a _i=0, _col/=16
     for /f usebackq^ tokens^=1^,2^ delims^=^=^" %%a in (
-        `set _args\%~n1 2^>nul`
+        `2^>nul set _args\%~n1`
     ) do if "%~1" neq "" (
         REM " Sort func name expansion
         set /a _i+=1
