@@ -683,7 +683,7 @@ ip_find() {
             # trim ^0
             for j in {0..9} {a..f};
             do
-                macs=${macs/0$j/$j};
+                macs=${macs//0$j/$j};
             done;
             # args arr
             macs_arr[${#macs_arr[@]}]=$macs.$i;
