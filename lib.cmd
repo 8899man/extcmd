@@ -671,9 +671,9 @@ REM EOF nul "rem "
 ::: "Print or check SHA512 (512-bit) checksums." "" "usage: %~n0 sha512 [file]"
 :::: "powershell error"
 :lib\SHA512
-    for %%a in (%0) do call :this\hash %%~na %1|| exit /b 1
-    shift /1
-    if exist "%~1" call %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
+    for /f "usebackq delims=" %%a in (
+        `2^>nul dir /b /s %*`
+    ) do for %%b in (%0) do call :this\hash %%~nb "%%~a" || exit /b 1
     exit /b 0
 
 :this\hash
