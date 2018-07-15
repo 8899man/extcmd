@@ -95,12 +95,11 @@ lib.cmd
         4.  HELP: lib -h or lib [func] -h
             有关函数用法，使用 lib.cmd -h 或 lib.cmd ［函数名］-h。
 
-dis.cmd
-
-        集中了一些对磁盘和 wim 的操作。
-        可以放到 samba 路径中直接执行。
-        e.g.
-            \\192.168.1.2\shared\dis.cmd --help
+        5.
+            集中了一些对磁盘和 wim 的操作。
+            可以放到 samba 路径中直接执行。
+            e.g.
+                \\192.168.1.2\shared\lib.cmd --help
 
 
 lib.vbs
