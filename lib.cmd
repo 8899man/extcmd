@@ -855,7 +855,7 @@ REM https://technet.microsoft.com/en-us/security/cc184924.aspx
         set _chot_kb=976932
     ) else set _chot=
 
-    >%temp%\%_ost_uuid%\chot.xsl call :this\txt\--subtxt "%~f0" chot.xml 2000
+    >%temp%\%_ost_uuid%\chot.xsl call :this\txt\--subtxt "%~f0" chot.xml 3000
 
     REM split xml -> log
     call :lib\vbs doxsl "%temp%\results_%_odt_now%.xml" %temp%\%_ost_uuid%\chot.xsl %temp%\hotlist_%_odt_now%.log || exit /b 1
@@ -1692,7 +1692,7 @@ REM Enable ServicesForNFS
     REM Create exclusion list
 
     if exist "%_input%\Windows\servicing\Version\*.*" (
-        >%_conf% call :this\txt\--subtxt "%~f0" wim.ini 2000
+        >%_conf% call :this\txt\--subtxt "%~f0" wim.ini 3000
         set _args=/ConfigFile:"%_conf%"
         REM /Description:Description
 
@@ -2301,7 +2301,7 @@ REM Project 2010 Professional
 :this\odt\--deploy
 :this\odt\-d
     3>nul call :odt\pro\full
-    >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt.xml 2000
+    >%temp%\odt_download.xml call :this\txt\--subtxt "%~f0" odt.xml 3000
 
     title Deployed to '%_odt_source_path%'
     >&3 echo Deployed to '%_odt_source_path%'
@@ -2325,7 +2325,7 @@ REM Project 2010 Professional
 
     if errorlevel 4 exit /b 4
 
-    >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt.xml 2000
+    >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt.xml 3000
 
     title Installing...
     >&3 echo Installing...
@@ -2749,7 +2749,7 @@ REM for :this\txt\--head, :this\txt\--tail
     if not defined _skip set _skip=10
     if %_skip% leq 0 set _skip=10
 
-    for /f "usebackq skip=%_skip% tokens=1* delims=:" %%a in (
+    for /f "usebackq skip=%_skip% tokens=2* delims=:" %%a in (
         "%~f1"
     ) do if "%%a"=="%~2" echo.%%b
 
