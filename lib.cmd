@@ -1295,9 +1295,10 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
     if /i "%~x1" neq ".wim" exit /b 5
     if "%~p1"=="\" exit /b 6
     reagentc.exe /disable
-    reagentc.exe /setreimage /path "%~dp1"
+    reagentc.exe /setreimage /path "%~1"
     reagentc.exe /enable
-    attrib.exe +s +h +r "%~dp1" /d /s
+    reagentc.exe /info
+    REM attrib.exe +s +h +r "%~dp1" /d /s
     bcdedit.exe /set {default} bootmenupolicy legacy
     goto :eof
 
@@ -2799,7 +2800,7 @@ REM EOF nul "rem "
 :::: "powershell error"
 :lib\SHA512
     for /f "usebackq delims=" %%a in (
-        `2^>nul dir /b /s %*`
+        `2^>nul dir /a-d /b /s %*`
     ) do for %%b in (%0) do call :this\hash %%~nb "%%~a" || exit /b 1
     exit /b 0
 
