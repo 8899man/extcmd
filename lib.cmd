@@ -177,8 +177,8 @@ REM for :this\path\--trim, delete path if not exist
 :this\var\--env
     if "%~1"=="" exit /b 2
     if "%~2"=="" exit /b 3
-    for %%a in (setx.exe) do if "%%~$path:a" neq "" setx.exe %~1 %2 /m >nul & exit /b 0
-    if defined %~1 wmic.exe environment where name="%~1" set VariableValue="%~2"
+    REM for %%a in (setx.exe) do if "%%~$path:a" neq "" setx.exe %~1 %2 /m >nul & exit /b 0
+    if defined %~1 wmic.exe environment where 'name="%~1" and username="<system>"' set VariableValue="%~2"
     if not defined %~1 wmic.exe environment create name="%~1",username="<system>",VariableValue="%~2"
     exit /b 0
 
