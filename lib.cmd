@@ -1480,11 +1480,15 @@ REM Enable ServicesForNFS
 :: vhd ::
 :::::::::
 
-::: "Virtual Hard Disk manager" "" "usage: %~n0 vhd [option] [args...]" "" "    --new,    -n  [new_vhd_path] [size[GB]] [[mount letter or path]]" "                                                       Creates a virtual disk file." "" "    --mount,  -m  [vhd_path] [[letter]]                Mount vhd file" "    --umount, -u  [vhd_path]                           Unmount vhd file" "    --expand, -e  [vhd_path] [GB_size]                 Expands the maximum size available on a virtual disk." "    --differ, -d  [new_vhd_path] [source_vhd_path]     Create differencing vhd file by an existing virtual disk file" "    --merge,  -me [chile_vhd_path] [[merge_depth]]     Merges a child disk with its parents" "    --rec,    -r                                       Recovery child vhd if have parent" "" "e.g." "    %~n0 vhd -n E:\nano.vhdx 30 V:"
+::: "Virtual Hard Disk manager" "" "usage: %~n0 vhd [option] [args...]" "" "    --new,    -n  [new_vhd_path] [size[GB]] [[mount letter or path]]" "                                                       Creates a virtual disk file." "" "    --mount,  -m  [vhd_path] [[letter]]                Mount vhd file" "    --umount, -u  [vhd_path]                           Unmount vhd file" "    --expand, -e  [vhd_path] [GB_size]                 Expands the maximum size available on a virtual disk." "    --differ, -d  [new_vhd_path] [source_vhd_path]     Create differencing vhd file by an existing virtual disk file" "    --merge,  -me [chile_vhd_path] [[merge_depth]]     Merges a child disk with its parents"
+REM  "    --rec,    -r                                       Recovery child vhd if have parent" "" "e.g." "    %~n0 vhd -n E:\nano.vhdx 30 V:"
 :::: "invalid option" "file suffix not vhd/vhdx" "file not found" "no volume find" "vhd size is empty" "letter already use" "diskpart error:" "not a letter or path" "{UNUSE}" "size not num" "parent vhd not found" "new file allready exist"
 :lib\vhd
     if "%~1"=="" call :this\annotation %0 & goto :eof
+    setlocal
+    set _diskpart_conf=%tmp%\.diskpart%random%
     call :this\vhd\%*
+    endlocal
     goto :eof
 
 :this\vhd\--new
@@ -1499,7 +1503,7 @@ REM Enable ServicesForNFS
     )
     REM make vhd
     set /a _size=%2 * 1024 + 8
-    >%tmp%\.diskpart (
+    >%_diskpart_conf% (
         setlocal enabledelayedexpansion
         echo create vdisk file="%~f1" maximum=%_size% type=expandable
         endlocal
@@ -1514,7 +1518,7 @@ REM Enable ServicesForNFS
             ) else echo assign mount="%~f3"
         )
     )
-    diskpart.exe /s %tmp%\.diskpart || exit /b 7
+    diskpart.exe /s %_diskpart_conf% || exit /b 7
     exit /b 0
 
 :this\vhd\--mount
@@ -1525,7 +1529,7 @@ REM Enable ServicesForNFS
         if /i "%~d2"=="%~2" if exist "%~2" exit /b 6
         if /i "%~d2" neq "%~2" if not exist "%~2" exit /b 8
     )
-    >%tmp%\.diskpart (
+    >%_diskpart_conf% (
         echo select vdisk file="%~f1"
         echo attach vdisk
         if "%~2" neq "" (
@@ -1537,7 +1541,7 @@ REM Enable ServicesForNFS
             ) else echo assign mount="%~f2"
         )
     )
-    diskpart.exe /s %tmp%\.diskpart || exit /b 7
+    diskpart.exe /s %_diskpart_conf% || exit /b 7
     exit /b 0
 
 :this\vhd\--umount
@@ -1545,11 +1549,11 @@ REM Enable ServicesForNFS
     if not exist "%~1" exit /b 3
     if /i "%~x1" neq ".vhd" if /i "%~x1" neq ".vhdx" exit /b 2
     REM unmount vhd
-    >%tmp%\.diskpart (
+    >%_diskpart_conf% (
         echo select vdisk file="%~f1"
         echo detach vdisk
     )
-    diskpart.exe /s %tmp%\.diskpart || exit /b 7
+    diskpart.exe /s %_diskpart_conf% || exit /b 7
     exit /b 0
 
 :this\vhd\--expand
@@ -1561,11 +1565,11 @@ REM Enable ServicesForNFS
     call :lib\vumount %1 > nul
     setlocal
     set /a _size=%~2 * 1024 + 8
-    >%tmp%\.diskpart (
+    >%_diskpart_conf% (
         echo select vdisk file="%~f1"
         echo expand vdisk maximum=%_size%
     )
-    diskpart.exe /s %tmp%\.diskpart || exit /b 7
+    diskpart.exe /s %_diskpart_conf% || exit /b 7
     endlocal
     exit /b 0
 
@@ -1574,8 +1578,8 @@ REM Enable ServicesForNFS
     if not exist "%~2" exit /b 11
     if exist "%~1" exit /b 12
     if /i ".vhd" neq "%~x1" if /i ".vhdx" neq "%~x1" exit /b 2
-    >%tmp%\.diskpart echo create vdisk file="%~f1" parent="%~f2"
-    diskpart.exe /s %tmp%\.diskpart || exit /b 7
+    >%_diskpart_conf% echo create vdisk file="%~f1" parent="%~f2"
+    diskpart.exe /s %_diskpart_conf% || exit /b 7
     exit /b 0
 
 :this\vhd\--merge
@@ -1585,63 +1589,63 @@ REM Enable ServicesForNFS
     setlocal
     set _depth=1
     if "%~2" neq "" set _depth=%~2
-    >%tmp%\.diskpart (
+    >%_diskpart_conf% (
         echo select vdisk file="%~f1"
         echo merge vdisk depth=%_depth%
     )
     endlocal
-    diskpart.exe /s %tmp%\.diskpart || exit /b 7
+    diskpart.exe /s %_diskpart_conf% || exit /b 7
     exit /b 0
 
-:::
-:this\vhd\--rec
-:this\vhd\-r
-    setlocal
-    set /p _i=[Warning] Child vhd will be recovery, Yes^|No:
-    if /i "%_i%" neq "y" if /i "%_i%" neq "yes" exit /b 0
-    endlocal
+REM :::
+REM :this\vhd\--rec
+REM :this\vhd\-r
+REM     setlocal
+REM     set /p _i=[Warning] Child vhd will be recovery, Yes^|No:
+REM     if /i "%_i%" neq "y" if /i "%_i%" neq "yes" exit /b 0
+REM     endlocal
 
-    chcp.com 437 >nul
+REM     chcp.com 437 >nul
 
-    REM Make vdisk info script
-    >%tmp%\.diskpart type nul
-    for /f "usebackq skip=1" %%a in (
-        `wmic.exe logicaldisk where DriveType^=3 get name`
-    ) do if exist %%a\*.vhd? for /f "usebackq delims=" %%b in (
-        `dir /a /b %%a\*.vhd?`
-    ) do >>%tmp%\.diskpart (
-        echo select vdisk file="%%a\%%b"
-        echo detail vdisk
-    )
+REM     REM Make vdisk info script
+REM     >%_diskpart_conf% type nul
+REM     for /f "usebackq skip=1" %%a in (
+REM         `wmic.exe logicaldisk where DriveType^=3 get name`
+REM     ) do if exist %%a\*.vhd? for /f "usebackq delims=" %%b in (
+REM         `dir /a /b %%a\*.vhd?`
+REM     ) do >>%_diskpart_conf% (
+REM         echo select vdisk file="%%a\%%b"
+REM         echo detail vdisk
+REM     )
 
-    REM Make create child vhd script
-    for /f "usebackq tokens=1,2*" %%a in (
-        `diskpart.exe /s %tmp%\.diskpart ^& ^>%tmp%\.diskpart type nul`
-    ) do >>%tmp%\.diskpart (
-        if "%%a"=="Filename:" set /p=create vdisk file="%%b"<nul
-        if "%%a%%b"=="ParentFilename:" echo. parent="%%c"
-    )
+REM     REM Make create child vhd script
+REM     for /f "usebackq tokens=1,2*" %%a in (
+REM         `diskpart.exe /s %_diskpart_conf% ^& ^>%_diskpart_conf% type nul`
+REM     ) do >>%_diskpart_conf% (
+REM         if "%%a"=="Filename:" set /p=create vdisk file="%%b"<nul
+REM         if "%%a%%b"=="ParentFilename:" echo. parent="%%c"
+REM     )
 
-    move /y %tmp%\.diskpart %tmp%\.tmp
+REM     move /y %_diskpart_conf% %tmp%\.tmp
 
-    REM Filter parent vhd, and delete child vhd
-    for /f "usebackq delims=" %%a in (
-        "%tmp%\.tmp"
-    ) do for /f usebackq^ tokens^=2^,4^ delims^=^" %%b in (
-        '%%a'
-    ) do if "%%c"=="" (
-        REM "
-        move "%%b" "%%b.snapshot"
-        >>%tmp%\.diskpart echo create vdisk file="%%b" parent="%%b.snapshot"
-    ) else (
-        erase /a /q %%b
-        >>%tmp%\.diskpart echo %%a
-    )
+REM     REM Filter parent vhd, and delete child vhd
+REM     for /f "usebackq delims=" %%a in (
+REM         "%tmp%\.tmp"
+REM     ) do for /f usebackq^ tokens^=2^,4^ delims^=^" %%b in (
+REM         '%%a'
+REM     ) do if "%%c"=="" (
+REM         REM "
+REM         move "%%b" "%%b.snapshot"
+REM         >>%_diskpart_conf% echo create vdisk file="%%b" parent="%%b.snapshot"
+REM     ) else (
+REM         erase /a /q %%b
+REM         >>%_diskpart_conf% echo %%a
+REM     )
 
-    REM Create new child vhd
-    diskpart.exe /s %tmp%\.diskpart
+REM     REM Create new child vhd
+REM     diskpart.exe /s %_diskpart_conf%
 
-    exit /b 0
+REM     exit /b 0
 
 ::::::::::
 :: dism ::
