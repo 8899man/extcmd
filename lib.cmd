@@ -1288,7 +1288,7 @@ REM for :init\?, printf cab | md5sum -> 16ecfd64-586e-c6c1-ab21-2762c2c38a90
     )
     exit /b 3
 
-
+REM error
 :this\boot\--winre
 :this\boot\-r
     if not exist "%~1" exit /b 4

@@ -226,20 +226,27 @@ Function lib_gfsd(tag)
     Next
 End Function
 
-''' Create shortcut at desktop
-Function lib_lnkd(targetFilePath)
+''' Create shortcut at desktop ''Usage: lib lnkd [source] [target] ''       [target]: Desktop AllUsersDesktop C:\
+Function lib_lnkd(sourceFilePath, targetFolder)
     Set WshShell = WScript.CreateObject("WScript.Shell")
     Set Fso = CreateObject("Scripting.FileSystemObject")
-    Set lnk = WshShell.CreateShortcut(WshShell.SpecialFolders("Desktop") & "\" & Fso.GetBaseName(targetFilePath) & ".lnk")
-    lnk.TargetPath = targetFilePath
+
+    targetDir = WshShell.SpecialFolders(targetFolder)
+    If targetDir = "" Then
+        targetDir = targetFolder
+    End If
+
+    Set lnk = WshShell.CreateShortcut(targetDir & "\" & Fso.GetBaseName(sourceFilePath) & ".lnk")
+    lnk.TargetPath = sourceFilePath
     lnk.Arguments = ""
-    lnk.WorkingDirectory = Fso.GetFile(targetFilePath).ParentFolder.Path
+    lnk.WorkingDirectory = Fso.GetFile(sourceFilePath).ParentFolder.Path
     lnk.WindowStyle = 1 ' Nomal Windows
     lnk.Hotkey = ""
-    lnk.IconLocation = targetFilePath & ", 0"
+    lnk.IconLocation = sourceFilePath & ", 0"
     lnk.Description = ""
     lnk.Save
 End Function
+
 
 ''''''''''''''''
 '   Template   '
