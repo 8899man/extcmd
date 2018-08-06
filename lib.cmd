@@ -2809,9 +2809,10 @@ REM EOF nul "rem "
     exit /b 0
 
 :this\hash
-    if exist "%~2" for /f "usebackq tokens=1,2" %%a in (
+    if exist "%~2" for /f "usebackq tokens=1,2 delims=(h" %%a in (
         `certutil.exe -hashfile %2 %~1`
-    ) do if "%%b"=="" echo %%a   %2& exit /b 0
+    ) do if "%%b"=="" call :hash\trim %%a %2& exit /b 0
+    if exist "%~2" exit /b 1
     setlocal
     call :this\psv
     if not errorlevel 2 exit /b 1
@@ -2834,6 +2835,13 @@ REM EOF nul "rem "
     set _hash=%_hash:F=f%
     endlocal & echo %_hash%   -
     exit /b 0
+
+:hash\trim
+    setlocal
+    set _str=%~1
+    echo %_str: =%   %2
+    endlocal
+    goto :eof
 
 REM ::: "Delete Login Notes"
 REM :lib\delLoginNote
