@@ -326,10 +326,10 @@ REM Reg VM names
     REM -ac 2 ::ED..A... set number of audio channels (from 0 to INT_MAX) (default 0) ::Convert the 5.1 track to stereo
     for %%a in (
         avi divx flv mkv mp4 mpg rm rmvb vob webm wmv
-    ) do if /i "%~x1"==".%%a" ffplay.exe -hide_banner %_stream_specifier% -ac 2 -sn -autoexit -af "volume=0.25" %1 2>&1
+    ) do if /i "%~x1"==".%%a" ffplay.exe -hide_banner %_stream_specifier% -ac 2 -sn -autoexit -af "volume=0.05" %1 2>&1
     for %%a in (
         alac ape flac m4a mp3 ogg tta tak wav wma
-    ) do if /i "%~x1"==".%%a" start /b /wait /min ffplay.exe -hide_banner -autoexit -af "volume=0.25" %1 2>&1
+    ) do if /i "%~x1"==".%%a" start /b /wait /min ffplay.exe -hide_banner -autoexit -af "volume=0.05" %1 2>&1
     exit /b 0
 
 REM :3rd\lcam

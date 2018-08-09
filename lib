@@ -83,7 +83,7 @@ lib_gpkg() {
     printf "Will listen \033[4m$countdown\033[0m sec.\n";
 
     # Reg hard link from /private/var/tmp
-    gpkg_serial_number $tmp;
+    __gpkg_serial_number $tmp;
 
     # Infinite loop
     while :; do
@@ -96,14 +96,14 @@ lib_gpkg() {
         [ $countdown == 0 ] && printf "Listening \033[4mstop\033[0m.\n";
 
         # Search download pkg
-        [ $((countdown -= 2)) -ge 0 ] && gpkg_serial_number /private/var/folders;
+        [ $((countdown -= 2)) -ge 0 ] && __gpkg_serial_number /private/var/folders;
 
         # foreach pkg array
         [ ${#pkg[@]} -gt 0 ] && for i in ${!pkg[@]};
         do
             # Alleady complete
             [ "${pkg[$i]%/*}" == "$tmp" ] && {
-                gpkg_complete "${pkg[$i]}" &
+                __gpkg_complete "${pkg[$i]}" &
                 unset pkg[$i];
                 continue
             };
@@ -118,7 +118,7 @@ lib_gpkg() {
             # Download complete
             [ -f "${pkg[$i]}" ] || {
                 unset pkg[$i];
-                gpkg_complete "$anchor" &
+                __gpkg_complete "$anchor" &
             };
         done;
 
@@ -138,7 +138,7 @@ lib_gpkg() {
 
 # for lib_gpkg
 # Override pkg map: pkg[$serial_number]="$path"
-gpkg_serial_number() {
+__gpkg_serial_number() {
     local k v;
     while read k v; do
         # Put in map
@@ -149,7 +149,7 @@ gpkg_serial_number() {
 
 # for lib_gpkg
 # hash and move to ~/Downloads
-gpkg_complete() {
+__gpkg_complete() {
     [ -f "$1" ] || return 1;
     local name=${1##*/};
     name=${name#*_};
@@ -301,15 +301,15 @@ lib_remote() {
     case $1 in
         -rsa)
             shift;
-            remote_rsa "$@"
+            __remote_rsa "$@"
         ;;
         -scp)
             shift;
-            remote_auto_scp "$@"
+            __remote_auto_scp "$@"
         ;;
         -tar)
             shift;
-            remote_tar "$@"
+            __remote_tar "$@"
         ;;
         *)
             exit 1; # invalid option
@@ -318,7 +318,7 @@ lib_remote() {
 }
 
 # for lib_remote
-remote_rsa() {
+__remote_rsa() {
      [ "$1" ] || exit 1; # first args is empty
     local rsa_pub;
     [ -s ~/.ssh/id_rsa$2.pub ] || ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa$2;
@@ -341,7 +341,7 @@ chmod 700 ~/.ssh
 }
 
 # for lib_remote
-remote_auto_scp() {
+__remote_auto_scp() {
     local password;
     password=$1;
     shift;
@@ -383,7 +383,7 @@ remote_auto_scp() {
     esac
 }
 
-remote_tar() {
+__remote_tar() {
     [ "$1" ] || exit 1; # target url is empty
     [ "$2" ] || exit 1; # source url is empty
     local option target_host target_dir source_host source_dir;
@@ -405,7 +405,7 @@ remote_tar() {
         *c*)
             if [ "$target_host" -a "$source_host" ]; then
                 # both
-                tar_c $source_host "${source_dir}" | tar_cat_i $target_host "$target_dir"
+                __tar_c $source_host "${source_dir}" | __tar_cat_i $target_host "$target_dir"
             elif [ "$target_host" ]; then
                 # local -> remote
                 [ -d "$source_dir" ] || exit 1; # source path not found.
@@ -418,21 +418,21 @@ remote_tar() {
                 } | rcat $target_host "$target_dir";
             else
                 # remote -> local
-                tar_c $source_host "$source_dir" > "$target_dir";
+                __tar_c $source_host "$source_dir" > "$target_dir";
             fi
         ;;
         *x*)
             if [ "$target_host" -a "$source_host" ]; then
                 # both
-                tar_cat_o $source_host "${source_dir}" | tar_x $target_host "$target_dir"
+                __tar_cat_o $source_host "${source_dir}" | __tar_x $target_host "$target_dir"
             elif [ "$target_host" ]; then
                 # local -> remote
                 [ -f "$source_dir" ] || exit 1; # source file not found.
-                cat "$source_dir" | tar_x $target_host "$target_dir"
+                cat "$source_dir" | __tar_x $target_host "$target_dir"
             else
                 # remote -> local
                 cd "$target_dir";
-                tar_cat_o $source_host "$source_dir" | tar $option -;
+                __tar_cat_o $source_host "$source_dir" | tar $option -;
                 cd "$OLDPWD"
             fi
         ;;
@@ -444,8 +444,8 @@ remote_tar() {
     return 0
 }
 
-# for remote_tar
-tar_c() {
+# for __remote_tar
+__tar_c() {
     {
         [ "${option/P/}" == "$option" ] && \
         printf %s 'cd "'"${2%/*}"'" >/dev/null && tar '$option' - "'"${2##*/}"'"' || \
@@ -453,20 +453,20 @@ tar_c() {
     } | ssh $1 bash
 }
 
-# for remote_tar
-tar_x() {
+# for __remote_tar
+__tar_x() {
     [ "${option/P/}" == "$option" ] && {
         ssh $1 'cd "'"$2"'" >/dev/null && tar '$option' -'
     } || ssh $1 'tar '$option' - '
 }
 
-# for remote_tar
-tar_cat_i() {
+# for __remote_tar
+__tar_cat_i() {
     ssh $1 'cat > "'"$2"'"'
 }
 
-# for remote_tar
-tar_cat_o() {
+# for __remote_tar
+__tar_cat_o() {
     ssh $1 'cat "'"$2"'"'
 }
 
@@ -616,7 +616,7 @@ lib_ip() {
         -f|--find)
             shift;
             source "$(cd `dirname $0`; pwd)/.lib";
-            ip_find "$@"
+            __ip_find "$@"
         ;;
         -t|--test)
             shift;
@@ -640,7 +640,7 @@ lib_ip() {
 }
 
 # for lib_ip
-ip_find() {
+__ip_find() {
     [ "$1" ] || exit 1; # MAC addr or Host name is empty
 
     # Clear arp cache
@@ -652,7 +652,7 @@ ip_find() {
     local i j l=0 r key mac macs macs_arr=() OLDIFS="$IFS" range route_ip;
 
     # get [setting]
-    load_ini sip_setting;
+    __load_ini sip_setting;
     route_ip=`_map -g route`;
     route_ip=(${route_ip//,/ } `route -n get default | grep gateway | awk '{print $2}'`);
     # trim
@@ -663,7 +663,7 @@ ip_find() {
     [ "$range" ] || range="1-127";
     _map -c;
 
-    load_ini hosts;
+    __load_ini hosts;
 
     # Args
     for i in "$@"; do
@@ -706,7 +706,7 @@ ip_find() {
             i=${r%.*}.$i;
 
             # get thread
-            _thread_valve --run _match_mac
+            _thread_valve --run __match_mac
 
         done;
     done;
@@ -722,7 +722,7 @@ ip_find() {
 
 }
 
-_match_mac() {
+__match_mac() {
     ping -c 2 -t 2 $i >/dev/null 2>&1;
     j=`arp $i 2>/dev/null`;
     for macs in ${macs_arr[@]};
@@ -743,7 +743,7 @@ _match_mac() {
     done
 }
 
-hosts() {
+__hosts() {
     printf %s '##
 # Host Database
 #
@@ -761,7 +761,7 @@ lib_hosts() {
     source "$(cd `dirname $0`; pwd)/.lib";
 
     # load ini in map1
-    load_ini hosts 1 || exit 1; # Not found ini configure
+    __load_ini hosts 1 || exit 1; # Not found ini configure
 
     # get map1 key array in REPLY
     _map -ks 1;
@@ -813,7 +813,7 @@ lib_hosts() {
 }
 
 # Test mac addr
-imac() {
+__imac() {
     [ "$1" ] || return 1;
     # command test
     [ "${1:0:1}" == "-" ] && return 1;
@@ -880,13 +880,13 @@ lib_plist() {
     esac
 }
 
-file_sub_time() {
+__file_sub_time() {
     [ -f "$1" ] || return 1;
     printf $(( (`date +%s` - `stat -f "%a" "$1"`) / 60 / 60 ))
 }
 
 # load .*.ini config
-load_ini() {
+__load_ini() {
     [ "$1" ] || return 1;
     local l tag IFS=$IFS"=";
     while read l; do
@@ -903,7 +903,7 @@ load_ini() {
     # while read l tag;
     # do
     #     lib_ip --test $tag || {
-    #         imac $tag || continue
+    #         __imac $tag || continue
     #     };
     #     _map -p "$l" "$tag" $2;
     # done < <(set);
@@ -914,7 +914,7 @@ load_ini() {
 
 
 # args path size(MB)
-ramfs() {
+__ramfs() {
     # https://gist.github.com/Roman2K/3238fb441e298369198e
     case $1 in
         --mount | -m)
