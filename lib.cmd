@@ -1656,6 +1656,7 @@ REM     exit /b 0
 :lib\wim
     if "%~1"=="" call :this\annotation %0 & goto :eof
     if /i "%username%"=="System" if not defined SCRATCH_DIR exit /b 2
+    2>nul mkdir %temp% %tmp%
     setlocal
     if /i "%username%" neq "System" set scratch_dir=
     if defined scratch_dir set "scratch_dir=/ScratchDir:%scratch_dir:/ScratchDir:=%"
@@ -1694,6 +1695,7 @@ REM     exit /b 0
     call :this\str\--now _conf "%tmp%\" .ini
     set _args=
     set _description=
+    set _load_point=HKLM\load-point%random%
     REM Create exclusion list
 
     if exist "%_input%\Windows\servicing\Version\*.*" (
@@ -1701,11 +1703,14 @@ REM     exit /b 0
         set _args=/ConfigFile:"%_conf%"
         REM /Description:Description
 
+        REM [WARN] Windows 10 have ReleaseId
+        >nul reg.exe load %_load_point% "%_input%\Windows\System32\config\SOFTWARE" || exit /b 6
         for /f "usebackq skip=1 tokens=2*" %%a in (
-            `reg.exe query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ProductName`
+            `reg.exe query "%_load_point%\Microsoft\Windows NT\CurrentVersion" /v ProductName`
         ) do if "%%a"=="REG_SZ" for /f "usebackq skip=1 tokens=2*" %%c in (
-            `reg.exe query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId`
+            `reg.exe query "%_load_point%\Microsoft\Windows NT\CurrentVersion" /v ReleaseId`
         ) do if "%%c"=="REG_SZ" set _description=/Description:"%%b %%d"
+        >nul reg.exe unload %_load_point%
 
     ) else (
         >%_conf% call :wim\ConfigFile "%_input%" && set _args=/ConfigFile:"%_conf%"
