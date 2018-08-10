@@ -1651,7 +1651,7 @@ REM     exit /b 0
 :: dism ::
 ::::::::::
 
-::: "Wim manager" "" "usage: %~n0 wim [option] [args ...]" "" "    --info,   -i [image_path]                                Displays information about images in a WIM file." "    --new,    -n [[compress level]] [target_dir_path] [[image_name]]            Capture file/directory to wim" "    --apply,  -a [wim_path] [[output_path] [image_index]]    Apply WIM file" "    --mount,  -m [wim_path] [mount_path] [[image_index]]     Mount wim" "    --umount, -u [mount_path]                                Unmount wim" "    --commit, -c [mount_path]                                Unmount wim with commit" "    --export, -e [source_wim_path] [target_wim_path] [image_index] [[compress_level]]    Export wim image" "                                   compress level: 0:none, 1:WIMBoot, 2:fast, 3:max, 4:recovery(esd)" "" "    --umountall, -ua                                         Unmount all wim" "    --rmountall, -ra                                         Recovers mount all orphaned wim"
+::: "Wim manager" "" "usage: %~n0 wim [option] [args ...]" "" "    --info,   -i [image_path]                                Displays information about images in a WIM file." "    --new,    -n [[compress level]] [target_dir_path] [[image_name]]" "                                                             Capture file/directory to wim" "                                                      [WARN] if target path tail without '\', root path is parent directory" "" "    --apply,  -a [wim_path] [[output_path] [image_index]]    Apply WIM file" "    --mount,  -m [wim_path] [mount_path] [[image_index]]     Mount wim" "    --umount, -u [mount_path]                                Unmount wim" "    --commit, -c [mount_path]                                Unmount wim with commit" "    --export, -e [source_wim_path] [target_wim_path] [image_index] [[compress_level]]    Export wim image" "                                   compress level: 0:none, 1:WIMBoot, 2:fast, 3:max, 4:recovery(esd)" "" "    --umountall, -ua                                         Unmount all wim" "    --rmountall, -ra                                         Recovers mount all orphaned wim"
 :::: "invalid option" "SCRATCH_DIR variable not set" "dism version is too old" "target not found" "need input image name" "dism error" "wim file not found" "not wim file" "output path allready use" "output path not found" "Not a path" "Target wim index not select" "compress level error"
 :lib\wim
     if "%~1"=="" call :this\annotation %0 & goto :eof
@@ -1680,9 +1680,10 @@ REM     exit /b 0
         set _export=ture
     )
 
+    set _iroot=
     set "_input=%~f1"
     REM trim path
-    if "%_input:~-1%"=="\" set "_input=%_input:~0,-1%"
+    if "%_input:~-1%"=="\" set _iroot=true& set "_input=%_input:~0,-1%"
 
     REM wim name
     if "%~2" neq "" (
@@ -1698,7 +1699,7 @@ REM     exit /b 0
     set _load_point=HKLM\load-point%random%
     REM Create exclusion list
 
-    if exist "%_input%\Windows\servicing\Version\*.*" (
+    if exist "%_input%\Windows\System32\config\SYSTEM" (
         >%_conf% call :this\txt\--subtxt "%~f0" wim.ini 3000
         set _args=/ConfigFile:"%_conf%"
         REM /Description:Description
@@ -1712,11 +1713,16 @@ REM     exit /b 0
         ) do if "%%c"=="REG_SZ" set _description=/Description:"%%b %%d"
         >nul reg.exe unload %_load_point%
 
+    ) else if defined _iroot (
+        echo.
+        echo root path: '%_input%'
     ) else (
         >%_conf% call :wim\ConfigFile "%_input%" && set _args=/ConfigFile:"%_conf%"
         REM input args
         for %%a in ("%_input%") do set "_input=%%~dpa"
         set "_input=!_input:~0,-1!"
+        echo.
+        echo root path: '!_input!'
     )
 
     REM Do capture
@@ -2995,8 +3001,9 @@ REM usage: :this\thread_valve [count] [name] [commandline]
 
 :this\page\--put
 :this\page\-p
-    if not defined _page set _page=1000000000
-    set /a _page+=1
+    if not defined _page (
+        set _page=1000000000
+    ) else set /a _page+=1
     if .%1==. (
         set _page\%_page%=.
     ) else set _page\%_page%=.%*
