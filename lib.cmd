@@ -2468,7 +2468,7 @@ REM https://docs.microsoft.com/zh-cn/visualstudio/install/workload-component-id-
     2>nul mkdir "%~1"
     call :this\ost\--current-lang _vsi_lang || exit /b 3
     call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d || exit /b 4
-    REM start /wait vsi.exe --wait --lang zh-CN --layout "%~1" --add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
+    REM start /wait vsi.exe --wait --lang %_vsi_lang% --layout "%~1" --add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
     start /wait vsi.exe --wait --lang %_vsi_lang% --layout "%~1" --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended || exit /b 5
     goto :eof
 
@@ -2822,7 +2822,7 @@ REM EOF nul "rem "
 :this\hash
     if exist "%~2" for /f "usebackq tokens=1,2 delims=(h" %%a in (
         `certutil.exe -hashfile %2 %~1`
-    ) do if "%%b"=="" call :hash\trim %%a %2& exit /b 0
+    ) do if "%%b"=="" call :hash\trim "%%a" %2& exit /b 0
     if exist "%~2" exit /b 1
     setlocal
     call :this\psv
