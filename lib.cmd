@@ -2307,6 +2307,7 @@ REM Project 2010 Professional
         if not exist "%~2" exit /b 2
         set "_odt_source_path=%~2"
     )
+    if "%_odt_source_path:~-1%"=="\" set _odt_source_path=%_odt_source_path:~0,-1%
 
     set _odt_update=
     call :this\ost\--current-lang _odt_lang || exit /b 2
@@ -2329,14 +2330,18 @@ REM Project 2010 Professional
 
 :this\odt\--install
 :this\odt\-i
-    if not exist "%_odt_source_path%" exit /b 7
+    if not exist "%_odt_source_path%\Office\Data" exit /b 7
 
+    REM shift can change %*
     if exist "%~1" shift /1
+
     if "%~1" neq "" (
         if /i "%~1"=="base" (
-            call :odt\pro\%*
+            shift /1
+            call :odt\pro\base %1 %2 %3 %4 %5 %6 %7 %8 %9
         ) else if /i "%~1"=="full" (
-            call :odt\pro\%*
+            shift /1
+            call :odt\pro\full %1 %2 %3 %4 %5 %6 %7 %8 %9
         ) else call :odt\install\var %*
     ) else call :odt\pro\base
 
@@ -2344,7 +2349,7 @@ REM Project 2010 Professional
 
     >%temp%\odt_install.xml call :this\txt\--subtxt "%~f0" odt.xml 3000
 
-    title Installing...
+    title Installing from %_odt_source_path%\Office
     >&3 echo Installing...
     call :odt\ext\setup 27af1be6-dd20-4cb4-b154-ebab8a7d4a7e || exit /b 3
     odt.exe /configure %temp%\odt_install.xml || exit /b 6
@@ -2352,7 +2357,6 @@ REM Project 2010 Professional
 
     call :this\ost\--vergeq 10.0 || goto odt\install\skip_compress
 
-    title compression
     >&3 echo compress '%ProgramFiles%\Microsoft Office'
     >nul call :this\pkg\--exe "%ProgramFiles%\Microsoft Office"
 
@@ -2422,7 +2426,7 @@ REM convert to volume license
 
     >&3 set /p=will install: <nul
     for %%a in (
-        access excel onenote outlook powerpoint publisher word
+        word excel powerpoint onenote access outlook publisher
     ) do if not defined _odt__%%a >&3 set /p='%%a' <nul
 
     REM Product
@@ -2433,7 +2437,8 @@ REM convert to volume license
         project visio
     ) do if defined _odt__%%a >&3 set /p='%%a' <nul
 
-    >&3 echo , will remove previous installation
+    >&3 echo.
+    >&3 echo [WARN] will remove previous installation
     exit /b 0
 
 REM download and set in path
@@ -2448,12 +2453,13 @@ REM download and set in path
     erase %temp%\%~1\officedeploymenttool16.exe %temp%\%~1\*.xml
     exit /b 0
 
-::: "Visual Studio Build Tools Installer (without IDE)" "" "usage: %~n0 vsi [option] [args]" "    --deploy,  -d [[directory_path]]    Deployment visual studio build tools data" "    --install, -i [[directory_path]]    Install visual studio build tools online" "                                        when script in deploy path, will install offline"
+::: "Visual Studio Installer" "" "usage: %~n0 vsi [branch] [option] [args]" "    branch:" "        enterprise" "        professional" "        community" "        core         (build tools without IDE)" "" "    --deploy,  -d [directory_path]      Deployment visual studio build tools data" "    --install, -i [[directory_path]]    Install visual studio build tools online" "                                        when script in deploy path, will install offline"
 :::: "invalid option" "args is empty" "can not get current language" "vs_install download error" "vs_buildtools error" "create soft link error" "can not install at root path" ""
 
 :lib\vsi
     title vsi
     if "%~1"=="" call :this\annotation %0 & goto :eof
+    if "%~2"=="" exit /b 2
     setlocal
     call :this\vsi\%*
 
@@ -2468,66 +2474,74 @@ REM download and set in path
     endlocal
     exit /b 0
 
+:this\vsi\enterprise
+:this\vsi\ent
+:this\vsi\professional
+:this\vsi\pro
+:this\vsi\community
+:this\vsi\core
+    set _branch=
+    set _install_args=
+    for %%a in (%0) do set _branch=%%~na
+    REM vs_buildtools: set _install_args=--add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
+    if "%_branch%"=="core" set "_branch=buildtools"& set _install_args=--add Microsoft.VisualStudio.Workload.VCTools;includeRecommended
+    if "%_branch%"=="ent" set _branch=enterprise
+    if "%_branch%"=="pro" set _branch=professional
+    call :vsi\option\%*
+    goto :eof
+
 REM https://docs.microsoft.com/zh-cn/visualstudio/install/workload-component-id-vs-build-tools#visual-c-build-tools
-:this\vsi\--deploy
-:this\vsi\-d
+:vsi\option\--deploy
+:vsi\option\-d
     if "%~1"=="" exit /b 2
     2>nul mkdir "%~1"
     call :this\ost\--current-lang _vsi_lang || exit /b 3
-    call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d || exit /b 4
-    REM start /wait vsi.exe --wait --lang %_vsi_lang% --layout "%~1" --add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
-    start /wait vsi.exe --wait --lang %_vsi_lang% --layout "%~1" --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended || exit /b 5
+    call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d %_branch% || exit /b 4
+
+    start /wait vs_%_branch%.exe --wait --lang %_vsi_lang% --layout "%~1" %_install_args%
     goto :eof
 
+REM REM Debuggable Package Manager （可调试包管理器）
+REM powershell.exe -NoExit -Command "& { Import-Module Appx; Import-Module .\AppxDebug.dll; Show-AppxDebug}"
+REM %comspec% /k "%VSINSTALLDIR%\Common7\Tools\VsDevCmd.bat"                REM Developer Command Prompt for VS 2017 （VS 2017的开发人员命令提示符）
+REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvars32.bat"           REM x86 Native Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x86 本机工具命令提示）
+REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvars64.bat"           REM x64 Native Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x64 本机工具命令提示）
+REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvarsx86_amd64.bat"    REM x86_x64 Cross Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x86_x64 兼容工具命令提示）
+REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvarsamd64_x86.bat"    REM x64_x86 Cross Tools Command Prompt for VS 2017 （VS 2017的 x64_x86 交叉工具命令提示符）
 REM https://docs.microsoft.com/zh-cn/visualstudio/install/build-tools-container
-:this\vsi\--install
-:this\vsi\-i
-    set _install_args=
+:vsi\option\--install
+:vsi\option\-i
     if "%~1" neq "" (
         if "%~d1\"=="%~dp1" exit /b 7
         call :this\dir\--isfree "%~1" || exit /b 8
         2>nul mkdir "%~dp1Kits" "%~1"
         mklink /j "%ProgramFiles(x86)%\Windows Kits" "%~dp1Kits" || exit /b 6
-        set _install_args=--installPath "%~1"
+        set _install_args=--installPath "%~1" %_install_args%
     )
 
+    set _vsi=vs_%_branch%.exe
+
+    REM offline
     for /d %%a in (
         "%~dp0*"
-    ) do if exist "%%a\vs_setup.exe" call :vsi\install-offline "%%a\vs_setup.exe"& goto :eof
+    ) do if exist "%%a\vs_setup.exe" set "_vsi=%%a\vs_setup.exe"& set "_branch=setup"& set _install_args=--noWeb %_install_args%
 
-    call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d || exit /b 4
-    REM start /wait vsi.exe --quiet --wait --norestart --nocache %_install_args% --add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
-    start /wait vsi.exe --quiet --wait --norestart --nocache %_install_args% --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended || exit /b 5
+    REM online
+    if /i "%_branch%" neq "setup" call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d %_branch% || exit /b 4
+
+    start /wait "%_vsi%" --quiet --wait --norestart --nocache %_install_args% || exit /b 5
     goto :eof
 
-    REM REM Developer Command Prompt for VS 2017 （VS 2017的开发人员命令提示符）
-    REM %comspec% /k "%VSINSTALLDIR%\Common7\Tools\VsDevCmd.bat"
-
-    REM REM x86 Native Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x86 本机工具命令提示）
-    REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvars32.bat"
-
-    REM REM x64 Native Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x64 本机工具命令提示）
-    REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvars64.bat"
-
-    REM REM x86_x64 Cross Tools Command Prompt for VS 2017 （适用于 VS 2017 的 x86_x64 兼容工具命令提示）
-    REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvarsx86_amd64.bat"
-
-    REM REM x64_x86 Cross Tools Command Prompt for VS 2017 （VS 2017的 x64_x86 交叉工具命令提示符）
-    REM %comspec% /k "%VSINSTALLDIR%\VC\Auxiliary\Build\vcvarsamd64_x86.bat"
-
-    REM REM Debuggable Package Manager （可调试包管理器）
-    REM powershell.exe -NoExit -Command "& { Import-Module Appx; Import-Module .\AppxDebug.dll; Show-AppxDebug}"
-
-:vsi\install-offline
-    start /wait "%~1" --quiet --wait --noWeb --norestart --nocache %_install_args% || exit /b 5
-    goto :eof
-
+REM https://aka.ms/vs/15/release/vs_buildtools.exe
+REM https://aka.ms/vs/15/release/vs_enterprise.exe
+REM https://aka.ms/vs/15/release/vs_professional.exe
+REM https://aka.ms/vs/15/release/vs_community.exe
 :vsi\ext\setup
-    for %%a in (vsi.exe) do if "%%~$path:a" neq "" exit /b 0
+    for %%a in (vs_%~2.exe) do if "%%~$path:a" neq "" exit /b 0
     set PATH=%temp%\%~1;%PATH%
-    if exist %temp%\%~1\vsi.exe exit /b 0
+    if exist %temp%\%~1\vs_%~2.exe exit /b 0
     2>nul mkdir %temp%\%~1
-    call :lib\download https://aka.ms/vs/15/release/vs_buildtools.exe %temp%\%~1\vsi.exe || exit /b 1
+    call :lib\download https://aka.ms/vs/15/release/vs_%~2.exe %temp%\%~1\vs_%~2.exe || exit /b 1
     exit /b 0
 
 :::::::::::
@@ -3233,7 +3247,7 @@ REM for :lib\odt
                ::odt.xml:    </Remove>
                ::odt.xml:    -->
                ::odt.xml:
-               ::odt.xml:    <Add SourcePath="!_odt_source_path!" OfficeClientEdition="64" Channel="Broad">
+               ::odt.xml:    <Add SourcePath="!_odt_source_path!\" OfficeClientEdition="64" Channel="Broad">
                ::odt.xml:
             ::!_odt_pro!:    <^!--
                ::odt.xml:        <^!--  https://go.microsoft.com/fwlink/p/?LinkID=301891  -->
@@ -3259,10 +3273,10 @@ REM for :lib\odt
        ::!_odt__project!:
                ::odt.xml:    </Add>
                ::odt.xml:
-         ::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!" Channel="Broad" />
+         ::!_odt_update!:    <Updates Enabled="TRUE" UpdatePath="!_odt_source_path!\" Channel="Broad" />
          ::!_odt_update!:
-               ::odt.xml:    <Display Level="None" AcceptEULA="TRUE" />
-               ::odt.xml:    <^!--  <Display Level="Full" AcceptEULA="TRUE" />  -->
+               ::odt.xml:    <Display Level="Full" AcceptEULA="TRUE" />
+               ::odt.xml:    <^!--  <Display Level="None" AcceptEULA="TRUE" />  -->
                ::odt.xml:
                ::odt.xml:    <Logging Path="%temp%" />
                ::odt.xml:    <^!--  <Property Name="AUTOACTIVATE" Value="1" />  -->
