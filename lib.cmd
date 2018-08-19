@@ -332,7 +332,7 @@ REM for :this\path\--trim, delete path if not exist
     call :map -ks _keys 1
     REM override mac to ipv4
     for /f "usebackq tokens=1*" %%a in (
-        `call lib.cmd ip --find %_keys%`
+        `call %~nx0 ip --find %_keys%`
     ) do if not defined _set\%%a (
         call :map -p %%a %%b 1 && call :lib\lali %%~a %%b
         set _set\%%a=-
@@ -466,7 +466,7 @@ REM for :this\path\--trim, delete path if not exist
         %_range:-=,1,%
     ) do (
         call :this\thread_valve 50 cmd.exe --find
-        start /b lib.cmd \\:ip\--find %%~na.%%b %_macs%
+        start /b %~nx0 \\:ip\--find %%~na.%%b %_macs%
     )
     endlocal
     exit /b 0
@@ -1488,6 +1488,7 @@ REM  "    --rec,    -r                                       Recovery child vhd 
     setlocal
     set _diskpart_conf=%tmp%\.diskpart%random%
     call :this\vhd\%*
+    2>nul erase %_diskpart_conf%
     endlocal
     goto :eof
 
@@ -2074,7 +2075,7 @@ REM from Window 10 wdk, will download devcon.exe at script path
 :: KMS ::
 :::::::::
 
-::: "KMS Client" "" "usage: %~n0 kms [option] [args...]" "" "    --os,  -s [[host]]     Active operating system" "    --odt, -o [[host]]     Active office, which install by Office Deployment Tool" "    e.g." "        %~n0 kms --os 192.168.1.1" "" "    --all, -a [[host]]     Active operating system and office"
+::: "KMS Client" "" "usage: %~n0 kms [option] [args...]" "" "    --os,  -s [[host[:port]]]     Active operating system" "    --odt, -o [[host[:port]]]     Active office, which install by Office Deployment Tool" "    e.g." "        %~n0 kms --os 192.168.1.1" "" "    --all, -a [[host[:port]]]     Active operating system and office"
 :::: "invalid option" "ospp.vbs not found" "Need ip or host" "OS not support" "No office found" "office not support"
 :lib\kms
     title kms
@@ -2448,18 +2449,24 @@ REM download and set in path
     exit /b 0
 
 ::: "Visual Studio Build Tools Installer (without IDE)" "" "usage: %~n0 vsi [option] [args]" "    --deploy,  -d [[directory_path]]    Deployment visual studio build tools data" "    --install, -i [[directory_path]]    Install visual studio build tools online" "                                        when script in deploy path, will install offline"
-:::: "invalid option" "args is empty" "directory already exist"
+:::: "invalid option" "args is empty" "can not get current language" "vs_install download error" "vs_buildtools error" "create soft link error" "can not install at root path" ""
+
 :lib\vsi
     title vsi
     if "%~1"=="" call :this\annotation %0 & goto :eof
     setlocal
-    call :this\odt\%*
+    call :this\vsi\%*
+
+    if errorlevel 1 goto :eof
+
     if exist "%ProgramData%\Microsoft\VisualStudio\Packages" rmdir /s /q "%ProgramData%\Microsoft\VisualStudio\Packages"
+
+    REM remove other parttition 'ProgramData' directory
     if "%~2" neq "" if exist %~d2\ProgramData\Microsoft\VisualStudio\Packages rmdir /s /q %~d2\ProgramData\Microsoft\VisualStudio\Packages
     call :this\dir\--clean %~d2\ProgramData
     call :this\dir\--isfree %~d2\ProgramData && rmdir /s /q %~d2\ProgramData
     endlocal
-    goto :eof
+    exit /b 0
 
 REM https://docs.microsoft.com/zh-cn/visualstudio/install/workload-component-id-vs-build-tools#visual-c-build-tools
 :this\vsi\--deploy
@@ -2479,8 +2486,8 @@ REM https://docs.microsoft.com/zh-cn/visualstudio/install/build-tools-container
     if "%~1" neq "" (
         if "%~d1\"=="%~dp1" exit /b 7
         call :this\dir\--isfree "%~1" || exit /b 8
-        2>nul mkdir "%~dp1\Kits" "%~1"
-        mklink /j "%ProgramFiles(x86)%\Windows Kits" "%~dp1\Kits" || exit /b 6
+        2>nul mkdir "%~dp1Kits" "%~1"
+        mklink /j "%ProgramFiles(x86)%\Windows Kits" "%~dp1Kits" || exit /b 6
         set _install_args=--installPath "%~1"
     )
 
@@ -2515,7 +2522,7 @@ REM https://docs.microsoft.com/zh-cn/visualstudio/install/build-tools-container
     start /wait "%~1" --quiet --wait --noWeb --norestart --nocache %_install_args% || exit /b 5
     goto :eof
 
-:this\vsi\ext\setup
+:vsi\ext\setup
     for %%a in (vsi.exe) do if "%%~$path:a" neq "" exit /b 0
     set PATH=%temp%\%~1;%PATH%
     if exist %temp%\%~1\vsi.exe exit /b 0
