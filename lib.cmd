@@ -2475,17 +2475,12 @@ REM download and set in path
     exit /b 0
 
 :this\vsi\enterprise
-:this\vsi\ent
 :this\vsi\professional
-:this\vsi\pro
 :this\vsi\community
 :this\vsi\core
+    set _install_args=--includeRecommended
     set _branch=
-    REM set _install_args=--all
-    set _install_args=--allWorkloads --includeRecommended
     for %%a in (%0) do set _branch=%%~na
-    if "%_branch%"=="ent" set _branch=enterprise
-    if "%_branch%"=="pro" set _branch=professional
     REM vs_buildtools: set _install_args=--add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
     if "%_branch%"=="core" set "_branch=buildtools"& set _install_args=--add Microsoft.VisualStudio.Workload.VCTools;includeRecommended
     call :vsi\option\%*
@@ -2499,7 +2494,9 @@ REM https://docs.microsoft.com/zh-cn/visualstudio/install/workload-component-id-
     call :this\ost\--current-lang _vsi_lang || exit /b 3
     call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d %_branch% || exit /b 4
 
-    start /wait vs_%_branch%.exe --wait --lang %_vsi_lang% --layout "%~1" %_install_args%
+    REM error args: --allWorkloads
+    start /wait vs_%_branch%.exe --wait --lang %_vsi_lang% --layout "%~1" %_install_args% || exit /b 5
+    if not errorlevel 1 echo can use command '%~1\vs_setup.exe --passive --wait --norestart --nocache --noWeb'
     goto :eof
 
 REM REM Debuggable Package Manager （可调试包管理器）
@@ -2520,17 +2517,8 @@ REM https://docs.microsoft.com/zh-cn/visualstudio/install/build-tools-container
         set _install_args=--installPath "%~1" %_install_args%
     )
 
-    set _vsi=vs_%_branch%.exe
-
-    REM offline
-    for /d %%a in (
-        "%~dp0*"
-    ) do if exist "%%a\vs_setup.exe" set "_vsi=%%a\vs_setup.exe"& set "_branch=setup"& set _install_args=--noWeb %_install_args%
-
-    REM online
-    if /i "%_branch%" neq "setup" call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d %_branch% || exit /b 4
-
-    start /wait "%_vsi%" --quiet --wait --norestart --nocache %_install_args% || exit /b 5
+    call :vsi\ext\setup e64d79b4-0219-aea6-18ce-2fe10ebd5f0d %_branch% || exit /b 4
+    start /wait vs_%_branch%.exe --passive --wait --norestart --nocache %_install_args% || exit /b 5
     goto :eof
 
 REM https://aka.ms/vs/15/release/vs_buildtools.exe
