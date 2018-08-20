@@ -2453,7 +2453,7 @@ REM download and set in path
     erase %temp%\%~1\officedeploymenttool16.exe %temp%\%~1\*.xml
     exit /b 0
 
-::: "Visual Studio Installer" "" "usage: %~n0 vsi [branch] [option] [args]" "    branch:" "        enterprise" "        professional" "        community" "        core         (build tools without IDE)" "" "    --deploy,  -d [directory_path]      Deployment visual studio build tools data" "    --install, -i [[directory_path]]    Install visual studio build tools online" "                                        when script in deploy path, will install offline"
+::: "Visual Studio Installer" "" "usage: %~n0 vsi [branch] [option] [args]" "    branch:" "        enterprise" "        professional" "        community" "        core         (build tools without IDE)" "" "    option:" "        --deploy,  -d [directory_path]      Deployment visual studio build tools data" "        --install, -i [[directory_path]]    Install visual studio build tools online" "                                            when script in deploy path, will install offline"
 :::: "invalid option" "args is empty" "can not get current language" "vs_install download error" "vs_buildtools error" "create soft link error" "can not install at root path" ""
 
 :lib\vsi
@@ -2481,12 +2481,13 @@ REM download and set in path
 :this\vsi\community
 :this\vsi\core
     set _branch=
-    set _install_args=
+    REM set _install_args=--all
+    set _install_args=--allWorkloads --includeRecommended
     for %%a in (%0) do set _branch=%%~na
-    REM vs_buildtools: set _install_args=--add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
-    if "%_branch%"=="core" set "_branch=buildtools"& set _install_args=--add Microsoft.VisualStudio.Workload.VCTools;includeRecommended
     if "%_branch%"=="ent" set _branch=enterprise
     if "%_branch%"=="pro" set _branch=professional
+    REM vs_buildtools: set _install_args=--add Microsoft.VisualStudio.Component.Static.Analysis.Tools --add Microsoft.VisualStudio.Component.VC.CoreBuildTools --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.TestTools.BuildTools --add Microsoft.VisualStudio.Component.Windows10SDK.17134 --add Microsoft.VisualStudio.Component.WinXP
+    if "%_branch%"=="core" set "_branch=buildtools"& set _install_args=--add Microsoft.VisualStudio.Workload.VCTools;includeRecommended
     call :vsi\option\%*
     goto :eof
 
