@@ -615,7 +615,7 @@ lib_ip() {
         ;;
         -f|--find)
             shift;
-            source "$(cd `dirname $0`; pwd)/.lib";
+            source "$(cd `dirname $0`; pwd)/_function";
             __ip_find "$@"
         ;;
         -t|--test)
@@ -758,7 +758,7 @@ __hosts() {
 
 ### Update hosts by ini #    will read ini config from HOME or script path. #    ini file context like: # #[hosts] #abc.org=01-12-23-34-45-56 #lib-233=67-78-89-9a-ab-bc #www.a.com=192.168.1.1 ##
 lib_hosts() {
-    source "$(cd `dirname $0`; pwd)/.lib";
+    source "$(cd `dirname $0`; pwd)/_function";
 
     # load ini in map1
     __load_ini hosts 1 || exit 1; # Not found ini configure
@@ -842,7 +842,7 @@ lib_inum() {
 ### Tag prefix each line, support `date` format ##Usage: [command] | prefix [strftime format] ##
 lib_prefix() {
     [ "$1" ] || exit 1; # Args is empty
-    source "$(cd `dirname $0`; pwd)/.lib";
+    source "$(cd `dirname $0`; pwd)/_function";
     _prefix "$@"
 }
 
