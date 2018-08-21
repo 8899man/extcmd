@@ -338,6 +338,7 @@ __play_title() {
 
 # for _3rd_play
 __play_ff() {
+    [ -f "$1" ] || exit 1; # file not exist
     case "`lib filter -l ${1##*.}`" in
         avi|divx|flv|mkv|mp4|mpg|rm|rmvb|vob|wmv)
             # -ac 2 #ED..A... set number of audio channels (from 0 to INT_MAX) (default 0) #Convert the 5.1 track to stereo
