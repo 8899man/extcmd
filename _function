@@ -33,24 +33,22 @@ _prefix() {
 _message_queue() {
     case $1 in
         --init)
-            mkfifo "/tmp/.message_queue+$USER+$$+${0//\//\+}.fifo";
+            mkfifo "/tmp/.mq+$USER+$$+${0//\//\+}.fifo";
             # &6
-            exec 6<> "/tmp/.message_queue+$USER+$$+${0//\//\+}.fifo";
+            exec 6<> "/tmp/.mq+$USER+$$+${0//\//\+}.fifo";
             # make handler
             {
                 local cmd;
                 time while read -u 6 cmd;
                 do
-                    [ "$cmd" == "0" ] && {
-                        exec 6>&-;
-                        exec 6<&-;
-                        rm -f "/tmp/.message_queue+$USER+$$+${0//\//\+}.fifo";
-                        printf "queue close.\n";
-                        break
-                    };
+                    [ "$cmd" == "mq+$USER+$$" ] && break;
                     # run command
                     eval ${cmd//%34/\\\"}
                 done
+                exec 6>&-;
+                exec 6<&-;
+                printf "queue close.\n";
+                rm -f "/tmp/.mq+$USER+$$+${0//\//\+}.fifo"
             } &
             printf "queue open.\n"
         ;;
@@ -68,7 +66,9 @@ _message_queue() {
             } >&6
         ;;
         --destroy)
-            printf "0\n" >&6
+            {
+                printf "mq+$USER+$$\n" >&6
+            } 2>/dev/null
         ;;
     esac
 }
