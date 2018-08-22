@@ -48,8 +48,9 @@ _message_queue() {
                 exec 6>&-;
                 exec 6<&-;
                 printf "queue close.\n";
-                rm -f "/tmp/.mq+$USER+$$+${0//\//\+}.fifo"
+                rm "/tmp/.mq+$USER+$$+${0//\//\+}.fifo"
             } &
+            MQ_PID=$!;
             printf "queue open.\n"
         ;;
         --put)
@@ -66,9 +67,11 @@ _message_queue() {
             } >&6
         ;;
         --destroy)
-            {
-                printf "mq+$USER+$$\n" >&6
-            } 2>/dev/null
+            printf "mq+$USER+$$\n" >&6
+        ;;
+        --stop)
+            timeout ${2:-1} cat "/tmp/.mq+$USER+$$+${0//\//\+}.fifo" > /dev/null;
+            _message_queue --destroy
         ;;
     esac
 }
@@ -78,9 +81,9 @@ _thread_valve() {
     case $1 in
         # use before loop, need count
         --init)
-            mkfifo "/tmp/.thread_valve+$USER+$$+${0//\//\+}.fifo";
+            mkfifo "/tmp/.tv+$USER+$$+${0//\//\+}.fifo";
             # &5
-            exec 5<> "/tmp/.thread_valve+$USER+$$+${0//\//\+}.fifo";
+            exec 5<> "/tmp/.tv+$USER+$$+${0//\//\+}.fifo";
             perl -e 'print "\n" x '$2 >&5
         ;;
         --run)
@@ -96,9 +99,12 @@ _thread_valve() {
             wait;
             exec 5>&-;
             exec 5<&-
-            rm -f "/tmp/.thread_valve+$USER+$$+${0//\//\+}.fifo"
+            rm "/tmp/.tv+$USER+$$+${0//\//\+}.fifo"
         ;;
-
+        --stop)
+            timeout ${2:-1} cat "/tmp/.tv+$USER+$$+${0//\//\+}.fifo";
+            _thread_valve --destroy
+        ;;
     esac
 }
 
