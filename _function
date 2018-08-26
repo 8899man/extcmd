@@ -89,7 +89,7 @@ _message_queue() {
 
             while :; do
                 [ -p "$mq_file.fifo" ] || return 1;
-                [ $((`_message_queue --lenght` + ${#args})) -ge $MQ_LIMIT_LENGHT ] || break;
+                [ $(_message_queue --free) -gt ${#args} ] && break;
                 sleep 60;
             done
 
@@ -114,7 +114,7 @@ _message_queue() {
             } || printf "[MQ:WARN] no task recall.\n";
             _message_queue --destroy
         ;;
-        --lenght)
+        --free)
             # if fifo not exist, will return false
             local len read_lens=0 read_len_arr write_lens=0 write_len_arr;
 
@@ -123,7 +123,7 @@ _message_queue() {
             for len in ${read_len_arr[@]}; do read_lens=$((read_lens + len)); done
             for len in ${write_len_arr[@]}; do write_lens=$((write_lens + len)); done
 
-            printf $((write_lens - read_lens));
+            printf $((MQ_LIMIT_LENGHT - (write_lens - read_lens) ));
             return 0
         ;;
     esac
