@@ -99,8 +99,7 @@ lib_gpkg() {
         [ $((countdown -= 2)) -ge 0 ] && __gpkg_serial_number /private/var/folders;
 
         # foreach pkg array
-        [ ${#pkg[@]} -gt 0 ] && for i in ${!pkg[@]};
-        do
+        [ ${#pkg[@]} -gt 0 ] && for i in ${!pkg[@]}; do
             # Alleady complete
             [ "${pkg[$i]%/*}" == "$tmp" ] && {
                 __gpkg_complete "${pkg[$i]}" &
@@ -627,8 +626,7 @@ lib_ip() {
             local a IFS=$IFS".";
             a=($1);
             [ ${#a[@]} == 4 ] || return 1;
-            for a in ${a[@]};
-            do
+            for a in ${a[@]}; do
                 [ $a -gt 255 ] && return 1;
             done
             return 0
@@ -681,8 +679,7 @@ __ip_find() {
             # convert lowercase
             macs=`lib_filter -l $macs`;
             # trim ^0
-            for j in {0..9} {a..f};
-            do
+            for j in {0..9} {a..f}; do
                 macs=${macs//0$j/$j};
             done;
             # args arr
@@ -699,10 +696,8 @@ __ip_find() {
     # init thread valve
     _thread_valve --init 40;
 
-    for r in ${route_ip[@]};
-    do
-        for i in `seq ${range/-/ }`;
-        do
+    for r in ${route_ip[@]}; do
+        for i in `seq ${range/-/ }`; do
             i=${r%.*}.$i;
 
             # get thread
@@ -725,16 +720,14 @@ __ip_find() {
 __match_mac() {
     ping -c 2 -t 2 $i >/dev/null 2>&1;
     j=`arp $i 2>/dev/null`;
-    for macs in ${macs_arr[@]};
-    do
+    for macs in ${macs_arr[@]}; do
         # cache key
         key=${macs#*.};
         # split arr with '|'
         IFS="|";
         macs=(${macs%%.*});
         IFS="$OLDIFS";
-        for mac in ${macs[@]};
-        do
+        for mac in ${macs[@]}; do
             [[ $j == *$mac* ]] && printf "%-${l}s$i\n" $key
         done
 
@@ -767,8 +760,7 @@ lib_hosts() {
     _map -ks 1;
     local i j k host_new n="
 "
-    while read i;
-    do
+    while read i; do
         # override mac addr in map1, if value not ipv4
         [[ "$(_map -g ${i%% *} 1)" == *[0-9].[0-9]*[0-9].[0-9]* ]] || {
             _map -p $i 1;
@@ -782,13 +774,11 @@ lib_hosts() {
     # get map1 key value in REPLY
     _map -a 1 || exit 1; # Unknown error
 
-    for ((i=0; i<${#REPLY[@]}; i+=2))
-    do
+    for ((i=0; i<${#REPLY[@]}; i+=2)); do
         lib_ip --test ${REPLY[i + 1]} && _map -p "${REPLY[$i]}" "${REPLY[i + 1]}";
     done
 
-    while read i;
-    do
+    while read i; do
         k=($i);
         j=`_map -g "${k[1]}"` && {
             _map -r "${k[1]}";
@@ -803,8 +793,7 @@ lib_hosts() {
     # empty array
     _map -a || unset REPLY;
 
-    for ((i=0; i<${#REPLY[@]}; i+=2))
-    do
+    for ((i=0; i<${#REPLY[@]}; i+=2)); do
         host_new+="${REPLY[i + 1]}	${REPLY[i]}$n"
     done
 
@@ -900,8 +889,7 @@ __load_ini() {
     done < <(cat ${0%/*}/.*.ini ~/.*.ini 2>/dev/null | awk -F\; 'gsub(/\r/,"",$1);{print $1}' | uniq);
 
     # # read environment variable
-    # while read l tag;
-    # do
+    # while read l tag; do
     #     lib_ip --test $tag || {
     #         __imac $tag || continue
     #     };

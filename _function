@@ -31,7 +31,8 @@ _prefix() {
 
 # TODO test timeout
 
-MQ_LIMIT_LENGHT=61440;
+# _mq_buf_size
+MQ_LIMIT_LENGHT=$((61440 - 1024));
 
 # Message Queue with timeout
 _message_queue() {
@@ -54,20 +55,20 @@ _message_queue() {
             };
             # make handler
             {
-                local cmd;
                 # make bidirectional buffer
                 exec 6<> "$mq_file.fifo";
-                time while read -u 6 cmd;
-                do
+
+                local cmd;
+                time while read cmd; do
                     [ "$cmd" == "mq+$USER+$$" ] && break;
                     # run command
                     eval ${cmd//%34/\\\"};
                     printf "\n $((${#cmd} + 1)) \n" >> "$mq_file.read"
-                done
-                # close
+                done < "$mq_file.fifo"
+                # close buffer
                 exec 6>&-;
                 exec 6<&-;
-                rm "$mq_file.*";
+                rm "$mq_file."*;
                 printf "[MQ:INFO] closed.\n"
             } &
             printf "$!" > "$mq_file.pid";
@@ -77,9 +78,8 @@ _message_queue() {
         ;;
         --put)
             shift;
-            local arg args;
-            for arg in "$@";
-            do
+            local arg args free_len;
+            for arg in "$@"; do
                 arg="${arg//\"/%34}"; # replace "
                 [ "${arg/ /}" == "$arg" ] || arg="\"$arg\"";
                 args="$args$arg "
@@ -89,14 +89,15 @@ _message_queue() {
 
             while :; do
                 [ -p "$mq_file.fifo" ] || return 1;
-                [ $(_message_queue --free) -gt ${#args} ] && break;
+                free_len=$(_message_queue --free);
+                [ $free_len -gt ${#args} ] && break;
                 sleep 60;
             done
 
             if printf "${args:0:-1}\n" | timeout 0.1 tee "$mq_file.fifo" >/dev/null; then
                 printf "\n ${#args} \n" >> "$mq_file.write"
             else
-                printf "[MQ:ERROR] 'put' '$args' fail.\n" >&2;
+                printf "[MQ:ERROR] free lenght: $free_len, 'put' '${args:0:-1}' fail.\n" >&2;
             fi
             _spinlock --unlock
         ;;
@@ -108,8 +109,9 @@ _message_queue() {
         ;;
         --break)
             printf "[MQ:WARN] will break.\n" >&2;
-            timeout ${2:-0.5} cat "$mq_file.fifo" | grep -q '[0-9a-zA-Z]' && {
-                printf "[MQ:INFO] recall task success.\n";
+            local count;
+            count=`timeout ${2:-0.5} cat "$mq_file.fifo" | grep -c '[0-9a-zA-Z]'` && {
+                printf "[MQ:INFO] recall task '$count' success.\n";
                 :
             } || printf "[MQ:WARN] no task recall.\n";
             _message_queue --destroy
@@ -139,8 +141,7 @@ _message_queue() {
 #                 local cmd;
 #                 # &6
 #                 exec 6<> "$mq_file.fifo";
-#                 time while read -u 6 cmd;
-#                 do
+#                 time while read -u 6 cmd; do
 #                     [ "$cmd" == "mq+$USER+$$" ] && {
 #                         exec 6>&-;
 #                         exec 6<&-;
@@ -157,8 +158,7 @@ _message_queue() {
 #         --put)
 #             shift;
 #             local arg args;
-#             for arg in "$@";
-#             do
+#             for arg in "$@"; do
 #                 arg="${arg//\"/%34}"; # replace "
 #                 [ "${arg/ /}" == "$arg" ] || arg="\"$arg\"";
 #                 args="$args$arg "
@@ -175,7 +175,7 @@ _message_queue() {
 # }
 
 # get mq buffer size
-_mq_buf() {
+_mq_buf_size() {
     local mq_fifo="/tmp/.mq+limit.fifo" str_k="b" write_lenght=0 test_count=0 read_lenght tmp;
 
     mkfifo "$mq_fifo";
@@ -186,28 +186,33 @@ _mq_buf() {
     str_k=${str_k:0:-1};
 
     # limit write
-    while :;
-    do
+    while :; do
         printf "$str_k\n" | timeout 0.02 tee "$mq_fifo" >/dev/null || break;
         write_lenght=$((write_lenght + ${#str_k} + 1));
     done
 
-    printf $write_lenght;
+    [ $write_lenght == 0 ] && {
+        timeout 0.1 cat "$mq_fifo" >/dev/null;
+        exec 6>&-;
+        exec 6<&-;
+        rm "$mq_fifo";
+        return 1
+    };
+
+    # printf "$write_lenght/";
 
     # local mq_all=$(timeout 0.1 cat "$mq_fifo");
     # printf "$mq_all\n" > "$mq_fifo"
 
     # read by can write
-    while read tmp;
-    do
+    while read tmp; do
         printf "$str_k\n" | timeout 0.02 tee "$mq_fifo" >/dev/null && break;
         write_lenght=$((write_lenght - ${#str_k} - 1));
     done < "$mq_fifo"
 
-    printf "/$((write_lenght - ${#str_k} - 1))";
+    printf $((write_lenght - ${#str_k} - 1));
 
-    while read tmp;
-    do
+    while read tmp; do
         [ $((test_count++)) == 0 ] && continue
         [ $test_count -ge 100 ] && break;
         printf "$str_k\n" | timeout 0.02 tee "$mq_fifo" >/dev/null || break
@@ -220,7 +225,6 @@ _mq_buf() {
 
     [ $test_count -ge 100 ] && return 0;
     return 1
-
 }
 
 _spinlock() {
@@ -229,8 +233,7 @@ _spinlock() {
         --lock)
             local time_stamp=$((`date +%s` + ${LOCK_TIMEOUT:-1800}))
             exec 7>>"$2";
-            until flock --exclusive --nonblock 7;
-            do
+            until flock --exclusive --nonblock 7; do
                 [ ! -f "$2" -o $(date +%s) -ge $time_stamp ] && {
                     exec 7>&-
                     return 1
@@ -314,8 +317,7 @@ _thread_valve() {
 #     local i=0 c t;
 #     case $1 in
 #         --encode|-e)
-#             for ((; i<${#2}; i++))
-#             do
+#             for ((; i<${#2}; i++)); do
 #                 t=$(printf %d \'${2:$i:1});
 #                 [ $t -gt 0 ] && {
 #                     c+=$t;
@@ -399,13 +401,11 @@ _set() {
 
 _BKDRHash (){
     local a i h=0 seed=131; # 31 131 1313 13131 131313
-    for ((i=0; i<${#1}; i++))
-    do
+    for ((i=0; i<${#1}; i++)); do
         a+=" '${1:$i:1}";
     done;
     a=(`printf "%d " $a`);
-    for i in ${a[@]};
-    do
+    for i in ${a[@]}; do
         h=$((seed * h + $i));
     done;
     # 2^63-1 = 0x7FFFFFFFFFFFFFFF
@@ -431,8 +431,7 @@ _BKDRHash (){
 #             } || {
 #                 # Get all key index
 #                 eval i=\${!MAP_KEY_$h[@]};
-#                 for i in $i;
-#                 do
+#                 for i in $i; do
 #                     eval k=\${MAP_KEY_$h[$i]};
 #                     [ "$k" == "$2" ] && {
 #                         # If key aleady in, update value
@@ -454,8 +453,7 @@ _BKDRHash (){
 #                 eval echo \${MAP_VALUE_$h}
 #             else
 #                 eval i=\${!MAP_KEY_$h[@]};
-#                 for i in $i;
-#                 do
+#                 for i in $i; do
 #                     eval k=\${MAP_KEY_$h[$i]};
 #                     [ "$k" == "$2" ] && {
 #                         # If key aleady in, update value
@@ -483,8 +481,7 @@ _offset_map() {
                 return 0
             } || {
                 k=(${MAP_OFFSET[$h]});
-                for ((i=0; i<${#k[@]}; i+=2))
-                do
+                for ((i=0; i<${#k[@]}; i+=2)); do
                     # If key aleady in, update value
                     entry=${MAP_ENTRY[$h]};
                     [ "${entry:$o:${k[$i]}}" == "$2" ] && {
@@ -522,8 +519,7 @@ _offset_map() {
                     return 0;
                 }
             elif [ ${#k[@]} -gt 2 ]; then
-                for ((i=0; i<${#k[@]}; i+=2))
-                do
+                for ((i=0; i<${#k[@]}; i+=2)); do
                     entry=${MAP_ENTRY[$h]};
                     # If key aleady in, update
                     [ "${entry:$o:${k[$i]}}" == "$2" ] && {
@@ -566,11 +562,9 @@ _offset_map() {
                 ;;
                 --keys | -ks)
                     unset REPLY r;
-                    for h in $h;
-                    do
+                    for h in $h; do
                         k=(${MAP_OFFSET[$h]}) o=0;
-                        for l in ${k[@]};
-                        do
+                        for l in ${k[@]}; do
                             [ $((r++ % 2)) == 0 ] && {
                                 entry=${MAP_ENTRY[$h]};
                                 REPLY[${#REPLY[@]}]="${entry:$o:$l}";
@@ -581,11 +575,9 @@ _offset_map() {
                 ;;
                 --values | -vs)
                     unset REPLY r;
-                    for h in $h;
-                    do
+                    for h in $h; do
                         k=(${MAP_OFFSET[$h]}) o=0;
-                        for l in ${k[@]};
-                        do
+                        for l in ${k[@]}; do
                             [ $((r++ % 2)) == 1 ] && {
                                 entry=${MAP_ENTRY[$h]};
                                 REPLY[${#REPLY[@]}]="${entry:$o:$l}";
@@ -596,11 +588,9 @@ _offset_map() {
                 ;;
                 --arr | -a)
                     unset REPLY;
-                    for h in $h;
-                    do
+                    for h in $h; do
                         k=(${MAP_OFFSET[$h]}) o=0;
-                        for i in ${k[@]};
-                        do
+                        for i in ${k[@]}; do
                             entry=${MAP_ENTRY[$h]};
                             REPLY[${#REPLY[@]}]="${entry:$o:$i}";
                             ((o += $i));
@@ -638,8 +628,7 @@ _split_map() {
                 IFS=$s;
                 kv=(${MAP[$h]});
                 IFS=$OLDIFS;
-                for ((i=0; i<${#kv[@]}; i+=2))
-                do
+                for ((i=0; i<${#kv[@]}; i+=2)); do
                     [ "${kv[$i]}" == "$2" ] && {
                         ((o += ${#kv[$i]} + 1));
                         MAP[$h]=${MAP[$h]:0:$o}$3${MAP[$h]:$o + ${#kv[$i + 1]}};
@@ -670,8 +659,7 @@ _split_map() {
                     return 0;
                 }
             elif [ ${#kv[@]} -gt 2 ]; then
-                for ((i=0; i<${#kv[@]}; i+=2))
-                do
+                for ((i=0; i<${#kv[@]}; i+=2)); do
                     [ "${kv[$i]}" == "$2" ] && {
                         REPLY="${kv[$i + 1]}";
                         # --get | -g || --remove | -r
@@ -713,39 +701,33 @@ _split_map() {
                 ;;
                 --keys | -ks)
                     unset REPLY r;
-                    for h in $h;
-                    do
+                    for h in $h; do
                         IFS=$s;
                         kv=(${MAP[$h]});
                         IFS=$OLDIFS;
-                        for l in ${!kv[@]};
-                        do
+                        for l in ${!kv[@]}; do
                             [ $((r++ % 2)) == 0 ] && REPLY[${#REPLY[@]}]="${kv[$l]}";
                         done
                     done
                 ;;
                 --values | -vs)
                     unset REPLY r;
-                    for h in $h;
-                    do
+                    for h in $h; do
                         IFS=$s;
                         kv=(${MAP[$h]});
                         IFS=$OLDIFS;
-                        for l in ${!kv[@]};
-                        do
+                        for l in ${!kv[@]}; do
                             [ $((r++ % 2)) == 1 ] && REPLY[${#REPLY[@]}]="${kv[$l]}";
                         done
                     done
                 ;;
                 --arr | -a)
                     unset REPLY;
-                    for h in $h;
-                    do
+                    for h in $h; do
                         IFS=$s;
                         kv=(${MAP[$h]});
                         IFS=$OLDIFS;
-                        for l in ${!kv[@]};
-                        do
+                        for l in ${!kv[@]}; do
                             REPLY[${#REPLY[@]}]="${kv[$l]}"
                         done
                     done

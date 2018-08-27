@@ -82,8 +82,7 @@ _3rd_gitbak() {
     which git >/dev/null 2>&1 || exit 1; # git command not found
     local l o name tamp;
 
-    while read l;
-    do
+    while read l; do
         l=${l%/*};
 
         # project name
@@ -477,8 +476,7 @@ __m2_get() {
 # }
 
 # args() {
-#     for i in "$@";
-#     do
+#     for i in "$@"; do
 #         case "$i" in
 #             --arg.str=*)
 #                 echo ${i#*=}
