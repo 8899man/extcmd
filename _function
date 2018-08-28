@@ -29,11 +29,6 @@ _prefix() {
     fi
 }
 
-# TODO test timeout
-
-# _mq_buf_size
-MQ_LIMIT_LENGHT=$((61440 - 1024));
-
 # Message Queue with timeout
 _message_queue() {
     local mq_file="/tmp/.mq+$USER+$$+${0//\//\+}";
@@ -42,7 +37,7 @@ _message_queue() {
         printf "[MQ:ERROR] closed or not created.\n" >&2
         [ -s "$mq_file.pid" ] && {
             kill $(cat "$mq_file.pid");
-            rm "$mq_file.pid"
+            rm -f "$mq_file."*
         };
         return 1
     fi
@@ -53,25 +48,32 @@ _message_queue() {
                 printf "[MQ:ERROR] already created.\n" >&2
                 return 1
             };
-            # make handler
-            {
-                # make bidirectional buffer
-                exec 6<> "$mq_file.fifo";
 
+            # make bidirectional buffer
+            exec 6<> "$mq_file.fifo";
+
+            until MQ_LIMIT_LENGHT=$(__mq_buf_size); do :; done
+            MQ_LIMIT_LENGHT=$(_highest_floor $MQ_LIMIT_LENGHT);
+            printf "[MQ:INFO] available buffer lenght: '$MQ_LIMIT_LENGHT'.\n"
+
+            {
+                # make handler
                 local cmd;
-                time while read cmd; do
-                    [ "$cmd" == "mq+$USER+$$" ] && break;
-                    # run command
-                    eval ${cmd//%34/\\\"};
+                while read cmd; do
+                    eval ${cmd//%34/\\\"}; # run command
                     printf "\n $((${#cmd} + 1)) \n" >> "$mq_file.read"
                 done < "$mq_file.fifo"
+
                 # close buffer
                 exec 6>&-;
                 exec 6<&-;
-                rm "$mq_file."*;
+                rm -f "$mq_file."*;
                 printf "[MQ:INFO] closed.\n"
             } &
             printf "$!" > "$mq_file.pid";
+
+            exec 6>&-;
+            exec 6<&-;
             >"$mq_file.read";
             >"$mq_file.write";
             printf "[MQ:INFO] open.\n"
@@ -85,7 +87,7 @@ _message_queue() {
                 args="$args$arg "
             done
 
-            _spinlock --lock "$mq_file.write" || return 1;
+            _spinlock --lock "$mq_file.pid" || return 1;
 
             while :; do
                 [ -p "$mq_file.fifo" ] || return 1;
@@ -102,7 +104,7 @@ _message_queue() {
             _spinlock --unlock
         ;;
         --destroy)
-            printf "mq+$USER+$$\n" | timeout 0.1 tee "$mq_file.fifo" >/dev/null || {
+            printf "break\n" | timeout 0.1 tee "$mq_file.fifo" >/dev/null || {
                 printf "[MQ:ERROR] 'destroy' fail.\n" >&2;
                 return 1
             }
@@ -163,7 +165,7 @@ _message_queue() {
 #                 [ "${arg/ /}" == "$arg" ] || arg="\"$arg\"";
 #                 args="$args$arg "
 #             done
-
+#
 #             [ -p "$mq_file.fifo" ] || return 1;
 #             printf "${args:0:-1}\n" >"$mq_file.fifo"
 #         ;;
@@ -175,11 +177,8 @@ _message_queue() {
 # }
 
 # get mq buffer size
-_mq_buf_size() {
-    local mq_fifo="/tmp/.mq+limit.fifo" str_k="b" write_lenght=0 test_count=0 read_lenght tmp;
-
-    mkfifo "$mq_fifo";
-    exec 6<> "$mq_fifo";
+__mq_buf_size() {
+    local str_k="b" write_lenght=0 test_count=0 read_lenght tmp;
 
     # make key
     for tmp in `seq 0 9`; do str_k=$str_k$str_k; done
@@ -187,44 +186,42 @@ _mq_buf_size() {
 
     # limit write
     while :; do
-        printf "$str_k\n" | timeout 0.02 tee "$mq_fifo" >/dev/null || break;
+        printf "$str_k\n" | timeout 0.02 tee "$mq_file.fifo" >/dev/null || break;
         write_lenght=$((write_lenght + ${#str_k} + 1));
     done
 
     [ $write_lenght == 0 ] && {
-        timeout 0.1 cat "$mq_fifo" >/dev/null;
-        exec 6>&-;
-        exec 6<&-;
-        rm "$mq_fifo";
+        timeout 0.1 cat "$mq_file.fifo" >/dev/null;
         return 1
     };
 
     # printf "$write_lenght/";
 
-    # local mq_all=$(timeout 0.1 cat "$mq_fifo");
-    # printf "$mq_all\n" > "$mq_fifo"
+    # local mq_all=$(timeout 0.1 cat "$mq_file.fifo");
+    # printf "$mq_all\n" > "$mq_file.fifo"
 
     # read by can write
     while read tmp; do
-        printf "$str_k\n" | timeout 0.02 tee "$mq_fifo" >/dev/null && break;
+        printf "$str_k\n" | timeout 0.02 tee "$mq_file.fifo" >/dev/null && break;
         write_lenght=$((write_lenght - ${#str_k} - 1));
-    done < "$mq_fifo"
+    done < "$mq_file.fifo"
 
     printf $((write_lenght - ${#str_k} - 1));
 
     while read tmp; do
         [ $((test_count++)) == 0 ] && continue
         [ $test_count -ge 100 ] && break;
-        printf "$str_k\n" | timeout 0.02 tee "$mq_fifo" >/dev/null || break
-    done < "$mq_fifo"
+        printf "$str_k\n" | timeout 0.02 tee "$mq_file.fifo" >/dev/null || break
+    done < "$mq_file.fifo"
 
-    timeout 0.1 cat "$mq_fifo" >/dev/null;
-    exec 6>&-;
-    exec 6<&-;
-    rm "$mq_fifo";
+    timeout 0.1 cat "$mq_file.fifo" >/dev/null;
 
     [ $test_count -ge 100 ] && return 0;
     return 1
+}
+
+_highest_floor() {
+    printf ${1:0:1}`printf "%.$((${#1} - 1))d\n" 0`
 }
 
 _spinlock() {
