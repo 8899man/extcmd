@@ -863,8 +863,8 @@ REM https://technet.microsoft.com/en-us/security/cc184924.aspx
     REM install lang
     set _lang=
     if %_hot_ver% lss 60 for /f "usebackq skip=1 tokens=1" %%a in (
-		`wmic.exe os get OSLanguage`
-	) do for %%b in (
+        `wmic.exe os get OSLanguage`
+    ) do for %%b in (
         cht.1028
         enu.1033
         jpn.1041
@@ -974,7 +974,7 @@ REM download and set in path
     if /i "%~d1"=="%SystemDrive%" exit /b 6
     setlocal enabledelayedexpansion
     for /f "usebackq tokens=1,3" %%a in (
-	    `reg.exe query HKLM\SYSTEM\MountedDevices /v \DosDevices\*`
+        `reg.exe query HKLM\SYSTEM\MountedDevices /v \DosDevices\*`
     ) do if /i "%%~a"=="\DosDevices\%~d1" (
         reg.exe delete HKLM\SYSTEM\MountedDevices /v "%%~a" /f || exit /b 7
         call :this\uuid _uuid
@@ -1145,7 +1145,7 @@ REM "Uncompress msi file"
     if "%~2"=="" call :this\dir\--isdir %1 && cabarc.exe -m LZX:21 n ".\%~n1.tmp" "%~1\*"
     REM By file
     call :this\dir\--isdir %1 || cabarc.exe -m LZX:21 n ".\%~n1.tmp" %*
-	if exist ".\%~n1.tmp" rename ".\%~n1.tmp" "%~n1.cab"
+    if exist ".\%~n1.tmp" rename ".\%~n1.tmp" "%~n1.cab"
     goto :eof
 
 :this\pkg\--udf
@@ -1204,7 +1204,6 @@ REM from Window 10 aik, will download oscdimg.exe at script path
     for %%a in (_%0) do if %processor_architecture:~-2%==64 (
         REM amd64
         call :this\getCab %%~na 0/A/A/0AA382BA-48B4-40F6-8DD0-BEBB48B6AC18/adk bbf55224a0290f00676ddc410f004498 fild40c79d789d460e48dc1cbd485d6fc2e
-
     REM x86
     ) else call :this\getCab %%~na 0/A/A/0AA382BA-48B4-40F6-8DD0-BEBB48B6AC18/adk 5d984200acbde182fd99cbfbe9bad133 fil720cc132fbb53f3bed2e525eb77bdbc1
     exit /b 0
@@ -1349,13 +1348,13 @@ REM new boot
 :this\boot\--is-vhd-os
     >nul chcp 437
     for /f "usebackq tokens=1*" %%a in (
-		`bcdedit.exe /v /enum {current}`
-	) do if .%%a==.osdevice for /f "tokens=2,3 delims=[,=]" %%c in (
-		"%%b"
-	) do if %%d. neq . if exist "%%c%%d" (
-		if /i .%%~xd neq ..vhd exit /b 0
+        `bcdedit.exe /v /enum {current}`
+    ) do if .%%a==.osdevice for /f "tokens=2,3 delims=[,=]" %%c in (
+        "%%b"
+    ) do if %%d. neq . if exist "%%c%%d" (
+        if /i .%%~xd neq ..vhd exit /b 0
         if /i .%%~xd neq ..vhdx exit /b 0
-	)
+    )
     exit /b 10
 
 :this\boot\--rebuild
@@ -1847,8 +1846,8 @@ REM for wim
 :this\wim\--umountall
 :this\wim\-ua
     for /f "usebackq tokens=1-3*" %%a in (
-		`dism.exe /English /Get-MountedWimInfo`
-	) do if "%%~a%%~b"=="MountDir" if exist "%%~d" call :this\wim\--umount "%%~d"
+        `dism.exe /English /Get-MountedWimInfo`
+    ) do if "%%~a%%~b"=="MountDir" if exist "%%~d" call :this\wim\--umount "%%~d"
     dism.exe /Cleanup-Wim
     exit /b 0
 
@@ -1857,8 +1856,8 @@ REM for wim
 :this\wim\-ra
     setlocal enabledelayedexpansion
     for /f "usebackq tokens=1-3*" %%a in (
-		`dism.exe /English /Get-MountedWimInfo`
-	) do (
+        `dism.exe /English /Get-MountedWimInfo`
+    ) do (
         if "%%~a"=="Mount" set _m=
         if "%%~a%%~b"=="MountDir" if exist "%%~d" set "_m=%%~d"
         if "%%~a%%~d"=="StatusRemount" if defined _m dism.exe /Remount-Wim /MountDir:"!_m!" %scratch_dir% || exit /b 6
@@ -2602,8 +2601,8 @@ REM https://aka.ms/vs/15/release/vs_community.exe
 REM for :this\reg\--intel-amd
 :this\reg\delInteltag
     for /f "tokens=1,4 delims=x	 " %%a in (
-		'reg.exe query HKLM\%1\Select'
-	) do if /i "%%a"=="Default" reg.exe delete HKLM\%1\ControlSet00%%b\Services\intelppm /f 2>nul
+        'reg.exe query HKLM\%1\Select'
+    ) do if /i "%%a"=="Default" reg.exe delete HKLM\%1\ControlSet00%%b\Services\intelppm /f 2>nul
     exit /b 0
 
 REM winpe \$windows.~bt -> ""
