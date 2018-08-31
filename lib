@@ -491,7 +491,7 @@ lib_oset() {
     esac
 }
 
-### File / directory tools ##Usage: files [option] [args...] ##    --unhidden, -uh [dir_path]   No hidden directory #    --own           [dir_path]   Set directory owner #    --boot          [dir_path]   Rebuild boot file #    --sums, -s      [file_path]  Print md5 sha1 sha256 checksums ##
+### File / directory tools ##Usage: files [option] [args...] ##    --unhidden, -uh [dir_path]   No hidden directory #    --own           [dir_path]   Set directory owner #    --boot          [dir_path]   Rebuild boot file #    --sums,  -s     [file_path]  Print md5 sha1 sha256 checksums #    --count, -c     [[dir_path]] get file count##
 lib_files() {
     case $1 in
         -uh|--unhidden)
@@ -532,6 +532,14 @@ lib_files() {
             sudo bless --folder "$2/com.apple.recovery.boot" --label "Recovery HD";
             # 426F6F74-0000-11AA-AA11-00306543ECAC
             # [ "${1##*/}" == "dmtest" -a "${2##*/}" == "BaseSystem.dmg" -a -d "$3" ] && "$2" ensureRecoveryPartition "$3" "$2" 0 0 "${2%.*}.chunklist"
+        ;;
+        -c|--count)
+            [ "$2" ] && {
+                [ -d "$2" ] || exit 1; # target not found or not directory
+                :
+            } || set "" \.;
+            # ls -alR "$2" 2>/dev/null | grep -c '^-'
+            find "$2" -type f | grep -c '\/'
         ;;
         *)
             exit 1; # invalid option
