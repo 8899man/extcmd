@@ -752,10 +752,10 @@ REM for :this\ost\--current-lang
     for /f "usebackq tokens=1-4" %%a in (
         `dism.exe /English /Online /Get-Features`
     ) do (
-        if "%%a%%b"=="FeatureName" call :this\lals %%d
-        if "%%a"=="State" call :this\lals %%c & echo.
+        if "%%a%%b"=="FeatureName" call :%~n0\lals %%d
+        if "%%a"=="State" call :%~n0\lals %%c & echo.
     )
-    call :this\lals 0 0
+    call :%~n0\lals 0 0
     exit /b 0
 
 :this\ost\--feature-enable
@@ -1457,21 +1457,83 @@ REM Enable ServicesForNFS
     REM start /w Ocsetup.exe ServicesForNFS-ClientOnly;ClientForNFS-Infrastructure;NFS-Administration /norestart
     exit /b 0
 
-::: "Lock / Unlock partition with BitLocker" "" "usage: %~n0 block [option] [args...]" "" "    --lock,   -l   [[passwd]]" "    --unlock, -u   [[passwd]]"
-:::: "invalid option" "Partition not found"
+::: "Lock / Unlock partition with BitLocker" "" "usage: %~n0 block [option] [args...]" "" "    --lock,   -l   [[passwd]]" "    --unlock, -u   [[passwd]]" "    --all,    -a   lock all partition, need usb drive"
+:::: "invalid option" "Partition not found" "not support winpe" "USB drive not found"
 :lib\block
     if "%~1"=="" call :this\annotation %0 & goto :eof
-    if not exist "%~2" exit /b 2
     call :this\bit\%*
     goto :eof
 
+:this\bit\--all
+:this\bit\-a
+    if /i "%username%"=="System" exit /b 3
+    setlocal
+    for /f "usebackq tokens=1,2" %%a in (
+        `wmic.exe logicaldisk get DeviceID^,DriveType`
+    ) do if "%%b"=="2" if exist %%a\ set _ud=%%a
+
+    if net defined _ud exit /b 4
+
+    >>%_ud%\key.log (
+        echo.
+        echo ::::::::::::::::::::::::::::::::::::::::::::::::::
+        echo %date% %time%
+        wmic.exe baseboard get Manufacturer,Product,Version
+        wmic.exe cpu get Name,NumberOfCores
+        wmic.exe diskdrive get Index,InterfaceType,Model,SCSIPort,SerialNumber,Size
+    )
+
+    for /f "usebackq tokens=1,2" %%a in (
+        `wmic.exe logicaldisk get DeviceID^,DriveType`
+    ) do if "%%b"=="3" if /i "%homedrive%"=="%%a" >>%_ud%\key.log (
+
+        REM Startup BitLocker
+        REM gpedit.msc: Local Computer Policy - Computer Configuration - Administrative Templates - Windows Components - BitLocker Drive Encryption - Operating System Drives
+        for %%c in (
+            "UseAdvancedStartup /t REG_DWORD /d 1"
+            "EnableBDEWithNoTPM /t REG_DWORD /d 1"
+            "UseTPM /t REG_DWORD /d 2"
+            "UseTPMPIN /t REG_DWORD /d 0"
+            "UseTPMKey /t REG_DWORD /d 2"
+            "UseTPMKeyPIN /t REG_DWORD /d 0"
+        ) do >nul reg.exe add HKLM\Software\Policies\Microsoft\FVE /v %%~c /f
+
+        REM remove right-mouse menu
+        for %%c in (
+            resume-bde resume-bde-elev
+            unlock-bde
+            manage-bde
+            encrypt-bde encrypt-bde-elev
+        ) do >nul reg.exe delete HKCR\Drive\shell\%%c /f
+
+        manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -StartupKey %_ud%\ -SkipHardwareTest
+        REM change drive ico
+        >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,31" /f
+
+    ) else if exist %%a >>%_ud%\key.log (
+        manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -RecoveryKey %_ud%\ -SkipHardwareTest
+        manage-bde.exe -autounlock -enable %%a
+
+        REM change drive ico
+        for /f "delims=:" %%c in (
+            "%%a"
+        ) do >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\%%c\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,27" /f
+    )
+
+    endlocal
+
+    attrib.exe -s -h -r %_ud%\*.bek
+    exit /b 0
+
 :this\bit\--lock
 :this\bit\-l
-    manage-bde.exe -on %~d1 -UsedSpaceOnly -Password %~2
+    if not exist "%~1" exit /b 2
+    manage-bde.exe -on %~d1 -UsedSpaceOnly -Synchronous -Password %~2
     exit /b 0
 
 :this\bit\--unlock
 :this\bit\--u
+    if not exist "%~1" exit /b 2
     manage-bde.exe -on %~d1 -UsedSpaceOnly -RecoveryPassword %~2
     exit /b 0
 
@@ -1484,11 +1546,7 @@ REM  "    --rec,    -r                                       Recovery child vhd 
 :::: "invalid option" "file suffix not vhd/vhdx" "file not found" "no volume find" "vhd size is empty" "letter already use" "diskpart error:" "not a letter or path" "{UNUSE}" "size not num" "parent vhd not found" "new file allready exist"
 :lib\vhd
     if "%~1"=="" call :this\annotation %0 & goto :eof
-    setlocal
-    set _diskpart_conf=%tmp%\.diskpart%random%
     call :this\vhd\%*
-    2>nul erase %_diskpart_conf%
-    endlocal
     goto :eof
 
 :this\vhd\--new
@@ -1502,11 +1560,9 @@ REM  "    --rec,    -r                                       Recovery child vhd 
         if /i "%~d3" neq "%~3" if not exist "%~3" exit /b 8
     )
     REM make vhd
-    set /a _size=%2 * 1024 + 8
-    >%_diskpart_conf% (
-        setlocal enabledelayedexpansion
+    call set /a _size=%2 * 1024 + 8
+    (
         echo create vdisk file="%~f1" maximum=%_size% type=expandable
-        endlocal
         echo attach vdisk
         echo create partition primary
         echo format fs=ntfs quick
@@ -1517,8 +1573,8 @@ REM  "    --rec,    -r                                       Recovery child vhd 
                 echo assign letter=%~d3
             ) else echo assign mount="%~f3"
         )
-    )
-    diskpart.exe /s %_diskpart_conf% || exit /b 7
+    ) | diskpart.exe | find.exe /i /v "DISKPART" || exit /b 7
+    echo complete.
     exit /b 0
 
 :this\vhd\--mount
@@ -1529,7 +1585,7 @@ REM  "    --rec,    -r                                       Recovery child vhd 
         if /i "%~d2"=="%~2" if exist "%~2" exit /b 6
         if /i "%~d2" neq "%~2" if not exist "%~2" exit /b 8
     )
-    >%_diskpart_conf% (
+    (
         echo select vdisk file="%~f1"
         echo attach vdisk
         if "%~2" neq "" (
@@ -1540,8 +1596,8 @@ REM  "    --rec,    -r                                       Recovery child vhd 
                 echo assign letter=%~2
             ) else echo assign mount="%~f2"
         )
-    )
-    diskpart.exe /s %_diskpart_conf% || exit /b 7
+    ) | diskpart.exe | find.exe /i /v "DISKPART" || exit /b 7
+    echo complete.
     exit /b 0
 
 :this\vhd\--umount
@@ -1549,11 +1605,11 @@ REM  "    --rec,    -r                                       Recovery child vhd 
     if not exist "%~1" exit /b 3
     if /i "%~x1" neq ".vhd" if /i "%~x1" neq ".vhdx" exit /b 2
     REM unmount vhd
-    >%_diskpart_conf% (
+    (
         echo select vdisk file="%~f1"
         echo detach vdisk
-    )
-    diskpart.exe /s %_diskpart_conf% || exit /b 7
+    ) | diskpart.exe | find.exe /i /v "DISKPART" || exit /b 7
+    echo complete.
     exit /b 0
 
 :this\vhd\--expand
@@ -1565,11 +1621,10 @@ REM  "    --rec,    -r                                       Recovery child vhd 
     call :lib\vumount %1 > nul
     setlocal
     set /a _size=%~2 * 1024 + 8
-    >%_diskpart_conf% (
+    (
         echo select vdisk file="%~f1"
         echo expand vdisk maximum=%_size%
-    )
-    diskpart.exe /s %_diskpart_conf% || exit /b 7
+    ) | diskpart.exe | find.exe /i /v "DISKPART" || exit /b 7
     endlocal
     exit /b 0
 
@@ -1578,8 +1633,8 @@ REM  "    --rec,    -r                                       Recovery child vhd 
     if not exist "%~2" exit /b 11
     if exist "%~1" exit /b 12
     if /i ".vhd" neq "%~x1" if /i ".vhdx" neq "%~x1" exit /b 2
-    >%_diskpart_conf% echo create vdisk file="%~f1" parent="%~f2"
-    diskpart.exe /s %_diskpart_conf% || exit /b 7
+    echo create vdisk file="%~f1" parent="%~f2" | diskpart.exe | find.exe /i /v "DISKPART" || exit /b 7
+    echo complete.
     exit /b 0
 
 :this\vhd\--merge
@@ -1587,65 +1642,15 @@ REM  "    --rec,    -r                                       Recovery child vhd 
     if not exist "%~1" exit /b 3
     if /i "%~x1" neq ".vhd" if /i "%~x1" neq ".vhdx" exit /b 2
     setlocal
-    set _depth=1
+    call set _depth=1
     if "%~2" neq "" set _depth=%~2
-    >%_diskpart_conf% (
+    (
         echo select vdisk file="%~f1"
         echo merge vdisk depth=%_depth%
-    )
+    ) | diskpart.exe | find.exe /i /v "DISKPART" || exit /b 7
+    echo complete.
     endlocal
-    diskpart.exe /s %_diskpart_conf% || exit /b 7
     exit /b 0
-
-REM :::
-REM :this\vhd\--rec
-REM :this\vhd\-r
-REM     setlocal
-REM     set /p _i=[Warning] Child vhd will be recovery, Yes^|No:
-REM     if /i "%_i%" neq "y" if /i "%_i%" neq "yes" exit /b 0
-REM     endlocal
-
-REM     chcp.com 437 >nul
-
-REM     REM Make vdisk info script
-REM     >%_diskpart_conf% type nul
-REM     for /f "usebackq skip=1" %%a in (
-REM         `wmic.exe logicaldisk where DriveType^=3 get name`
-REM     ) do if exist %%a\*.vhd? for /f "usebackq delims=" %%b in (
-REM         `dir /a /b %%a\*.vhd?`
-REM     ) do >>%_diskpart_conf% (
-REM         echo select vdisk file="%%a\%%b"
-REM         echo detail vdisk
-REM     )
-
-REM     REM Make create child vhd script
-REM     for /f "usebackq tokens=1,2*" %%a in (
-REM         `diskpart.exe /s %_diskpart_conf% ^& ^>%_diskpart_conf% type nul`
-REM     ) do >>%_diskpart_conf% (
-REM         if "%%a"=="Filename:" set /p=create vdisk file="%%b"<nul
-REM         if "%%a%%b"=="ParentFilename:" echo. parent="%%c"
-REM     )
-
-REM     move /y %_diskpart_conf% %tmp%\.tmp
-
-REM     REM Filter parent vhd, and delete child vhd
-REM     for /f "usebackq delims=" %%a in (
-REM         "%tmp%\.tmp"
-REM     ) do for /f usebackq^ tokens^=2^,4^ delims^=^" %%b in (
-REM         '%%a'
-REM     ) do if "%%c"=="" (
-REM         REM "
-REM         move "%%b" "%%b.snapshot"
-REM         >>%_diskpart_conf% echo create vdisk file="%%b" parent="%%b.snapshot"
-REM     ) else (
-REM         erase /a /q %%b
-REM         >>%_diskpart_conf% echo %%a
-REM     )
-
-REM     REM Create new child vhd
-REM     diskpart.exe /s %_diskpart_conf%
-
-REM     exit /b 0
 
 ::::::::::
 :: dism ::
@@ -3372,6 +3377,7 @@ REM for unattend.xml
         ::unattend.xml:    </settings>
         ::unattend.xml:</unattend>
 
+REM hisecws.inf: Registry Values: 1:REG_SZ 2:REG_EXPAND_SZ 3:REG_BINARY 4:REG_DWORD 7:REG_MULTI_SZ
     ::hisecws.inf:[Unicode]
     ::hisecws.inf:Unicode=yes
     ::hisecws.inf:
@@ -3384,8 +3390,14 @@ REM for unattend.xml
     ::hisecws.inf:MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoDriveTypeAutoRun=4,255
     ::hisecws.inf:MACHINE\Software\Policies\Microsoft\Windows NT\Reliability\**del.ShutdownReasonUI=1,""
     ::hisecws.inf:MACHINE\Software\Policies\Microsoft\Windows NT\Reliability\ShutdownReasonOn=4,0
-    ::hisecws.inf:;User\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoThumbnailCache=4,1
-    ::hisecws.inf:;User\Software\Policies\Microsoft\Windows\Explorer\DisableThumbsDBOnNetworkFolders=4,1
+    ::hisecws.inf:;MACHINE\Software\Policies\Microsoft\FVE\UseAdvancedStartup=4,1
+    ::hisecws.inf:;MACHINE\Software\Policies\Microsoft\FVE\EnableBDEWithNoTPM=4,1
+    ::hisecws.inf:;MACHINE\Software\Policies\Microsoft\FVE\UseTPM=4,2
+    ::hisecws.inf:;MACHINE\Software\Policies\Microsoft\FVE\UseTPMPIN=4,0
+    ::hisecws.inf:;MACHINE\Software\Policies\Microsoft\FVE\UseTPMKey=4,2
+    ::hisecws.inf:;MACHINE\Software\Policies\Microsoft\FVE\UseTPMKeyPIN=4,0
+    ::hisecws.inf:User\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoThumbnailCache=4,1
+    ::hisecws.inf:User\Software\Policies\Microsoft\Windows\Explorer\DisableThumbsDBOnNetworkFolders=4,1
     ::hisecws.inf:
     ::hisecws.inf:[Version]
     ::hisecws.inf:signature="$CHICAGO$"
