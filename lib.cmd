@@ -1458,15 +1458,16 @@ REM Enable ServicesForNFS
     exit /b 0
 
 ::: "Lock / Unlock partition with BitLocker" "" "usage: %~n0 block [option] [args...]" "" "    --lock,   -l   [[passwd]]" "    --unlock, -u   [[passwd]]" "    --all,    -a   lock all partition, need usb drive"
-:::: "invalid option" "Partition not found" "not support winpe" "USB drive not found"
+:::: "invalid option" "Partition not found" "not support winpe" "USB drive not found" "operating system version not support" "manage-bde error"
 :lib\block
     if "%~1"=="" call :this\annotation %0 & goto :eof
-    call :this\bit\%*
+    call :this\block\%*
     goto :eof
 
-:this\bit\--all
-:this\bit\-a
+:this\block\--all
+:this\block\-a
     if /i "%username%"=="System" exit /b 3
+    call :this\ost\--vergeq 10.0 || exit /b 5
     setlocal
     for /f "usebackq tokens=1,2" %%a in (
         `wmic.exe logicaldisk get DeviceID^,DriveType`
@@ -1476,14 +1477,16 @@ REM Enable ServicesForNFS
 
     >>%_ud%\key.log (
         echo.
-        echo ::::::::::::::::::::::::::::::::::::::::::::::::::
+        echo ;::::::::::::::::::::::::::::::::::::::::::::::::::
         echo %date% %time%
-        wmic.exe baseboard get Manufacturer,Product,Version /format:list
-        wmic.exe cpu get Name,NumberOfCores /format:list
-        wmic.exe diskdrive get Index,InterfaceType,Model,SCSIPort,SerialNumber,Size /format:list
+        echo.
+        for /f "usebackq delims=" %%a in (`
+            wmic.exe baseboard get Manufacturer^,Product^,Version ^&
+            wmic.exe cpu get Name^,NumberOfCores ^&
+            wmic.exe diskdrive get Index^,InterfaceType^,Model^,SCSIPort^,SerialNumber^,Size
+        `) do echo.%%~a
     )
 
-    echo Encryption...
     for /f "usebackq tokens=1,2" %%a in (
         `wmic.exe logicaldisk get DeviceID^,DriveType`
     ) do if "%%b"=="3" if /i "%homedrive%"=="%%a" >>%_ud%\key.log (
@@ -1507,33 +1510,41 @@ REM Enable ServicesForNFS
             encrypt-bde encrypt-bde-elev
         ) do >nul reg.exe delete HKCR\Drive\shell\%%c /f
 
-        manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -StartupKey %_ud%\ -SkipHardwareTest
+        >&3 echo Encryption [C] ...
+        call :block\regexist "imageres.dll,31" C || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -StartupKey %_ud%\ -SkipHardwareTest || exit /b 6
         REM change drive ico
         >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,31" /f
 
-    ) else if exist %%a >>%_ud%\key.log (
-        manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -RecoveryKey %_ud%\ -SkipHardwareTest
-        manage-bde.exe -autounlock -enable %%a
-
-        REM change drive ico
-        for /f "delims=:" %%c in (
+    ) else if exist %%a for /f "delims=:" %%c in (
             "%%a"
-        ) do >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\%%c\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,27" /f
+    ) do >>%_ud%\key.log (
+        >&3 echo Encryption [%%c] ...
+
+        call :block\regexist "imageres.dll,27" %%c || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -RecoveryKey %_ud%\ -SkipHardwareTest || exit /b 6
+        manage-bde.exe -autounlock -enable %%a || exit /b 6
+        REM change drive ico
+        >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\%%c\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,27" /f
     )
 
-    endlocal
-
     attrib.exe -s -h -r %_ud%\*.bek
+    endlocal
     exit /b 0
 
-:this\bit\--lock
-:this\bit\-l
+REM for :this\block\--all
+:block\regexist
+    for /f "usebackq tokens=3" %%a in (
+        `reg.exe query HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\%~2\DefaultIcon /ve`
+    ) do if /i "%~1"=="%%~nxa" exit /b 0
+    exit /b 1
+
+:this\block\--lock
+:this\block\-l
     if not exist "%~1" exit /b 2
     manage-bde.exe -on %~d1 -UsedSpaceOnly -Synchronous -Password %~2
     exit /b 0
 
-:this\bit\--unlock
-:this\bit\--u
+:this\block\--unlock
+:this\block\--u
     if not exist "%~1" exit /b 2
     manage-bde.exe -on %~d1 -UsedSpaceOnly -RecoveryPassword %~2
     exit /b 0
