@@ -1036,12 +1036,12 @@ REM mini uuid creater
 :this\letter\--firstpath
 :this\letter\-fp
     if "%~1"=="" exit /b 4
-    for /f "usebackq skip=1 tokens=1,2" %%a in (
-        `wmic.exe logicaldisk get Caption`
-    ) do if "%%~aa" neq "" if exist "%%a\%~1" (
+    for /f "usebackq skip=1 tokens=1-3" %%a in (
+        `wmic.exe logicaldisk get Access^,DeviceID`
+    ) do if "%%a"=="0" if exist "%%b\%~1" (
         if "%~2"=="" (
-            echo %%a\%~1
-        ) else set "%~2=%%a\%~1"
+            echo %%b\%~1
+        ) else set "%~2=%%b\%~1"
         exit /b 0
     )
     exit /b 5
@@ -1469,15 +1469,17 @@ REM Enable ServicesForNFS
     if /i "%username%"=="System" exit /b 3
     call :this\ost\--vergeq 10.0 || exit /b 5
     setlocal
-    for /f "usebackq tokens=1,2" %%a in (
-        `wmic.exe logicaldisk get DeviceID^,DriveType`
-    ) do if "%%b"=="2" if exist %%a\ set _ud=%%a
-
+    for /f "usebackq tokens=1-4" %%a in (
+        `wmic.exe logicaldisk get Access^,DeviceID^,DriveType^`
+    ) do if "%%a%%c"=="02" set _ud=%%b
     if not defined _ud exit /b 4
 
-    >>%_ud%\key.log (
+    2>nul mkdir %_ud%\key
+    call :this\str\--now _log %_ud%\key\key- .log
+    >>%_log% (
         echo.
-        echo ;::::::::::::::::::::::::::::::::::::::::::::::::::
+        echo ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        echo ;:: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: ::
         echo %date% %time%
         echo.
         for /f "usebackq delims=" %%a in (`
@@ -1487,9 +1489,9 @@ REM Enable ServicesForNFS
         `) do echo.%%~a
     )
 
-    for /f "usebackq tokens=1,2" %%a in (
+    for /f "usebackq tokens=1-3" %%a in (
         `wmic.exe logicaldisk get DeviceID^,DriveType`
-    ) do if "%%b"=="3" if /i "%homedrive%"=="%%a" >>%_ud%\key.log (
+    ) do if "%%b"=="3" if /i "%homedrive%"=="%%a" >>%_log% (
 
         REM Startup BitLocker
         REM gpedit.msc: Local Computer Policy - Computer Configuration - Administrative Templates - Windows Components - BitLocker Drive Encryption - Operating System Drives
@@ -1514,19 +1516,27 @@ REM Enable ServicesForNFS
         call :block\regexist "imageres.dll,31" C || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -StartupKey %_ud%\ -SkipHardwareTest || exit /b 6
         REM change drive ico
         >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,31" /f
-
+        echo.
     ) else if exist %%a for /f "delims=:" %%c in (
             "%%a"
-    ) do >>%_ud%\key.log (
+    ) do >>%_log% (
         >&3 echo Encryption [%%c] ...
 
-        call :block\regexist "imageres.dll,27" %%c || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -RecoveryKey %_ud%\ -SkipHardwareTest || exit /b 6
+        if not exist %_ud% exit /b 4
+        2>nul mkdir %_ud%\key\%%c
+
+        call :block\regexist "imageres.dll,27" %%c || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -RecoveryKey %_ud%\key\%%c -SkipHardwareTest || exit /b 6
         manage-bde.exe -autounlock -enable %%a || exit /b 6
         REM change drive ico
         >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\%%c\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,27" /f
+        echo.
     )
 
     attrib.exe -s -h -r %_ud%\*.bek
+    for /d %%a in (
+        %_ud%\key\*
+    ) do attrib.exe -s -h -r %%a\*.bek
+
     endlocal
     exit /b 0
 
