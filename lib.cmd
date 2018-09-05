@@ -1472,17 +1472,18 @@ REM Enable ServicesForNFS
         `wmic.exe logicaldisk get DeviceID^,DriveType`
     ) do if "%%b"=="2" if exist %%a\ set _ud=%%a
 
-    if net defined _ud exit /b 4
+    if not defined _ud exit /b 4
 
     >>%_ud%\key.log (
         echo.
         echo ::::::::::::::::::::::::::::::::::::::::::::::::::
         echo %date% %time%
-        wmic.exe baseboard get Manufacturer,Product,Version
-        wmic.exe cpu get Name,NumberOfCores
-        wmic.exe diskdrive get Index,InterfaceType,Model,SCSIPort,SerialNumber,Size
+        wmic.exe baseboard get Manufacturer,Product,Version /format:list
+        wmic.exe cpu get Name,NumberOfCores /format:list
+        wmic.exe diskdrive get Index,InterfaceType,Model,SCSIPort,SerialNumber,Size /format:list
     )
 
+    echo Encryption...
     for /f "usebackq tokens=1,2" %%a in (
         `wmic.exe logicaldisk get DeviceID^,DriveType`
     ) do if "%%b"=="3" if /i "%homedrive%"=="%%a" >>%_ud%\key.log (
