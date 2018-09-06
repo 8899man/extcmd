@@ -1475,11 +1475,11 @@ REM Enable ServicesForNFS
     if not defined _ud exit /b 4
 
     2>nul mkdir %_ud%\keys
-    call :this\str\--now _log %_ud%\keys\key- .log
+    set /a _suf=%random% %% 900 + 100
+    call :this\str\--now _log %_ud%\keys\key- %_suf%.log
     >>%_log% (
         echo.
-        echo ;=====================================================================================================
-        echo ;-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+        echo =====================================================================================================
         echo %date% %time%
         echo.
         call :this\drv\--info
@@ -1499,26 +1499,27 @@ REM Enable ServicesForNFS
     for /f "usebackq tokens=1-3" %%a in (
         `wmic.exe logicaldisk get DeviceID^,DriveType`
     ) do if "%%b"=="3" if /i "%homedrive%"=="%%a" >>%_log% (
-        >&3 echo Encryption [C] ...
-        title Encryption [C] ...
+        echo.
+        echo.
+        >&3 echo Encryption [C:] ...
+        title Encryption [C:] ...
         call :block\regexist "imageres.dll,31" C || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -StartupKey %_ud%\ -SkipHardwareTest || exit /b 6
-
         REM change drive ico
         >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,31" /f
-        echo.
     ) else if exist %%a for /f "delims=:" %%c in (
             "%%a"
     ) do >>%_log% (
-        >&3 echo Encryption [%%c] ...
+        echo.
+        echo.
+        >&3 echo Encryption [%%c:] ...
         if not exist %_ud% exit /b 4
         2>nul mkdir %_ud%\keys\%%c
 
-        title Encryption [%%c] ...
+        title Encryption [%%c:] ...
         call :block\regexist "imageres.dll,27" %%c || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -RecoveryKey %_ud%\keys\%%c -SkipHardwareTest || exit /b 6
         manage-bde.exe -autounlock -enable %%a || exit /b 6
         REM change drive ico
         >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\%%c\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,27" /f
-        echo.
     )
 
     REM remove right-mouse menu
