@@ -612,18 +612,18 @@ REM for :this\dir\--clean
 :this\ost\--vergeq
     if "%~x1"=="" exit /b 2
     setlocal
-    call :ost\this_version_x_10 _this_ver
+    call :ost\this_version_multiply_10 _this_ver
     for /f "usebackq tokens=1,2 delims=." %%a in (
         '%~1'
     ) do set /a _ver=%_this_ver% - %%a * 10 - %%b
     endlocal & if %_ver% geq 0 exit /b 0
     exit /b 10
 
-:ost\this_version_x_10 [variable_name]
+:ost\this_version_multiply_10 [variable_name]
     if "%~1"=="" exit /b 1
-    for /f "usebackq delims=" %%a in (
-        `ver`
-    ) do for %%b in (%%a) do if "%%~xb" neq "" for /f "usebackq tokens=1,2 delims=." %%c in (
+    for /f "usebackq skip=1" %%a in (
+        `wmic.exe os get Version`
+    ) do for %%b in (%%~na) do for /f "usebackq tokens=1,2 delims=." %%c in (
         '%%b'
     ) do set /a %~1=%%c * 10 + %%d
     exit /b 0
@@ -841,7 +841,7 @@ REM https://technet.microsoft.com/en-us/security/cc184924.aspx
     set _chot_kb=
     set _op=
     set _chot=chot.xml
-    call :ost\this_version_x_10 _hot_ver
+    call :ost\this_version_multiply_10 _hot_ver
     if %_hot_ver%==51 (
         set _op=xp
         set _chot_kb=936929
@@ -1474,8 +1474,8 @@ REM Enable ServicesForNFS
     ) do if "%%a%%c"=="02" set _ud=%%b
     if not defined _ud exit /b 4
 
-    2>nul mkdir %_ud%\key
-    call :this\str\--now _log %_ud%\key\key- .log
+    2>nul mkdir %_ud%\keys
+    call :this\str\--now _log %_ud%\keys\key- .log
     >>%_log% (
         echo.
         echo ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1484,7 +1484,9 @@ REM Enable ServicesForNFS
         echo.
         for /f "usebackq delims=" %%a in (`
             wmic.exe baseboard get Manufacturer^,Product^,Version ^&
-            wmic.exe cpu get Name^,NumberOfCores ^&
+            wmic.exe csproduct get Name^,UUID^,Vendor^,Version ^&
+            wmic.exe cpu get Name^,NumberOfCores^,NumberOfLogicalProcessors ^&
+            wmic.exe memphysical get MaxCapacity ^&
             wmic.exe diskdrive get Index^,InterfaceType^,Model^,SCSIPort^,SerialNumber^,Size
         `) do echo.%%~a
     )
@@ -1523,9 +1525,9 @@ REM Enable ServicesForNFS
         >&3 echo Encryption [%%c] ...
 
         if not exist %_ud% exit /b 4
-        2>nul mkdir %_ud%\key\%%c
+        2>nul mkdir %_ud%\keys\%%c
 
-        call :block\regexist "imageres.dll,27" %%c || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -RecoveryKey %_ud%\key\%%c -SkipHardwareTest || exit /b 6
+        call :block\regexist "imageres.dll,27" %%c || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -RecoveryKey %_ud%\keys\%%c -SkipHardwareTest || exit /b 6
         manage-bde.exe -autounlock -enable %%a || exit /b 6
         REM change drive ico
         >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\%%c\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,27" /f
@@ -1534,7 +1536,7 @@ REM Enable ServicesForNFS
 
     attrib.exe -s -h -r %_ud%\*.bek
     for /d %%a in (
-        %_ud%\key\*
+        %_ud%\keys\*
     ) do attrib.exe -s -h -r %%a\*.bek
 
     endlocal
