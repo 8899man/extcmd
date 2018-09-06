@@ -1478,44 +1478,31 @@ REM Enable ServicesForNFS
     call :this\str\--now _log %_ud%\keys\key- .log
     >>%_log% (
         echo.
-        echo ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        echo ;:: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: :: ::
+        echo ;=====================================================================================================
+        echo ;-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
         echo %date% %time%
         echo.
-        for /f "usebackq delims=" %%a in (`
-            wmic.exe baseboard get Manufacturer^,Product^,Version ^&
-            wmic.exe csproduct get Name^,UUID^,Vendor^,Version ^&
-            wmic.exe cpu get Name^,NumberOfCores^,NumberOfLogicalProcessors ^&
-            wmic.exe memphysical get MaxCapacity ^&
-            wmic.exe diskdrive get Index^,InterfaceType^,Model^,SCSIPort^,SerialNumber^,Size
-        `) do echo.%%~a
+        call :this\drv\--info
     )
+
+    REM Startup BitLocker
+    REM gpedit.msc: Local Computer Policy - Computer Configuration - Administrative Templates - Windows Components - BitLocker Drive Encryption - Operating System Drives
+    for %%c in (
+        "UseAdvancedStartup /t REG_DWORD /d 1"
+        "EnableBDEWithNoTPM /t REG_DWORD /d 1"
+        "UseTPM /t REG_DWORD /d 2"
+        "UseTPMPIN /t REG_DWORD /d 0"
+        "UseTPMKey /t REG_DWORD /d 2"
+        "UseTPMKeyPIN /t REG_DWORD /d 0"
+    ) do >nul reg.exe add HKLM\Software\Policies\Microsoft\FVE /v %%~c /f
 
     for /f "usebackq tokens=1-3" %%a in (
         `wmic.exe logicaldisk get DeviceID^,DriveType`
     ) do if "%%b"=="3" if /i "%homedrive%"=="%%a" >>%_log% (
-
-        REM Startup BitLocker
-        REM gpedit.msc: Local Computer Policy - Computer Configuration - Administrative Templates - Windows Components - BitLocker Drive Encryption - Operating System Drives
-        for %%c in (
-            "UseAdvancedStartup /t REG_DWORD /d 1"
-            "EnableBDEWithNoTPM /t REG_DWORD /d 1"
-            "UseTPM /t REG_DWORD /d 2"
-            "UseTPMPIN /t REG_DWORD /d 0"
-            "UseTPMKey /t REG_DWORD /d 2"
-            "UseTPMKeyPIN /t REG_DWORD /d 0"
-        ) do >nul reg.exe add HKLM\Software\Policies\Microsoft\FVE /v %%~c /f
-
-        REM remove right-mouse menu
-        for %%c in (
-            resume-bde resume-bde-elev
-            unlock-bde
-            manage-bde
-            encrypt-bde encrypt-bde-elev
-        ) do >nul reg.exe delete HKCR\Drive\shell\%%c /f
-
         >&3 echo Encryption [C] ...
+        title Encryption [C] ...
         call :block\regexist "imageres.dll,31" C || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -StartupKey %_ud%\ -SkipHardwareTest || exit /b 6
+
         REM change drive ico
         >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\C\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,31" /f
         echo.
@@ -1523,16 +1510,24 @@ REM Enable ServicesForNFS
             "%%a"
     ) do >>%_log% (
         >&3 echo Encryption [%%c] ...
-
         if not exist %_ud% exit /b 4
         2>nul mkdir %_ud%\keys\%%c
 
+        title Encryption [%%c] ...
         call :block\regexist "imageres.dll,27" %%c || manage-bde.exe -on %%a -Synchronous -UsedSpaceOnly -EncryptionMethod xts_aes128 -RecoveryKey %_ud%\keys\%%c -SkipHardwareTest || exit /b 6
         manage-bde.exe -autounlock -enable %%a || exit /b 6
         REM change drive ico
         >nul reg.exe add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\DriveIcons\%%c\DefaultIcon /ve /t REG_SZ /d "%SystemRoot%\System32\imageres.dll,27" /f
         echo.
     )
+
+    REM remove right-mouse menu
+    for %%c in (
+        encrypt-bde encrypt-bde-elev
+        manage-bde
+        resume-bde resume-bde-elev
+        unlock-bde
+    ) do >nul reg.exe delete HKCR\Drive\shell\%%c /f
 
     attrib.exe -s -h -r %_ud%\*.bek
     for /d %%a in (
@@ -1924,7 +1919,7 @@ REM for wim
     endlocal
     goto :eof
 
-::: "Drivers manager" "" "usage: %~n0 drv [option] [args...]" "" "    --add,    -a  [os_path] [drv_path ...]     Add drivers offline" "    --list,   -l  [[os_path]]                  Show OS drivers list" "    --remove, -r  [os_path] [[name].inf]       remove drivers, 3rd party drivers like oem1.inf" "    --get,    -g                               display hardware ids" "    --filter, -f [devinf_path] [drivers_path]  search device inf" "                                           e.g." "                                               %~n0 drv --get" "                                               %~n0 drv --filter D:\d.log D:\drv"
+::: "Drivers manager" "" "usage: %~n0 drv [option] [args...]" "" "    --add,    -a  [os_path] [drv_path ...]      Add drivers offline" "    --list,   -l  [[os_path]]                   Display OS drivers list" "    --remove, -r  [os_path] [[name].inf]        Remove drivers, 3rd party drivers like oem1.inf" "    --get,    -g                                Display hardware ids" "    --filter, -f  [inf_path] [drivers_dir]      Search device *.inf" "    --info,   -v                                Display device info"
 :::: "invalid option" "OS path not found" "Not drivers name" "dism error" "drivers info file not found" "drivers path error" "SCRATCH_DIR variable not set"
 :lib\drv
     if "%~1"=="" call :this\annotation %0 & goto :eof
@@ -1936,24 +1931,35 @@ REM for wim
     endlocal
     goto :eof
 
+:this\drv\--info
+:this\drv\-v
+    for /f "usebackq delims=" %%a in (`
+        wmic.exe baseboard get Manufacturer^,Product^,Version ^&
+        wmic.exe csproduct get Name^,UUID^,Vendor^,Version ^&
+        wmic.exe cpu get Name^,NumberOfCores^,NumberOfLogicalProcessors ^&
+        wmic.exe memphysical get MaxCapacity ^&
+        wmic.exe diskdrive get Index^,InterfaceType^,Model^,SerialNumber^,Signature^,Size
+    `) do echo.%%~a
+    exit /b 0
+
 REM Will install at \Windows\System32\DriverStore\FileRepository
-:this\drv\-a
 :this\drv\--add
+:this\drv\-a
     for %%a in (%*) do call :this\dir\--isdir %1 && (
         dism.exe /Image:"%~f1" /Add-Driver /Driver:%%a /Recurse %scratch_dir% || REM
     ) || if /i "%%~xa"==".inf" dism.exe /Image:"%~f1" /Add-Driver /Driver:%%a %scratch_dir% || exit /b 4
     exit /b 0
 
-:this\drv\-l
 :this\drv\--list
+:this\drv\-l
     if "%~1" neq "" call :this\dir\--isdir %1 || exit /b 2
     if "%~1"=="" (
         dism.exe /Online /Get-Drivers /all || exit /b 4
     ) else dism.exe /Image:"%~f1" /Get-Drivers /all || exit /b 4
     exit /b 0
 
-:this\drv\-r
 :this\drv\--remove
+:this\drv\-r
     call :this\dir\--isdir %1 || exit /b 2
     if /i "%~x2" neq ".inf" exit /b 3
     dism.exe /Image:"%~f1" /Remove-Driver /Driver:%~2 %scratch_dir% || exit /b 4
@@ -2002,7 +2008,6 @@ REM "Hardware ids manager"
     rmdir /s /q %_out%
     endlocal
     exit /b 0
-
 
 :this\drv\--extract--env
 :this\drv\-ee
@@ -2085,7 +2090,6 @@ REM "Hardware ids manager"
     REM \Windows\WinSxS\amd64_microsoft-windows-servicingstack_31bf3856ad364e35_!_ver_drv!_none_!_hash_drv!\DrUpdate.dll
     REM \Windows\WinSxS\amd64_microsoft-windows-servicingstack_31bf3856ad364e35_!_ver_drv!_none_!_hash_drv!\drvstore.dll
     REM \Windows\WinSxS\amd64_microsoft-windows-servicingstack_31bf3856ad364e35_!_ver_drv!_none_!_hash_drv!\wcp.dll
-
     goto :eof
 
 REM from Window 10 wdk, will download devcon.exe at script path
