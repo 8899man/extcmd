@@ -496,7 +496,7 @@ __m2_get() {
 # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Print Error info
-func_err() {
+_func_err() {
     [[ "$4$6" == exit_${0##*/}* ]] && {
         local err=`awk 'NR=='$2'{print}' $0`;
         # Print line text after '#'
@@ -518,7 +518,7 @@ func_err() {
 }
 
 # Show function info
-func_annotation() {
+_func_annotation() {
     local i j k OLDIFS IFS=$IFS\({;
     # Cache IFS
     OLDIFS=$IFS;
@@ -563,7 +563,7 @@ func_annotation() {
 }
 
 # Cache exit
-trap 'func_err $? $LINENO $BASH_LINENO $BASH_COMMAND ${FUNCNAME[@]}' EXIT
+trap '_func_err $? $LINENO $BASH_LINENO $BASH_COMMAND ${FUNCNAME[@]}' EXIT
 
 # # # # # # # # # # # # # # # # # # # # # # # # #
 #                   Framework                   #
@@ -571,11 +571,11 @@ trap 'func_err $? $LINENO $BASH_LINENO $BASH_COMMAND ${FUNCNAME[@]}' EXIT
 
 # Test if help
 [[ ! "$1" || "$1" == "-h" || "$1" == "--help" ]] && {
-    func_annotation | sort;
+    _func_annotation | sort;
     exit 0
 } || [[ "$2" == "-h" || "$2" == "--help" ]] && {
     # Test if help
-    func_annotation $1 || printf "\033[31mError: No function found \033[0m\n" >&2;
+    _func_annotation $1 || printf "\033[31mError: No function found \033[0m\n" >&2;
     exit $?
 };
 
