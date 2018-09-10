@@ -3067,20 +3067,20 @@ REM usage: :this\thread_valve [count] [name] [commandline]
 REM load .*.ini config
 :this\load_ini
     if "%~1"=="" exit /b 1
-    set _tag=
+    set _bool_=
     REM trim ';' and cut it
     for /f "usebackq delims=" %%a in (
         `2^>nul type "%~dp0.*.ini" "%userprofile%\.*.ini"`
     ) do for /f "usebackq tokens=1 delims=;" %%b in (
-        '%%a'
+        '%%a!!'
     ) do for /f "usebackq tokens=1* delims==" %%c in (
         '%%b'
     ) do if "%%d"=="" (
-        if /i "%%c"=="[%~1]" (
-            set _tag=true
-        ) else set _tag=
-    ) else if defined _tag set _MAP%~2\%%c=%%d
-    set _tag=
+        if /i "%%c"=="[%~1]!!" (
+            set _bool_=true
+        ) else set _bool_=
+    ) else if defined _bool_ set _MAP%~2\%%c=%%d
+    set _bool_=
 
     REM REM Load
     REM for /f "usebackq tokens=1* delims==" %%a in (
